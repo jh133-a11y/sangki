@@ -102,6 +102,27 @@ section { padding: 120px 0; }
 .contact-link { text-decoration: underline; text-underline-offset: 4px; }
 footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10px var(--mono); }
 
+.guestbook { background: #c6b9ff; }
+.guestbook .section-head { border-color: rgba(23, 23, 23, .45); }
+.guestbook-intro { display: flex; justify-content: space-between; gap: 40px; align-items: end; margin-bottom: 55px; }
+.guestbook-intro h2 { margin: 0; font-size: clamp(55px, 10vw, 135px); line-height: .8; letter-spacing: -.1em; }
+.guestbook-intro em { color: var(--orange); font-style: normal; }
+.guestbook-intro p { max-width: 265px; margin: 0; font: 12px/1.7 var(--mono); }
+.comment-form { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; border-top: 1px solid var(--ink); padding-top: 18px; }
+.comment-form label { display: flex; flex-direction: column; gap: 9px; font: 11px var(--mono); text-transform: uppercase; }
+.comment-form input, .comment-form textarea { border: 1px solid var(--ink); border-radius: 0; padding: 14px; background: rgba(241, 238, 231, .35); color: var(--ink); font: 14px var(--sans); outline: none; }
+.comment-form input:focus, .comment-form textarea:focus { box-shadow: 4px 4px 0 var(--orange); }
+.comment-field { grid-column: 1 / -1; }
+.comment-form button { justify-self: start; border: 1px solid var(--ink); padding: 13px 18px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); text-transform: uppercase; }
+.comment-form button:disabled { cursor: wait; opacity: .55; }
+.form-status { min-height: 18px; margin: 13px 0 0; font: 11px var(--mono); }
+.comments { margin-top: 70px; border-top: 1px solid var(--ink); }
+.comments-loading, .comments-empty { font: 12px var(--mono); }
+.comment { display: grid; grid-template-columns: 1fr 3fr auto; gap: 22px; padding: 20px 0; border-bottom: 1px solid rgba(23, 23, 23, .3); }
+.comment-author { font-weight: 600; }
+.comment-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.5; }
+.comment-date { font: 10px var(--mono); opacity: .65; }
+
 @media (max-width: 720px) {
   .wrap { width: min(100% - 30px, 1240px); }
   header { padding: 18px 0; }
@@ -120,4 +141,11 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .work:nth-child(4) { margin-left: 0; }
   .contact h2 { margin-bottom: 48px; }
   .contact-row { display: block; line-height: 2; }
+  .guestbook-intro { display: block; }
+  .guestbook-intro p { margin-top: 34px; }
+  .comment-form { display: block; }
+  .comment-form label { margin-bottom: 18px; }
+  .comment-field { margin-top: 22px; }
+  .comment { display: block; }
+  .comment-body { margin: 12px 0; }
 }

@@ -16,6 +16,7 @@
         <a href="#about">about</a>
         <a href="#works">works</a>
         <a href="#contact">contact</a>
+        <a href="#guestbook">04/04</a>
       </nav>
     </div>
   </header>
@@ -76,6 +77,26 @@
           <a class="contact-link" href="mailto:hello@byungsin.studio">hello@byungsin.studio</a>
           <span>instagram / @byungsin.studio</span>
           <span>© byungsin studio</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="guestbook" id="guestbook">
+      <div class="wrap">
+        <div class="section-head"><h2 class="section-title">leave a trace</h2><span class="section-index">04 / 04</span></div>
+        <div class="guestbook-intro">
+          <h2>여기에<br><em>흔적</em>을 남겨.</h2>
+          <p>닉네임과 짧은 이야기를 남겨주세요.<br>비밀번호는 댓글 확인용으로 안전하게 보관됩니다.</p>
+        </div>
+        <form class="comment-form" id="comment-form">
+          <label>닉네임<input id="nickname" name="nickname" type="text" maxlength="24" placeholder="이름을 입력하세요" required></label>
+          <label>비밀번호 4자리<input id="password" name="password" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required></label>
+          <label class="comment-field">댓글<textarea id="comment" name="comment" maxlength="500" rows="4" placeholder="하고 싶은 말을 남겨주세요" required></textarea></label>
+          <button type="submit">댓글 남기기 ↗</button>
+          <p class="form-status" id="form-status" role="status"></p>
+        </form>
+        <div class="comments" id="comments" aria-live="polite">
+          <p class="comments-loading">댓글을 불러오는 중...</p>
         </div>
       </div>
     </section>
