@@ -94,11 +94,6 @@ const renderComments = (items) => {
 };
 
 const renderPagination = (totalPages) => {
-  if (totalPages <= 1) {
-    pagination.replaceChildren();
-    return;
-  }
-
   const previous = document.createElement('button');
   previous.className = 'comments-page-button';
   previous.type = 'button';
