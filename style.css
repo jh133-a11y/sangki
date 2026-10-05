@@ -121,9 +121,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .form-status { min-height: 18px; margin: 13px 0 0; font: 11px var(--mono); }
 .comments { border-top: 0; }
 .comments-loading, .comments-empty { font: 12px var(--mono); }
-.comment { display: grid; grid-template-columns: 1fr 3fr auto; gap: 22px; padding: 20px 0; border-bottom: 1px solid rgba(23, 23, 23, .3); }
-.comment-reply { margin-left: 7%; border-bottom-color: rgba(23, 23, 23, .18); }
-.comment-reply:before { content: "↳"; margin-right: 8px; font: 14px var(--mono); }
+.comment { display: grid; grid-template-columns: minmax(125px, 1fr) minmax(0, 3fr) minmax(155px, auto); gap: 22px; padding: 20px 0; border-bottom: 1px solid rgba(23, 23, 23, .3); }
+.comment-reply { margin-left: 3%; padding-left: 18px; border-bottom-color: rgba(23, 23, 23, .18); }
+.comment-reply:before { content: "↳"; position: absolute; margin-left: -18px; font: 14px var(--mono); }
 .comment-author { font-weight: 600; }
 .comment-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.5; }
 .comment-date { font: 10px var(--mono); opacity: .65; }
