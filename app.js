@@ -114,7 +114,22 @@ const renderInvestmentState = (state) => {
     sell.textContent = '매도';
     sell.disabled = !asset.listed;
     sell.addEventListener('click', () => tradeInvestment(asset.symbol, 'sell', quantity));
-    trade.append(quantity, buy, sell);
+    const maxBuy = document.createElement('button');
+    maxBuy.type = 'button';
+    maxBuy.textContent = '최대 매수';
+    maxBuy.disabled = !asset.listed;
+    maxBuy.addEventListener('click', () => {
+      quantity.value = String(Math.floor(state.cash / asset.current_price));
+    });
+    const maxSell = document.createElement('button');
+    maxSell.type = 'button';
+    maxSell.textContent = '최대 매도';
+    maxSell.disabled = !asset.listed;
+    maxSell.addEventListener('click', () => {
+      const holding = state.holdings.find((item) => item.symbol === asset.symbol);
+      quantity.value = String(holding ? holding.quantity : 0);
+    });
+    trade.append(quantity, buy, sell, maxBuy, maxSell);
     row.append(name, price, change, trade);
     return row;
   }));

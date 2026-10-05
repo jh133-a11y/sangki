@@ -108,9 +108,9 @@ section { padding: 120px 0; }
 .investment-change.positive { color: #ff4e4e; }
 .investment-change.negative { color: #55a5ff; }
 .investment-change.flat { color: #aaa69d; }
-.investment-trade { display: flex; gap: 5px; }
+.investment-trade { display: flex; flex-wrap: wrap; gap: 5px; }
 .investment-trade input { width: 62px; border: 1px solid rgba(241,238,231,.5); padding: 8px 5px; background: transparent; color: var(--paper); font: 11px var(--mono); }
-.investment-trade button { border: 1px solid var(--paper); padding: 8px 9px; background: transparent; color: var(--paper); cursor: pointer; font: 10px var(--mono); }
+.investment-trade button { border: 1px solid var(--paper); padding: 8px 9px; background: transparent; color: var(--paper); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
 .investment-trade button:hover { background: var(--paper); color: var(--ink); }
 .investment-trade button:disabled { cursor: wait; opacity: .4; }
 .investment-ranking { align-self: start; padding: 21px; background: var(--acid); color: var(--ink); }
