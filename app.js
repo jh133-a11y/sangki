@@ -22,6 +22,7 @@ const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');
 const status = document.querySelector('#form-status');
 const refreshButton = document.querySelector('#comments-refresh');
+const notificationToggle = document.querySelector('#notification-toggle');
 const pagination = document.querySelector('#comments-pagination');
 const COMMENTS_PER_PAGE = 10;
 let currentPage = 1;
@@ -60,6 +61,32 @@ const requestNotifications = async () => {
     }
   }
 };
+
+const updateNotificationButton = () => {
+  if (!('Notification' in window)) {
+    notificationToggle.textContent = '알림 미지원';
+    notificationToggle.disabled = true;
+    return;
+  }
+  const permission = Notification.permission;
+  notificationToggle.classList.toggle('is-enabled', permission === 'granted');
+  notificationToggle.classList.toggle('is-blocked', permission === 'denied');
+  notificationToggle.textContent = permission === 'granted'
+    ? '알림 켜짐'
+    : permission === 'denied'
+      ? '알림 차단됨'
+      : '알림 허용';
+};
+
+notificationToggle.addEventListener('click', async () => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'denied') {
+    window.alert('브라우저 사이트 설정에서 알림을 허용한 뒤 다시 시도해주세요.');
+    return;
+  }
+  await requestNotifications();
+  updateNotificationButton();
+});
 
 const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -321,6 +348,7 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-requestNotifications();
+requestNotifications().then(updateNotificationButton);
+updateNotificationButton();
 loadComments();
 window.setInterval(loadComments, 20000);
