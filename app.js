@@ -142,7 +142,9 @@ const renderInvestmentState = (state) => {
     const value = asset && asset.listed ? asset.current_price * holding.quantity : 0;
     const name = document.createElement('span');
     name.className = 'holding-name';
-    name.textContent = `${asset ? asset.name : holding.symbol} · ${holding.quantity}주`;
+    name.innerHTML = '<strong></strong><small></small>';
+    name.querySelector('strong').textContent = asset ? asset.name : holding.symbol;
+    name.querySelector('small').textContent = `${holding.quantity}주 보유`;
     const change = document.createElement('span');
     const changePct = asset ? Number(asset.change_pct) : 0;
     change.className = `holding-change ${changePct > 0 ? 'positive' : changePct < 0 ? 'negative' : 'flat'}`;
@@ -151,8 +153,12 @@ const renderInvestmentState = (state) => {
       : '상장폐지';
     const total = document.createElement('strong');
     total.className = 'holding-value';
-    total.textContent = formatWon(value);
-    row.append(name, change, total);
+    total.innerHTML = '<span></span><small></small>';
+    total.querySelector('span').textContent = formatWon(value);
+    total.querySelector('small').textContent = asset && asset.listed
+      ? `현재가 ${formatWon(asset.current_price)}`
+      : '거래 중지';
+    row.append(name, total, change);
     return row;
   }) : [Object.assign(document.createElement('p'), {
     className: 'investment-empty',
