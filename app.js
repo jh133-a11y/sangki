@@ -307,12 +307,12 @@ const deleteComment = async (id) => {
   if (!window.confirm(isAdmin ? '관리자 권한으로 모든 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
 
   try {
-    const deleted = await callCommentRpc('delete_comment', {
-      p_id: id,
-      p_password_hash: await hashPassword(password),
-      p_admin_password: password
-    });
-    if (!deleted) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+    const endpoint = isAdmin ? 'delete_all_comments' : 'delete_comment';
+    const payload = isAdmin
+      ? { p_admin_password: password }
+      : { p_id: id, p_password_hash: await hashPassword(password), p_admin_password: password };
+    const deleted = await callCommentRpc(endpoint, payload);
+    if (!deleted && !isAdmin) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
     await loadComments();
   } catch (error) {
     window.alert(error.message);

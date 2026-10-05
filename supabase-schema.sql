@@ -92,6 +92,29 @@ revoke all on function public.delete_comment(uuid, text, text) from public;
 grant execute on function public.update_comment(uuid, text, text) to anon;
 grant execute on function public.delete_comment(uuid, text, text) to anon;
 
+drop function if exists public.delete_all_comments(text);
+
+create or replace function public.delete_all_comments(
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    return false;
+  end if;
+
+  delete from public.comments;
+  return true;
+end;
+$$;
+
+revoke all on function public.delete_all_comments(text) from public;
+grant execute on function public.delete_all_comments(text) to anon;
+
 create table if not exists public.speed_game_scores (
   id uuid primary key default gen_random_uuid(),
   nickname text not null check (char_length(nickname) between 1 and 24),
