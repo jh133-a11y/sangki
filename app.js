@@ -1,6 +1,11 @@
 const SUPABASE_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
 const commentsEndpoint = `${SUPABASE_URL}/rest/v1/comments`;
+const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
+const apiHeaders = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`
+};
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener('click', (event) => {
@@ -34,24 +39,89 @@ const renderComments = (items) => {
     article.innerHTML = `
       <strong class="comment-author"></strong>
       <p class="comment-body"></p>
-      <time class="comment-date"></time>
+      <div class="comment-meta">
+        <time class="comment-date"></time>
+        <span class="edited"></span>
+        <div class="comment-actions">
+          <button class="comment-action" type="button" data-action="edit">수정</button>
+          <button class="comment-action" type="button" data-action="delete">삭제</button>
+        </div>
+      </div>
     `;
     article.querySelector('.comment-author').textContent = item.nickname;
     article.querySelector('.comment-body').textContent = item.body;
     article.querySelector('.comment-date').textContent = escapeDate(item.created_at);
+    article.querySelector('.edited').textContent = item.edited_at ? '(edited)' : '';
+    article.querySelector('[data-action="edit"]').addEventListener('click', () => editComment(item));
+    article.querySelector('[data-action="delete"]').addEventListener('click', () => deleteComment(item.id));
     return article;
   }));
 };
 
 const loadComments = async () => {
   try {
-    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at&order=created_at.desc`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at&order=created_at.desc`, {
+      headers: apiHeaders
     });
     if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
     renderComments(await response.json());
   } catch (error) {
     comments.innerHTML = '<p class="comments-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>';
+  }
+};
+
+const requestPassword = () => {
+  const password = window.prompt('댓글의 4자리 비밀번호를 입력하세요.');
+  if (password === null) return null;
+  if (!/^\d{4}$/.test(password)) {
+    window.alert('비밀번호는 숫자 4자리여야 합니다.');
+    return null;
+  }
+  return password;
+};
+
+const callCommentRpc = async (name, payload) => {
+  const response = await fetch(`${rpcEndpoint}/${name}`, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) throw new Error('비밀번호가 틀렸거나 요청에 실패했습니다.');
+  return response.json();
+};
+
+const editComment = async (item) => {
+  const password = requestPassword();
+  if (password === null) return;
+  const body = window.prompt('수정할 댓글을 입력하세요.', item.body);
+  if (body === null || !body.trim()) return;
+
+  try {
+    const updated = await callCommentRpc('update_comment', {
+      p_id: item.id,
+      p_password_hash: await hashPassword(password),
+      p_body: body
+    });
+    if (!updated) throw new Error('비밀번호가 틀렸거나 댓글을 수정할 수 없습니다.');
+    await loadComments();
+  } catch (error) {
+    window.alert(error.message);
+  }
+};
+
+const deleteComment = async (id) => {
+  const password = requestPassword();
+  if (password === null || !window.confirm('이 댓글을 삭제할까요?')) return;
+
+  try {
+    const deleted = await callCommentRpc('delete_comment', {
+      p_id: id,
+      p_password_hash: await hashPassword(password)
+    });
+    if (!deleted) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+    await loadComments();
+  } catch (error) {
+    window.alert(error.message);
   }
 };
 
