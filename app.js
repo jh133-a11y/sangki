@@ -143,8 +143,7 @@ form.addEventListener('submit', async (event) => {
     const response = await fetch(commentsEndpoint, {
       method: 'POST',
       headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
+        ...apiHeaders,
         'Content-Type': 'application/json',
         Prefer: 'return=minimal'
       },
