@@ -354,7 +354,8 @@ const endGame = async (message) => {
   document.querySelector('#game-submit').disabled = true;
   gameStart.disabled = false;
   gameStart.textContent = '다시 시작';
-  gameMessage.textContent = `${message} 총 ${gameState.solved}문제를 풀었습니다.`;
+  const answer = gameState.first * gameState.second;
+  gameMessage.textContent = `${message} 정답은 ${answer}입니다. 총 ${gameState.solved}문제를 풀었습니다.`;
 
   try {
     const response = await fetch(scoresEndpoint, {
@@ -432,11 +433,35 @@ const loadGameRanking = async () => {
       const value = document.createElement('span');
       value.className = 'ranking-score';
       value.textContent = `${score.solved_count}문제`;
-      item.append(name, value);
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'ranking-delete';
+      deleteButton.type = 'button';
+      deleteButton.textContent = '관리자 삭제';
+      deleteButton.addEventListener('click', () => deleteGameScore(score.id));
+      item.append(name, value, deleteButton);
       return item;
     }));
   } catch {
     gameRankingList.innerHTML = '<li class="ranking-empty">랭킹을 불러오지 못했습니다.</li>';
+  }
+};
+
+const deleteGameScore = async (id) => {
+  const password = window.prompt('관리자 비밀번호를 입력하세요.');
+  if (password === null || !window.confirm('이 랭킹 기록을 삭제할까요?')) return;
+
+  try {
+    const response = await fetch(`${rpcEndpoint}/delete_speed_game_score`, {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_id: id, p_admin_password: password })
+    });
+    if (!response.ok || !(await response.json())) {
+      throw new Error('관리자 비밀번호가 틀렸거나 삭제할 수 없습니다.');
+    }
+    await loadGameRanking();
+  } catch (error) {
+    window.alert(error.message);
   }
 };
 

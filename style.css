@@ -124,9 +124,11 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .game-message { min-height: 18px; margin: 25px 0 0; font: 11px var(--mono); }
 .game-ranking { padding: 21px; background: var(--acid); align-self: start; }
 .game-ranking ol { min-height: 320px; margin: 22px 0 0; padding: 0; list-style: none; counter-reset: ranking; }
-.game-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23, 23, 23, .25); font-size: 14px; }
+.game-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23, 23, 23, .25); font-size: 14px; }
 .game-ranking li:before { content: counter(ranking, decimal-leading-zero); font: 11px var(--mono); }
 .ranking-score { font: 11px var(--mono); }
+.ranking-delete { border: 0; padding: 0; background: transparent; cursor: pointer; font: 10px var(--mono); text-decoration: underline; }
+.ranking-delete:hover { color: var(--orange); }
 .ranking-empty, .ranking-note { font: 11px/1.6 var(--mono); }
 .ranking-note { margin: 0; opacity: .7; }
 
@@ -192,6 +194,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .game-answer-form { display: block; }
   .game-answer-form input, .game-answer-form button { width: 100%; }
   .game-answer-form button { margin-top: 10px; }
+  .game-ranking li { grid-template-columns: 28px 1fr auto; }
+  .ranking-delete { grid-column: 2 / -1; justify-self: start; }
   .guestbook-intro { display: block; }
   .guestbook-intro p { margin-top: 34px; }
   .comment-form { display: block; }

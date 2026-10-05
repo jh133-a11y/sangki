@@ -111,3 +111,29 @@ to anon using (true);
 create policy "Anyone can add speed game scores"
 on public.speed_game_scores for insert
 to anon with check (true);
+
+drop function if exists public.delete_speed_game_score(uuid, text);
+
+create or replace function public.delete_speed_game_score(
+  p_id uuid,
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    return false;
+  end if;
+
+  delete from public.speed_game_scores
+  where id = p_id;
+
+  return found;
+end;
+$$;
+
+revoke all on function public.delete_speed_game_score(uuid, text) from public;
+grant execute on function public.delete_speed_game_score(uuid, text) to anon;
