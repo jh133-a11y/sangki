@@ -118,6 +118,16 @@ section { padding: 120px 0; }
 .investment-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23,23,23,.25); font-size: 13px; }
 .investment-ranking li:before { content: counter(ranking, decimal-leading-zero); font: 11px var(--mono); }
 .investment-ranking .ranking-value { font: 11px var(--mono); }
+.investment-admin-button { width: 100%; margin-top: 18px; border: 1px solid var(--ink); padding: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
+.investment-admin-button:hover { background: var(--ink); color: var(--acid); }
+.investment-admin-panel { margin-top: 10px; padding: 9px; background: rgba(23,23,23,.08); font: 10px/1.5 var(--mono); }
+.investment-admin-panel p { margin: 0 0 5px; }
+.investment-admin-active { color: var(--orange); }
+.investment-ranking li:has(.ranking-grant) { grid-template-columns: 28px 1fr auto; }
+.ranking-grant { grid-column: 2 / -1; display: flex; gap: 5px; }
+.ranking-grant input { min-width: 0; width: 90px; border: 1px solid var(--ink); padding: 6px; background: transparent; color: var(--ink); font: 10px var(--mono); }
+.ranking-grant button { border: 1px solid var(--ink); padding: 6px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
+.ranking-grant button:hover { background: var(--orange); color: var(--ink); }
 .investment-holdings { margin: 12px 0 35px; padding: 28px 30px; background: var(--paper); color: var(--ink); border: 2px solid var(--acid); box-shadow: 8px 8px 0 rgba(217,255,54,.35); }
 .holdings-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding-bottom: 18px; border-bottom: 2px solid var(--ink); font: 10px var(--mono); text-transform: uppercase; }
 .holdings-heading h3 { margin: 5px 0 0; font-size: clamp(26px, 4vw, 48px); line-height: .9; letter-spacing: -.08em; }

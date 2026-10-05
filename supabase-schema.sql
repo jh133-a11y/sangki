@@ -319,9 +319,9 @@ as $$
     'assets', coalesce((select jsonb_agg(to_jsonb(a) order by a.symbol) from public.investment_assets a), '[]'::jsonb),
     'holdings', coalesce((select jsonb_agg(to_jsonb(h) order by h.symbol) from public.investment_holdings h where h.client_id = u.client_id), '[]'::jsonb),
     'ranking', coalesce((
-      select jsonb_agg(jsonb_build_object('nickname', r.nickname, 'total_asset', r.total_asset) order by r.total_asset desc)
+      select jsonb_agg(jsonb_build_object('client_id', r.client_id, 'nickname', r.nickname, 'total_asset', r.total_asset) order by r.total_asset desc)
       from (
-        select iu.nickname, iu.cash + coalesce((
+        select iu.client_id, iu.nickname, iu.cash + coalesce((
           select sum(ih.quantity * ia.current_price)
           from public.investment_holdings ih
           join public.investment_assets ia on ia.symbol = ih.symbol
@@ -346,10 +346,56 @@ set search_path = public
 as $$
 begin
   perform public.investment_update_market();
+  if trim(p_nickname) is null
+     or char_length(trim(p_nickname)) = 0
+     or char_length(trim(p_nickname)) > 24 then
+    raise exception '닉네임은 1~24자로 입력하세요.';
+  end if;
+
+  if exists (
+    select 1
+    from public.investment_users
+    where nickname = trim(p_nickname)
+      and client_id <> p_client_id
+  ) then
+    raise exception '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력하세요.';
+  end if;
+
   insert into public.investment_users (client_id, nickname)
   values (p_client_id, trim(p_nickname))
   on conflict (client_id) do nothing;
   return public.investment_build_state(p_client_id);
+end;
+$$;
+
+create or replace function public.investment_admin_grant_cash(
+  p_admin_password text,
+  p_target_client_id uuid,
+  p_amount bigint
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_amount is null or p_amount < 1 then
+    raise exception '지급액은 1원 이상이어야 합니다.';
+  end if;
+
+  update public.investment_users
+  set cash = cash + p_amount
+  where client_id = p_target_client_id;
+
+  if not found then
+    raise exception '지급할 투자자를 찾을 수 없습니다.';
+  end if;
+
+  return true;
 end;
 $$;
 
@@ -400,5 +446,7 @@ $$;
 
 revoke all on function public.investment_get_state(uuid, text) from public;
 revoke all on function public.investment_trade(uuid, text, text, integer) from public;
+revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, integer) to anon;
+grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;

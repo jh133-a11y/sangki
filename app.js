@@ -32,7 +32,10 @@ const investmentProducts = document.querySelector('#investment-products');
 const investmentHoldings = document.querySelector('#investment-holdings');
 const holdingsList = document.querySelector('#holdings-list');
 const investmentRankingList = document.querySelector('#investment-ranking-list');
+const investmentAdminButton = document.querySelector('#investment-admin-button');
+const investmentAdminPanel = document.querySelector('#investment-admin-panel');
 let investmentState = null;
+let investmentAdminMode = false;
 
 const getInvestmentClientId = () => {
   let id = localStorage.getItem(investmentClientKey);
@@ -206,12 +209,70 @@ const renderInvestmentState = (state) => {
     total.className = 'ranking-value';
     total.textContent = formatWon(entry.total_asset);
     item.append(name, total);
+    if (investmentAdminMode) {
+      const grant = document.createElement('div');
+      grant.className = 'ranking-grant';
+      const amount = document.createElement('input');
+      amount.type = 'number';
+      amount.min = '1';
+      amount.step = '1000';
+      amount.placeholder = '지급액';
+      const grantButton = document.createElement('button');
+      grantButton.type = 'button';
+      grantButton.textContent = '현금 지급';
+      grantButton.addEventListener('click', () => grantInvestmentCash(entry.client_id, amount));
+      grant.append(amount, grantButton);
+      item.append(grant);
+    }
     return item;
   }) : [Object.assign(document.createElement('li'), {
     className: 'ranking-empty',
     textContent: '아직 투자자가 없습니다.'
   })]));
 };
+
+const grantInvestmentCash = async (clientId, amountInput) => {
+  const amount = Number(amountInput.value);
+  if (!Number.isSafeInteger(amount) || amount < 1) {
+    window.alert('지급액은 1원 이상의 정수로 입력하세요.');
+    return;
+  }
+  if (!window.confirm(`${formatWon(amount)}을 지급할까요?`)) return;
+  try {
+    amountInput.disabled = true;
+    await callInvestmentRpc('investment_admin_grant_cash', {
+      p_admin_password: '8170',
+      p_target_client_id: clientId,
+      p_amount: amount
+    });
+    amountInput.value = '';
+    await loadInvestmentState();
+    investorStatus.textContent = '현금 지급이 완료되었습니다.';
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    amountInput.disabled = false;
+  }
+};
+
+investmentAdminButton.addEventListener('click', () => {
+  if (investmentAdminMode) {
+    investmentAdminMode = false;
+    investmentAdminPanel.hidden = true;
+    investmentAdminButton.textContent = '관리자 모드';
+    if (investmentState) renderInvestmentState(investmentState);
+    return;
+  }
+  const password = window.prompt('관리자 비밀번호를 입력하세요.');
+  if (password !== '8170') {
+    if (password !== null) window.alert('관리자 비밀번호가 틀렸습니다.');
+    return;
+  }
+  investmentAdminMode = true;
+  investmentAdminPanel.hidden = false;
+  investmentAdminButton.textContent = '관리자 모드 종료';
+  if (investmentState) renderInvestmentState(investmentState);
+});
 
 const loadInvestmentState = async (nickname = investorNickname.value.trim()) => {
   if (!nickname) return;

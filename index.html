@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
   <div class="noise"></div>
@@ -67,6 +67,11 @@
           </div>
           <aside class="investment-ranking">
             <div class="ranking-head"><span>asset ranking</span><span>total</span></div>
+            <button class="investment-admin-button" id="investment-admin-button" type="button">관리자 모드</button>
+            <div class="investment-admin-panel" id="investment-admin-panel" hidden>
+              <p>랭킹 유저에게 지급할 금액을 입력하세요.</p>
+              <span class="investment-admin-active">관리자 모드 활성</span>
+            </div>
             <ol id="investment-ranking-list"><li class="ranking-empty">아직 투자자가 없습니다.</li></ol>
             <p class="ranking-note">총 자산이 높은 순서로 표시됩니다.</p>
           </aside>
@@ -158,6 +163,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
