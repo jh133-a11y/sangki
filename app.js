@@ -3,6 +3,7 @@ const SUPABASE_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
 const commentsEndpoint = `${SUPABASE_URL}/rest/v1/comments`;
 const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
 const scoresEndpoint = `${SUPABASE_URL}/rest/v1/speed_game_scores`;
+const investmentClientKey = 'sangki-investment-client-id';
 const apiHeaders = {
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`
@@ -18,6 +19,194 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
     }
   });
 });
+
+const investorForm = document.querySelector('#investor-form');
+const investorNickname = document.querySelector('#investor-nickname');
+const investorStatus = document.querySelector('#investor-status');
+const portfolioSummary = document.querySelector('#portfolio-summary');
+const portfolioNickname = document.querySelector('#portfolio-nickname');
+const portfolioCash = document.querySelector('#portfolio-cash');
+const portfolioTotal = document.querySelector('#portfolio-total');
+const marketUpdated = document.querySelector('#market-updated');
+const investmentProducts = document.querySelector('#investment-products');
+const investmentHoldings = document.querySelector('#investment-holdings');
+const holdingsList = document.querySelector('#holdings-list');
+const investmentRankingList = document.querySelector('#investment-ranking-list');
+let investmentState = null;
+
+const getInvestmentClientId = () => {
+  let id = localStorage.getItem(investmentClientKey);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(investmentClientKey, id);
+  }
+  return id;
+};
+
+const formatWon = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
+
+const callInvestmentRpc = async (name, payload) => {
+  const response = await fetch(`${rpcEndpoint}/${name}`, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const error = await response.json();
+      detail = error.message || error.hint || '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(detail || '투자장 요청에 실패했습니다.');
+  }
+  return response.json();
+};
+
+const renderInvestmentState = (state) => {
+  investmentState = state;
+  investorNickname.value = state.nickname;
+  investorNickname.disabled = true;
+  investorForm.querySelector('button').disabled = true;
+  portfolioSummary.hidden = false;
+  investmentHoldings.hidden = false;
+  portfolioNickname.textContent = state.nickname;
+  portfolioCash.textContent = formatWon(state.cash);
+  portfolioTotal.textContent = formatWon(state.total_asset);
+  marketUpdated.textContent = `${state.market_date} 12:00`;
+
+  investmentProducts.replaceChildren(...state.assets.map((asset) => {
+    const row = document.createElement('article');
+    row.className = 'investment-product';
+    const name = document.createElement('div');
+    name.innerHTML = `<strong class="investment-product-name"></strong><span class="investment-product-symbol"></span>`;
+    name.querySelector('strong').textContent = asset.name;
+    name.querySelector('span').textContent = asset.listed ? asset.symbol : '상장폐지 · 다음 12시에 재출시';
+    const price = document.createElement('strong');
+    price.className = 'investment-price';
+    price.textContent = asset.listed ? formatWon(asset.current_price) : '—';
+    const change = document.createElement('span');
+    change.className = 'investment-change';
+    if (!asset.listed) {
+      change.classList.add('flat');
+      change.textContent = '상장폐지';
+    } else {
+      const pct = Number(asset.change_pct);
+      change.classList.add(pct > 0 ? 'positive' : pct < 0 ? 'negative' : 'flat');
+      change.textContent = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+    }
+    const trade = document.createElement('div');
+    trade.className = 'investment-trade';
+    const quantity = document.createElement('input');
+    quantity.type = 'number';
+    quantity.min = '1';
+    quantity.step = '1';
+    quantity.value = '1';
+    quantity.disabled = !asset.listed;
+    const buy = document.createElement('button');
+    buy.type = 'button';
+    buy.textContent = '매수';
+    buy.disabled = !asset.listed;
+    buy.addEventListener('click', () => tradeInvestment(asset.symbol, 'buy', quantity));
+    const sell = document.createElement('button');
+    sell.type = 'button';
+    sell.textContent = '매도';
+    sell.disabled = !asset.listed;
+    sell.addEventListener('click', () => tradeInvestment(asset.symbol, 'sell', quantity));
+    trade.append(quantity, buy, sell);
+    row.append(name, price, change, trade);
+    return row;
+  }));
+
+  const holdings = state.holdings.filter((holding) => holding.quantity > 0);
+  holdingsList.replaceChildren(...(holdings.length ? holdings.map((holding) => {
+    const asset = state.assets.find((item) => item.symbol === holding.symbol);
+    const row = document.createElement('div');
+    row.className = 'holding-row';
+    const value = asset && asset.listed ? asset.current_price * holding.quantity : 0;
+    row.innerHTML = '<span></span><strong></strong>';
+    row.firstElementChild.textContent = `${asset ? asset.name : holding.symbol} · ${holding.quantity}주`;
+    row.lastElementChild.textContent = formatWon(value);
+    return row;
+  }) : [Object.assign(document.createElement('p'), {
+    className: 'investment-empty',
+    textContent: '아직 보유한 종목이 없습니다.'
+  })]));
+
+  investmentRankingList.replaceChildren(...(state.ranking.length ? state.ranking.map((entry) => {
+    const item = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = entry.nickname;
+    const total = document.createElement('span');
+    total.className = 'ranking-value';
+    total.textContent = formatWon(entry.total_asset);
+    item.append(name, total);
+    return item;
+  }) : [Object.assign(document.createElement('li'), {
+    className: 'ranking-empty',
+    textContent: '아직 투자자가 없습니다.'
+  })]));
+};
+
+const loadInvestmentState = async (nickname = investorNickname.value.trim()) => {
+  if (!nickname) return;
+  const state = await callInvestmentRpc('investment_get_state', {
+    p_client_id: getInvestmentClientId(),
+    p_nickname: nickname
+  });
+  renderInvestmentState(state);
+};
+
+const tradeInvestment = async (symbol, side, quantityInput) => {
+  const quantity = Number(quantityInput.value);
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    window.alert('수량은 1주 이상 정수로 입력하세요.');
+    return;
+  }
+  try {
+    quantityInput.disabled = true;
+    const state = await callInvestmentRpc('investment_trade', {
+      p_client_id: getInvestmentClientId(),
+      p_symbol: symbol,
+      p_side: side,
+      p_quantity: quantity
+    });
+    investorStatus.textContent = side === 'buy' ? `${quantity}주 매수했습니다.` : `${quantity}주 매도했습니다.`;
+    renderInvestmentState(state);
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    quantityInput.disabled = false;
+  }
+};
+
+investorForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = investorForm.querySelector('button');
+  const nickname = investorNickname.value.trim();
+  if (!nickname) return;
+  button.disabled = true;
+  investorStatus.textContent = '투자장을 여는 중...';
+  try {
+    await loadInvestmentState(nickname);
+    localStorage.setItem('sangki-investor-nickname', nickname);
+    investorStatus.textContent = '닉네임은 이 브라우저에서 변경할 수 없습니다.';
+  } catch (error) {
+    button.disabled = false;
+    investorStatus.textContent = error.message;
+  }
+});
+
+try {
+  const savedNickname = localStorage.getItem('sangki-investor-nickname');
+  if (savedNickname) {
+    investorNickname.value = savedNickname;
+    loadInvestmentState(savedNickname).catch(() => {});
+  }
+} catch {
+  // Private browsing can block localStorage; the form remains usable.
+}
 
 const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');

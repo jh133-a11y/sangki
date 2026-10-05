@@ -32,12 +32,38 @@
       <div class="wrap scroll"><i></i> 아래로 내려서 더 보기</div>
     </section>
 
-    <section class="statement" id="about">
+    <section class="investment" id="about">
       <div class="wrap">
-        <div class="section-head"><h2 class="section-title">what we do</h2><span class="section-index">01 / 04</span></div>
-        <div class="statement-copy">
-          <h3>쓸모없어 보이는 것에서<br>가장 쓸모있는 질문을 만듭니다.</h3>
-          <p>byungsin은 브랜드, 공간, 디지털 경험을 가로지르며 익숙한 문법을 새롭게 편집하는 작은 스튜디오입니다. 정답보다 재미있는 방향을 선택합니다.</p>
+        <div class="section-head"><h2 class="section-title">virtual<br>market</h2><span class="section-index">01 / 04</span></div>
+        <div class="investment-intro">
+          <h3>오늘의 돈으로<br><em>내일의 주식</em>을 사.</h3>
+          <p>닉네임을 정하면 평생 바꿀 수 없습니다. 가입 즉시 가상 투자금 500,000원을 지급합니다.<br>가격은 매일 12:00(KST)에 한 번만 변동합니다.</p>
+        </div>
+        <form class="investor-form" id="investor-form">
+          <label>고유 닉네임<input id="investor-nickname" maxlength="24" placeholder="한 번 정하면 바꿀 수 없음" required></label>
+          <button type="submit">투자 시작 ↗</button>
+          <p id="investor-status" class="investor-status" role="status"></p>
+        </form>
+        <div class="portfolio-summary" id="portfolio-summary" hidden>
+          <div><span>investor</span><strong id="portfolio-nickname">—</strong></div>
+          <div><span>남은 돈</span><strong id="portfolio-cash">₩0</strong></div>
+          <div><span>총 자산</span><strong id="portfolio-total">₩0</strong></div>
+          <div><span>시장 상태</span><strong id="market-updated">—</strong></div>
+        </div>
+        <div class="investment-layout">
+          <div class="investment-products">
+            <div class="investment-list-head"><span>상품 / 현재가</span><span>변동률 / 매매</span></div>
+            <div id="investment-products"><p class="investment-empty">닉네임을 설정하면 투자 목록이 열립니다.</p></div>
+          </div>
+          <aside class="investment-ranking">
+            <div class="ranking-head"><span>asset ranking</span><span>total</span></div>
+            <ol id="investment-ranking-list"><li class="ranking-empty">아직 투자자가 없습니다.</li></ol>
+            <p class="ranking-note">총 자산이 높은 순서로 표시됩니다.</p>
+          </aside>
+        </div>
+        <div class="investment-holdings" id="investment-holdings" hidden>
+          <div class="investment-list-head"><span>보유 종목</span><span>평가금액</span></div>
+          <div id="holdings-list"></div>
         </div>
       </div>
     </section>
@@ -126,6 +152,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>
