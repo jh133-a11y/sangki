@@ -269,7 +269,16 @@ const callCommentRpc = async (name, payload) => {
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!response.ok) throw new Error('비밀번호가 틀렸거나 요청에 실패했습니다.');
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const error = await response.json();
+      detail = error.message || error.hint || '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(detail || 'Supabase 요청에 실패했습니다.');
+  }
   return response.json();
 };
 
@@ -312,7 +321,11 @@ const deleteComment = async (id) => {
       ? { p_admin_password: password }
       : { p_id: id, p_password_hash: await hashPassword(password), p_admin_password: password };
     const deleted = await callCommentRpc(endpoint, payload);
-    if (!deleted && !isAdmin) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+    if (!deleted) {
+      throw new Error(isAdmin
+        ? '관리자 삭제 함수가 false를 반환했습니다. Supabase SQL을 최신 내용으로 다시 실행해주세요.'
+        : '비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+    }
     await loadComments();
   } catch (error) {
     window.alert(error.message);
