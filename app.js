@@ -22,6 +22,10 @@ const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');
 const status = document.querySelector('#form-status');
 const refreshButton = document.querySelector('#comments-refresh');
+const pagination = document.querySelector('#comments-pagination');
+const COMMENTS_PER_PAGE = 10;
+let currentPage = 1;
+let allComments = [];
 
 const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -62,20 +66,64 @@ const renderComment = (item, isReply = false) => {
 const renderComments = (items) => {
   if (!items.length) {
     comments.innerHTML = '<p class="comments-empty">아직 남겨진 흔적이 없습니다. 첫 번째 댓글을 남겨보세요.</p>';
+    pagination.replaceChildren();
     return;
   }
 
+  const rootComments = items
+    .filter((item) => !item.parent_id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const totalPages = Math.ceil(rootComments.length / COMMENTS_PER_PAGE);
+  currentPage = Math.min(currentPage, totalPages);
+  const pageStart = (currentPage - 1) * COMMENTS_PER_PAGE;
+  const pageItems = rootComments.slice(pageStart, pageStart + COMMENTS_PER_PAGE);
   const replies = new Map();
   items.filter((item) => item.parent_id).forEach((item) => {
     if (!replies.has(item.parent_id)) replies.set(item.parent_id, []);
     replies.get(item.parent_id).push(item);
   });
   const nodes = [];
-  items.filter((item) => !item.parent_id).forEach((item) => {
+  pageItems.forEach((item) => {
     nodes.push(renderComment(item));
-    (replies.get(item.id) || []).forEach((reply) => nodes.push(renderComment(reply, true)));
+    (replies.get(item.id) || [])
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .forEach((reply) => nodes.push(renderComment(reply, true)));
   });
   comments.replaceChildren(...nodes);
+  renderPagination(totalPages);
+};
+
+const renderPagination = (totalPages) => {
+  if (totalPages <= 1) {
+    pagination.replaceChildren();
+    return;
+  }
+
+  const previous = document.createElement('button');
+  previous.className = 'comments-page-button';
+  previous.type = 'button';
+  previous.textContent = '← 이전';
+  previous.disabled = currentPage === 1;
+  previous.addEventListener('click', () => {
+    currentPage -= 1;
+    renderComments(allComments);
+  });
+
+  const number = document.createElement('span');
+  number.className = 'comments-page-number';
+  number.textContent = `${currentPage} / ${totalPages}`;
+
+  const next = document.createElement('button');
+  next.className = 'comments-page-button';
+  next.type = 'button';
+  next.textContent = '다음 →';
+  next.disabled = currentPage === totalPages;
+  next.addEventListener('click', () => {
+    currentPage += 1;
+    renderComments(allComments);
+  });
+
+  pagination.replaceChildren(previous, number, next);
 };
 
 const loadComments = async () => {
@@ -84,7 +132,8 @@ const loadComments = async () => {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
-    renderComments(await response.json());
+    allComments = await response.json();
+    renderComments(allComments);
   } catch (error) {
     comments.innerHTML = '<p class="comments-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>';
   }
@@ -213,6 +262,7 @@ form.addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error('댓글 저장에 실패했습니다.');
     form.reset();
     status.textContent = '댓글이 저장되었습니다.';
+    currentPage = 1;
     await loadComments();
   } catch (error) {
     status.textContent = error.message;
