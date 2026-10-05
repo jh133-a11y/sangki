@@ -108,6 +108,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .guestbook-intro h2 { margin: 0; font-size: clamp(55px, 10vw, 135px); line-height: .8; letter-spacing: -.1em; }
 .guestbook-intro em { color: var(--orange); font-style: normal; }
 .guestbook-intro p { max-width: 265px; margin: 0; font: 12px/1.7 var(--mono); }
+.comments-heading { display: flex; justify-content: space-between; align-items: center; margin-top: 70px; border-top: 1px solid var(--ink); padding-top: 15px; font: 11px var(--mono); text-transform: uppercase; }
+.comments-refresh { border: 1px solid var(--ink); padding: 8px 11px; background: transparent; cursor: pointer; font: 10px var(--mono); }
+.comments-refresh:hover { background: var(--ink); color: var(--paper); }
 .comment-form { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; border-top: 1px solid var(--ink); padding-top: 18px; }
 .comment-form label { display: flex; flex-direction: column; gap: 9px; font: 11px var(--mono); text-transform: uppercase; }
 .comment-form input, .comment-form textarea { border: 1px solid var(--ink); border-radius: 0; padding: 14px; background: rgba(241, 238, 231, .35); color: var(--ink); font: 14px var(--sans); outline: none; }
@@ -116,7 +119,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .comment-form button { justify-self: start; border: 1px solid var(--ink); padding: 13px 18px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); text-transform: uppercase; }
 .comment-form button:disabled { cursor: wait; opacity: .55; }
 .form-status { min-height: 18px; margin: 13px 0 0; font: 11px var(--mono); }
-.comments { margin-top: 70px; border-top: 1px solid var(--ink); }
+.comments { border-top: 0; }
 .comments-loading, .comments-empty { font: 12px var(--mono); }
 .comment { display: grid; grid-template-columns: 1fr 3fr auto; gap: 22px; padding: 20px 0; border-bottom: 1px solid rgba(23, 23, 23, .3); }
 .comment-author { font-weight: 600; }
@@ -151,6 +154,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .comment-form { display: block; }
   .comment-form label { margin-bottom: 18px; }
   .comment-field { margin-top: 22px; }
+  .comments-heading { margin-top: 55px; }
   .comment { display: block; }
   .comment-body { margin: 12px 0; }
   .comment-meta { display: flex; flex-direction: row; justify-content: space-between; align-items: center; }

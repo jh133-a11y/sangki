@@ -86,7 +86,7 @@
         <div class="section-head"><h2 class="section-title">leave a trace</h2><span class="section-index">04 / 04</span></div>
         <div class="guestbook-intro">
           <h2>여기에<br><em>흔적</em>을 남겨.</h2>
-          <p>닉네임과 짧은 이야기를 남겨주세요.<br>비밀번호를 사용해 댓글을 수정하거나 삭제할 수 있습니다.</p>
+          <p>닉네임과 짧은 이야기를 남겨주세요.<br>비밀번호를 사용해 댓글을 수정하거나 삭제할 수 있습니다.<br>부적절한 댓글은 관리자에 의해 삭제될 수도 있습니다.</p>
         </div>
         <form class="comment-form" id="comment-form">
           <label>닉네임<input id="nickname" name="nickname" type="text" maxlength="24" placeholder="이름을 입력하세요" required></label>
@@ -95,6 +95,10 @@
           <button type="submit">댓글 남기기 ↗</button>
           <p class="form-status" id="form-status" role="status"></p>
         </form>
+        <div class="comments-heading">
+          <span>comments</span>
+          <button class="comments-refresh" id="comments-refresh" type="button">새로고침 ↻</button>
+        </div>
         <div class="comments" id="comments" aria-live="polite">
           <p class="comments-loading">댓글을 불러오는 중...</p>
         </div>

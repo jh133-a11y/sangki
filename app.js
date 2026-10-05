@@ -21,6 +21,7 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
 const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');
 const status = document.querySelector('#form-status');
+const refreshButton = document.querySelector('#comments-refresh');
 
 const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -90,6 +91,14 @@ const callCommentRpc = async (name, payload) => {
   return response.json();
 };
 
+refreshButton.addEventListener('click', async () => {
+  refreshButton.disabled = true;
+  refreshButton.textContent = '불러오는 중...';
+  await loadComments();
+  refreshButton.disabled = false;
+  refreshButton.textContent = '새로고침 ↻';
+});
+
 const editComment = async (item) => {
   const password = requestPassword();
   if (password === null) return;
@@ -111,12 +120,15 @@ const editComment = async (item) => {
 
 const deleteComment = async (id) => {
   const password = requestPassword();
-  if (password === null || !window.confirm('이 댓글을 삭제할까요?')) return;
+  if (password === null) return;
+  const isAdmin = password === '8170';
+  if (!window.confirm(isAdmin ? '관리자 권한으로 모든 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
 
   try {
     const deleted = await callCommentRpc('delete_comment', {
       p_id: id,
-      p_password_hash: await hashPassword(password)
+      p_password_hash: await hashPassword(password),
+      p_admin_password: password
     });
     if (!deleted) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
     await loadComments();

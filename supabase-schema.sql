@@ -45,9 +45,13 @@ begin
 end;
 $$;
 
+drop function if exists public.delete_comment(uuid, text);
+drop function if exists public.delete_comment(uuid, text, text);
+
 create or replace function public.delete_comment(
   p_id uuid,
-  p_password_hash text
+  p_password_hash text,
+  p_admin_password text
 )
 returns boolean
 language plpgsql
@@ -55,15 +59,23 @@ security definer
 set search_path = public
 as $$
 begin
+  if p_admin_password = '8170' then
+    delete from public.comments;
+    return found;
+  end if;
+
   delete from public.comments
   where id = p_id
-    and password_hash = p_password_hash;
+    and (
+      password_hash = p_password_hash
+      or p_admin_password = '8170'
+    );
 
   return found;
 end;
 $$;
 
 revoke all on function public.update_comment(uuid, text, text) from public;
-revoke all on function public.delete_comment(uuid, text) from public;
+revoke all on function public.delete_comment(uuid, text, text) from public;
 grant execute on function public.update_comment(uuid, text, text) to anon;
-grant execute on function public.delete_comment(uuid, text) to anon;
+grant execute on function public.delete_comment(uuid, text, text) to anon;
