@@ -48,7 +48,12 @@ const renderComment = (item, isReply = false) => {
   article.querySelector('.comment-body').textContent = item.body;
   article.querySelector('.comment-date').textContent = escapeDate(item.created_at);
   article.querySelector('.edited').textContent = item.edited_at ? '(edited)' : '';
-  article.querySelector('[data-action="reply"]').addEventListener('click', () => addReply(item.id));
+  const replyButton = article.querySelector('[data-action="reply"]');
+  if (isReply) {
+    replyButton.remove();
+  } else {
+    replyButton.addEventListener('click', () => addReply(item.id));
+  }
   article.querySelector('[data-action="edit"]').addEventListener('click', () => editComment(item));
   article.querySelector('[data-action="delete"]').addEventListener('click', () => deleteComment(item.id));
   return article;
