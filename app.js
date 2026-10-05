@@ -417,7 +417,7 @@ gameAnswerForm.addEventListener('submit', (event) => {
 
 const loadGameRanking = async () => {
   try {
-    const response = await fetch(`${scoresEndpoint}?select=nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=10`, {
+    const response = await fetch(`${scoresEndpoint}?select=id,nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=10`, {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('랭킹을 불러오지 못했습니다.');
