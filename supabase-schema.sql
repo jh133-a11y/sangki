@@ -160,8 +160,19 @@ create table if not exists public.investment_holdings (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
   symbol text not null references public.investment_assets(symbol),
   quantity integer not null default 0 check (quantity >= 0),
+  invested_amount bigint not null default 0 check (invested_amount >= 0),
   primary key (client_id, symbol)
 );
+
+alter table public.investment_holdings
+  add column if not exists invested_amount bigint not null default 0;
+
+update public.investment_holdings h
+set invested_amount = h.quantity * a.current_price
+from public.investment_assets a
+where h.symbol = a.symbol
+  and h.quantity > 0
+  and h.invested_amount = 0;
 
 alter table public.investment_market enable row level security;
 alter table public.investment_assets enable row level security;
@@ -456,6 +467,7 @@ declare
   user_row public.investment_users%rowtype;
   asset_row public.investment_assets%rowtype;
   current_quantity integer;
+  current_invested bigint;
   total_price bigint;
 begin
   perform public.investment_update_market();
@@ -465,19 +477,28 @@ begin
   select * into asset_row from public.investment_assets where symbol = p_symbol for update;
   if asset_row.symbol is null or not asset_row.listed then raise exception '현재 거래할 수 없는 상품입니다.'; end if;
   total_price := asset_row.current_price * p_quantity;
-  select coalesce(quantity, 0) into current_quantity from public.investment_holdings
+  select coalesce(quantity, 0), coalesce(invested_amount, 0)
+  into current_quantity, current_invested
+  from public.investment_holdings
   where client_id = p_client_id and symbol = p_symbol;
 
   if p_side = 'buy' then
     if user_row.cash < total_price then raise exception '보유 현금이 부족합니다.'; end if;
     update public.investment_users set cash = cash - total_price where client_id = p_client_id;
-    insert into public.investment_holdings (client_id, symbol, quantity)
-    values (p_client_id, p_symbol, p_quantity)
-    on conflict (client_id, symbol) do update set quantity = public.investment_holdings.quantity + excluded.quantity;
+    insert into public.investment_holdings (client_id, symbol, quantity, invested_amount)
+    values (p_client_id, p_symbol, p_quantity, total_price)
+    on conflict (client_id, symbol) do update
+    set quantity = public.investment_holdings.quantity + excluded.quantity,
+        invested_amount = public.investment_holdings.invested_amount + excluded.invested_amount;
   elsif p_side = 'sell' then
     if current_quantity < p_quantity then raise exception '보유 주식보다 많이 팔 수 없습니다.'; end if;
     update public.investment_users set cash = cash + total_price where client_id = p_client_id;
-    update public.investment_holdings set quantity = quantity - p_quantity
+    update public.investment_holdings
+    set quantity = quantity - p_quantity,
+        invested_amount = case
+          when p_quantity = current_quantity then 0
+          else invested_amount - round(invested_amount * p_quantity::numeric / current_quantity)
+        end
     where client_id = p_client_id and symbol = p_symbol;
   else
     raise exception '잘못된 거래 유형입니다.';

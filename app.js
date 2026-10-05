@@ -143,6 +143,8 @@ const renderInvestmentState = (state) => {
     const row = document.createElement('div');
     row.className = 'holding-row';
     const value = asset && asset.listed ? asset.current_price * holding.quantity : 0;
+    const invested = Number(holding.invested_amount || 0);
+    const returnPct = invested > 0 ? ((value - invested) / invested) * 100 : 0;
     const name = document.createElement('span');
     name.className = 'holding-name';
     name.innerHTML = '<strong></strong><small></small>';
@@ -158,9 +160,7 @@ const renderInvestmentState = (state) => {
     total.className = 'holding-value';
     total.innerHTML = '<span></span><small></small>';
     total.querySelector('span').textContent = formatWon(value);
-    total.querySelector('small').textContent = asset && asset.listed
-      ? `현재가 ${formatWon(asset.current_price)}`
-      : '거래 중지';
+    total.querySelector('small').textContent = `투자금액 ${formatWon(invested)}`;
     const trade = document.createElement('div');
     trade.className = 'holding-trade';
     const quantity = document.createElement('input');
@@ -194,7 +194,11 @@ const renderInvestmentState = (state) => {
       quantity.value = String(holding.quantity);
     });
     trade.append(quantity, buy, sell, maxBuy, maxSell);
-    row.append(name, total, change, trade);
+    total.dataset.return = returnPct;
+    const returnValue = document.createElement('span');
+    returnValue.className = `holding-return ${returnPct > 0 ? 'positive' : returnPct < 0 ? 'negative' : 'flat'}`;
+    returnValue.textContent = `수익률 ${returnPct > 0 ? '+' : ''}${returnPct.toFixed(2)}%`;
+    row.append(name, total, returnValue, change, trade);
     return row;
   }) : [Object.assign(document.createElement('p'), {
     className: 'investment-empty',
