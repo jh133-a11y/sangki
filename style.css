@@ -128,6 +128,7 @@ section { padding: 120px 0; }
 .ranking-grant input { min-width: 0; width: 90px; border: 1px solid var(--ink); padding: 6px; background: transparent; color: var(--ink); font: 10px var(--mono); }
 .ranking-grant button { border: 1px solid var(--ink); padding: 6px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
 .ranking-grant button:hover { background: var(--orange); color: var(--ink); }
+.ranking-grant button:last-child { border-color: #55a5ff; }
 .investment-holdings { margin: 12px 0 35px; padding: 28px 30px; background: var(--paper); color: var(--ink); border: 2px solid var(--acid); box-shadow: 8px 8px 0 rgba(217,255,54,.35); }
 .holdings-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding-bottom: 18px; border-bottom: 2px solid var(--ink); font: 10px var(--mono); text-transform: uppercase; }
 .holdings-heading h3 { margin: 5px 0 0; font-size: clamp(26px, 4vw, 48px); line-height: .9; letter-spacing: -.08em; }

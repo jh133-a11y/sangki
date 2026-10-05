@@ -399,6 +399,48 @@ begin
 end;
 $$;
 
+create or replace function public.investment_admin_adjust_cash(
+  p_admin_password text,
+  p_target_client_id uuid,
+  p_amount bigint
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_cash bigint;
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_amount is null or p_amount = 0 then
+    raise exception '조정 금액은 0원이 될 수 없습니다.';
+  end if;
+
+  select cash into current_cash
+  from public.investment_users
+  where client_id = p_target_client_id
+  for update;
+
+  if current_cash is null then
+    raise exception '조정할 투자자를 찾을 수 없습니다.';
+  end if;
+
+  if p_amount < 0 and current_cash + p_amount < 0 then
+    raise exception '현금은 0원 아래로 차감할 수 없습니다.';
+  end if;
+
+  update public.investment_users
+  set cash = cash + p_amount
+  where client_id = p_target_client_id;
+
+  return true;
+end;
+$$;
+
 create or replace function public.investment_trade(
   p_client_id uuid,
   p_symbol text,
@@ -447,6 +489,8 @@ $$;
 revoke all on function public.investment_get_state(uuid, text) from public;
 revoke all on function public.investment_trade(uuid, text, text, integer) from public;
 revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
+revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, integer) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
+grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;

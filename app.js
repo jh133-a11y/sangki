@@ -221,7 +221,11 @@ const renderInvestmentState = (state) => {
       grantButton.type = 'button';
       grantButton.textContent = '현금 지급';
       grantButton.addEventListener('click', () => grantInvestmentCash(entry.client_id, amount));
-      grant.append(amount, grantButton);
+      const deductButton = document.createElement('button');
+      deductButton.type = 'button';
+      deductButton.textContent = '현금 차감';
+      deductButton.addEventListener('click', () => adjustInvestmentCash(entry.client_id, amount, 'subtract'));
+      grant.append(amount, grantButton, deductButton);
       item.append(grant);
     }
     return item;
@@ -248,6 +252,30 @@ const grantInvestmentCash = async (clientId, amountInput) => {
     amountInput.value = '';
     await loadInvestmentState();
     investorStatus.textContent = '현금 지급이 완료되었습니다.';
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    amountInput.disabled = false;
+  }
+};
+
+const adjustInvestmentCash = async (clientId, amountInput, action) => {
+  const amount = Number(amountInput.value);
+  if (!Number.isSafeInteger(amount) || amount < 1) {
+    window.alert('차감액은 1원 이상의 정수로 입력하세요.');
+    return;
+  }
+  if (!window.confirm(`${formatWon(amount)}을 차감할까요?`)) return;
+  try {
+    amountInput.disabled = true;
+    await callInvestmentRpc('investment_admin_adjust_cash', {
+      p_admin_password: '8170',
+      p_target_client_id: clientId,
+      p_amount: action === 'subtract' ? -amount : amount
+    });
+    amountInput.value = '';
+    await loadInvestmentState();
+    investorStatus.textContent = '현금 차감이 완료되었습니다.';
   } catch (error) {
     window.alert(error.message);
   } finally {
