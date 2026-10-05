@@ -158,7 +158,40 @@ const renderInvestmentState = (state) => {
     total.querySelector('small').textContent = asset && asset.listed
       ? `현재가 ${formatWon(asset.current_price)}`
       : '거래 중지';
-    row.append(name, total, change);
+    const trade = document.createElement('div');
+    trade.className = 'holding-trade';
+    const quantity = document.createElement('input');
+    quantity.type = 'number';
+    quantity.min = '1';
+    quantity.step = '1';
+    quantity.value = '1';
+    quantity.disabled = !asset || !asset.listed;
+    const buy = document.createElement('button');
+    buy.type = 'button';
+    buy.textContent = '매수';
+    buy.disabled = !asset || !asset.listed;
+    buy.addEventListener('click', () => tradeInvestment(holding.symbol, 'buy', quantity));
+    const sell = document.createElement('button');
+    sell.type = 'button';
+    sell.textContent = '매도';
+    sell.disabled = !asset || !asset.listed;
+    sell.addEventListener('click', () => tradeInvestment(holding.symbol, 'sell', quantity));
+    const maxBuy = document.createElement('button');
+    maxBuy.type = 'button';
+    maxBuy.textContent = '최대 매수';
+    maxBuy.disabled = !asset || !asset.listed;
+    maxBuy.addEventListener('click', () => {
+      quantity.value = String(Math.floor(state.cash / asset.current_price));
+    });
+    const maxSell = document.createElement('button');
+    maxSell.type = 'button';
+    maxSell.textContent = '최대 매도';
+    maxSell.disabled = !asset || !asset.listed;
+    maxSell.addEventListener('click', () => {
+      quantity.value = String(holding.quantity);
+    });
+    trade.append(quantity, buy, sell, maxBuy, maxSell);
+    row.append(name, total, change, trade);
     return row;
   }) : [Object.assign(document.createElement('p'), {
     className: 'investment-empty',

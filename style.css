@@ -122,7 +122,7 @@ section { padding: 120px 0; }
 .holdings-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding-bottom: 18px; border-bottom: 2px solid var(--ink); font: 10px var(--mono); text-transform: uppercase; }
 .holdings-heading h3 { margin: 5px 0 0; font-size: clamp(26px, 4vw, 48px); line-height: .9; letter-spacing: -.08em; }
 .holdings-kicker { font: 10px var(--mono); }
-.holding-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) 120px; align-items: center; gap: 25px; padding: 20px 0; border-bottom: 1px solid rgba(23,23,23,.25); font: 13px var(--mono); }
+.holding-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) 120px minmax(250px, 1.2fr); align-items: center; gap: 25px; padding: 20px 0; border-bottom: 1px solid rgba(23,23,23,.25); font: 13px var(--mono); }
 .holding-row:last-child { border-bottom: 0; }
 .holding-name { display: flex; flex-direction: column; gap: 6px; }
 .holding-name strong { font: 600 19px var(--sans); letter-spacing: -.04em; }
@@ -134,6 +134,11 @@ section { padding: 120px 0; }
 .holding-change.negative { color: #55a5ff; }
 .holding-change.flat { color: #777; }
 .investment-empty { color: #aaa69d; font: 11px var(--mono); }
+.holding-trade { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
+.holding-trade input { width: 62px; border: 1px solid rgba(23,23,23,.5); padding: 8px 5px; background: transparent; color: var(--ink); font: 11px var(--mono); }
+.holding-trade button { border: 1px solid var(--ink); padding: 8px 9px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
+.holding-trade button:hover { background: var(--ink); color: var(--paper); }
+.holding-trade button:disabled { cursor: wait; opacity: .4; }
 
 .works { display: grid; grid-template-columns: repeat(12, 1fr); gap: 22px; }
 .work { position: relative; min-height: 390px; padding: 21px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
@@ -253,6 +258,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .holding-row { grid-template-columns: 1fr auto; gap: 12px; padding: 18px 0; }
   .holding-value { text-align: right; }
   .holding-change { grid-column: 1 / -1; text-align: left; padding-top: 4px; }
+  .holding-trade { grid-column: 1 / -1; justify-content: flex-start; }
   .investment-product { grid-template-columns: 1fr auto; gap: 10px; }
   .investment-change { grid-column: 2; grid-row: 1; }
   .investment-trade { grid-column: 1 / -1; }
