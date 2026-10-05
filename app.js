@@ -313,18 +313,16 @@ const deleteComment = async (id) => {
   const password = requestPassword();
   if (password === null) return;
   const isAdmin = password === '8170';
-  if (!window.confirm(isAdmin ? '관리자 권한으로 모든 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
+  if (!window.confirm(isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
 
   try {
-    const endpoint = isAdmin ? 'delete_all_comments' : 'delete_comment';
-    const payload = isAdmin
-      ? { p_admin_password: password }
-      : { p_id: id, p_password_hash: await hashPassword(password), p_admin_password: password };
-    const deleted = await callCommentRpc(endpoint, payload);
+    const deleted = await callCommentRpc('delete_comment', {
+      p_id: id,
+      p_password_hash: await hashPassword(password),
+      p_admin_password: isAdmin ? password : ''
+    });
     if (!deleted) {
-      throw new Error(isAdmin
-        ? '관리자 삭제 함수가 false를 반환했습니다. Supabase SQL을 최신 내용으로 다시 실행해주세요.'
-        : '비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+      throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
     }
     await loadComments();
   } catch (error) {
