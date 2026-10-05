@@ -29,6 +29,7 @@ let currentPage = 1;
 let allComments = [];
 let commentsInitialized = false;
 const WATCHED_COMMENTS_KEY = 'sangki-watched-comments';
+const NOTIFICATIONS_ENABLED_KEY = 'sangki-notifications-enabled';
 const notifiedEvents = new Set();
 
 const getWatchedComments = () => {
@@ -46,7 +47,9 @@ const watchComment = (id) => {
 };
 
 const showNotification = (title, body, tag) => {
-  if (Notification.permission !== 'granted' || notifiedEvents.has(tag)) return;
+  if (Notification.permission !== 'granted'
+    || localStorage.getItem(NOTIFICATIONS_ENABLED_KEY) === 'false'
+    || notifiedEvents.has(tag)) return;
   notifiedEvents.add(tag);
   new Notification(title, { body, tag });
 };
@@ -69,10 +72,11 @@ const updateNotificationButton = () => {
     return;
   }
   const permission = Notification.permission;
-  notificationToggle.classList.toggle('is-enabled', permission === 'granted');
-  notificationToggle.classList.toggle('is-blocked', permission === 'denied');
+  const enabled = localStorage.getItem(NOTIFICATIONS_ENABLED_KEY) !== 'false';
+  notificationToggle.classList.toggle('is-enabled', permission === 'granted' && enabled);
+  notificationToggle.classList.toggle('is-blocked', permission === 'denied' || !enabled);
   notificationToggle.textContent = permission === 'granted'
-    ? '알림 켜짐'
+    ? enabled ? '알림 켜짐' : '알림 꺼짐'
     : permission === 'denied'
       ? '알림 차단됨'
       : '알림 허용';
@@ -84,7 +88,15 @@ notificationToggle.addEventListener('click', async () => {
     window.alert('브라우저 사이트 설정에서 알림을 허용한 뒤 다시 시도해주세요.');
     return;
   }
-  await requestNotifications();
+  if (Notification.permission === 'granted') {
+    const enabled = localStorage.getItem(NOTIFICATIONS_ENABLED_KEY) !== 'false';
+    localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, String(!enabled));
+  } else {
+    await requestNotifications();
+    if (Notification.permission === 'granted') {
+      localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
+    }
+  }
   updateNotificationButton();
 });
 
