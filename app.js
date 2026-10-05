@@ -140,9 +140,19 @@ const renderInvestmentState = (state) => {
     const row = document.createElement('div');
     row.className = 'holding-row';
     const value = asset && asset.listed ? asset.current_price * holding.quantity : 0;
-    row.innerHTML = '<span></span><strong></strong>';
-    row.firstElementChild.textContent = `${asset ? asset.name : holding.symbol} · ${holding.quantity}주`;
-    row.lastElementChild.textContent = formatWon(value);
+    const name = document.createElement('span');
+    name.className = 'holding-name';
+    name.textContent = `${asset ? asset.name : holding.symbol} · ${holding.quantity}주`;
+    const change = document.createElement('span');
+    const changePct = asset ? Number(asset.change_pct) : 0;
+    change.className = `holding-change ${changePct > 0 ? 'positive' : changePct < 0 ? 'negative' : 'flat'}`;
+    change.textContent = asset && asset.listed
+      ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%`
+      : '상장폐지';
+    const total = document.createElement('strong');
+    total.className = 'holding-value';
+    total.textContent = formatWon(value);
+    row.append(name, change, total);
     return row;
   }) : [Object.assign(document.createElement('p'), {
     className: 'investment-empty',

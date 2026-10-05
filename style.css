@@ -118,9 +118,14 @@ section { padding: 120px 0; }
 .investment-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23,23,23,.25); font-size: 13px; }
 .investment-ranking li:before { content: counter(ranking, decimal-leading-zero); font: 11px var(--mono); }
 .investment-ranking .ranking-value { font: 11px var(--mono); }
-.investment-holdings { margin-top: 35px; padding: 20px; background: rgba(241,238,231,.08); }
-.holding-row { display: flex; justify-content: space-between; gap: 15px; padding: 13px 0; border-bottom: 1px solid rgba(241,238,231,.18); font: 12px var(--mono); }
+.investment-holdings { margin-top: 18px; padding: 20px; background: rgba(241,238,231,.08); }
+.holding-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 150px; align-items: center; gap: 15px; padding: 13px 0; border-bottom: 1px solid rgba(241,238,231,.18); font: 12px var(--mono); }
 .holding-row:last-child { border-bottom: 0; }
+.holding-change { text-align: right; }
+.holding-change.positive { color: #ff4e4e; }
+.holding-change.negative { color: #55a5ff; }
+.holding-change.flat { color: #aaa69d; }
+.holding-value { text-align: right; }
 .investment-empty { color: #aaa69d; font: 11px var(--mono); }
 
 .works { display: grid; grid-template-columns: repeat(12, 1fr); gap: 22px; }
@@ -235,6 +240,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .portfolio-summary div:nth-child(2) { border-right: 0; }
   .investment-layout { display: block; }
   .investment-ranking { margin-top: 18px; }
+  .holding-row { grid-template-columns: 1fr auto; }
+  .holding-change { grid-column: 2; grid-row: 1; }
+  .holding-value { grid-column: 1 / -1; text-align: left; }
   .investment-product { grid-template-columns: 1fr auto; gap: 10px; }
   .investment-change { grid-column: 2; grid-row: 1; }
   .investment-trade { grid-column: 1 / -1; }
