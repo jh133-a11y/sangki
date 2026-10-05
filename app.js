@@ -26,6 +26,40 @@ const pagination = document.querySelector('#comments-pagination');
 const COMMENTS_PER_PAGE = 10;
 let currentPage = 1;
 let allComments = [];
+let commentsInitialized = false;
+const WATCHED_COMMENTS_KEY = 'sangki-watched-comments';
+const notifiedEvents = new Set();
+
+const getWatchedComments = () => {
+  try {
+    return JSON.parse(localStorage.getItem(WATCHED_COMMENTS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const watchComment = (id) => {
+  const watched = new Set(getWatchedComments());
+  watched.add(id);
+  localStorage.setItem(WATCHED_COMMENTS_KEY, JSON.stringify([...watched]));
+};
+
+const showNotification = (title, body, tag) => {
+  if (Notification.permission !== 'granted' || notifiedEvents.has(tag)) return;
+  notifiedEvents.add(tag);
+  new Notification(title, { body, tag });
+};
+
+const requestNotifications = async () => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    try {
+      await Notification.requestPermission();
+    } catch {
+      // Permission prompts can be blocked by the browser.
+    }
+  }
+};
 
 const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   dateStyle: 'medium',
@@ -127,7 +161,23 @@ const loadComments = async () => {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
-    allComments = await response.json();
+    const nextComments = await response.json();
+    if (commentsInitialized) {
+      const watched = new Set(getWatchedComments());
+      const previousById = new Map(allComments.map((item) => [item.id, item]));
+      nextComments.forEach((item) => {
+        if (item.parent_id && watched.has(item.parent_id) && !previousById.has(item.id)) {
+          showNotification('새 답글이 달렸습니다', `${item.nickname}님이 회원님의 댓글에 답글을 남겼습니다.`, `reply-${item.id}`);
+        }
+      });
+      allComments.forEach((item) => {
+        if (watched.has(item.id) && !nextComments.some((next) => next.id === item.id)) {
+          showNotification('댓글이 삭제되었습니다', '회원님의 댓글이 관리자 또는 작성자에 의해 삭제되었습니다.', `deleted-${item.id}`);
+        }
+      });
+    }
+    allComments = nextComments;
+    commentsInitialized = true;
     renderComments(allComments);
   } catch (error) {
     comments.innerHTML = '<p class="comments-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>';
@@ -145,7 +195,7 @@ const addReply = async (parentId) => {
   try {
     const response = await fetch(commentsEndpoint, {
       method: 'POST',
-      headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify({
         nickname: nickname.trim(),
         body: body.trim(),
@@ -154,6 +204,9 @@ const addReply = async (parentId) => {
       })
     });
     if (!response.ok) throw new Error('답글 저장에 실패했습니다.');
+    const [createdReply] = await response.json();
+    watchComment(parentId);
+    if (createdReply) watchComment(createdReply.id);
     await loadComments();
   } catch (error) {
     window.alert(error.message);
@@ -246,7 +299,7 @@ form.addEventListener('submit', async (event) => {
       headers: {
         ...apiHeaders,
         'Content-Type': 'application/json',
-        Prefer: 'return=minimal'
+        Prefer: 'return=representation'
       },
       body: JSON.stringify({
         nickname: formData.get('nickname').trim(),
@@ -255,7 +308,9 @@ form.addEventListener('submit', async (event) => {
       })
     });
     if (!response.ok) throw new Error('댓글 저장에 실패했습니다.');
+    const [createdComment] = await response.json();
     form.reset();
+    if (createdComment) watchComment(createdComment.id);
     status.textContent = '댓글이 저장되었습니다.';
     currentPage = 1;
     await loadComments();
@@ -266,4 +321,6 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
+requestNotifications();
 loadComments();
+window.setInterval(loadComments, 20000);
