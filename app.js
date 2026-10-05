@@ -2,6 +2,7 @@ const SUPABASE_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
 const commentsEndpoint = `${SUPABASE_URL}/rest/v1/comments`;
 const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
+const scoresEndpoint = `${SUPABASE_URL}/rest/v1/speed_game_scores`;
 const apiHeaders = {
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`
@@ -323,6 +324,123 @@ const hashPassword = async (password) => {
   const hash = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
+
+const gameStart = document.querySelector('#game-start');
+const gameAnswerForm = document.querySelector('#game-answer-form');
+const gameAnswer = document.querySelector('#game-answer');
+const gameQuestion = document.querySelector('#game-question');
+const gameTime = document.querySelector('#game-time');
+const gameQuestionNumber = document.querySelector('#game-question-number');
+const gamePlayer = document.querySelector('#game-player');
+const gameMessage = document.querySelector('#game-message');
+const gameRankingList = document.querySelector('#game-ranking-list');
+let gameState = null;
+let gameTimer = null;
+
+const randomInteger = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const createGameQuestion = () => {
+  const first = gameState.questionNumber >= 10 ? randomInteger(100, 999) : randomInteger(10, 99);
+  const second = randomInteger(10, 99);
+  gameState.first = first;
+  gameState.second = second;
+  gameQuestion.textContent = `${first} × ${second}`;
+};
+
+const endGame = async (message) => {
+  window.clearInterval(gameTimer);
+  gameTimer = null;
+  gameAnswer.disabled = true;
+  document.querySelector('#game-submit').disabled = true;
+  gameStart.disabled = false;
+  gameStart.textContent = '다시 시작';
+  gameMessage.textContent = `${message} 총 ${gameState.solved}문제를 풀었습니다.`;
+
+  try {
+    const response = await fetch(scoresEndpoint, {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ nickname: gameState.nickname, solved_count: gameState.solved })
+    });
+    if (!response.ok) throw new Error('랭킹 저장에 실패했습니다.');
+    await loadGameRanking();
+  } catch (error) {
+    gameMessage.textContent += ` ${error.message}`;
+  }
+};
+
+const tickGame = () => {
+  gameState.remaining -= .1;
+  gameTime.textContent = Math.max(0, gameState.remaining).toFixed(1);
+  if (gameState.remaining <= 0) endGame('시간이 끝났습니다.');
+};
+
+const startGame = () => {
+  const nickname = window.prompt('닉네임을 입력하세요.');
+  if (nickname === null || !nickname.trim()) return;
+  gameState = { nickname: nickname.trim().slice(0, 24), questionNumber: 1, solved: 0, remaining: 10 };
+  gamePlayer.textContent = `player — ${gameState.nickname}`;
+  gameQuestionNumber.textContent = '1';
+  gameTime.textContent = '10.0';
+  gameAnswer.disabled = false;
+  document.querySelector('#game-submit').disabled = false;
+  gameStart.disabled = true;
+  gameMessage.textContent = '정답을 입력하고 Enter를 누르세요.';
+  createGameQuestion();
+  gameAnswer.value = '';
+  gameAnswer.focus();
+  gameTimer = window.setInterval(tickGame, 100);
+};
+
+gameStart.addEventListener('click', startGame);
+gameAnswerForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!gameState || gameAnswer.disabled) return;
+  const answer = Number(gameAnswer.value);
+  if (answer === gameState.first * gameState.second) {
+    gameState.solved += 1;
+    gameState.questionNumber += 1;
+    gameState.remaining = Math.max(3, 10 - (gameState.questionNumber - 1));
+    gameQuestionNumber.textContent = String(gameState.questionNumber);
+    gameTime.textContent = gameState.remaining.toFixed(1);
+    createGameQuestion();
+    gameAnswer.value = '';
+    gameMessage.textContent = gameState.questionNumber >= 10
+      ? '3자리 × 2자리 문제입니다. 계속 빠르게 풀어보세요.'
+      : '정답입니다. 다음 문제!';
+  } else {
+    gameMessage.textContent = '오답입니다. 다시 입력하세요.';
+    gameAnswer.select();
+  }
+});
+
+const loadGameRanking = async () => {
+  try {
+    const response = await fetch(`${scoresEndpoint}?select=nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=10`, {
+      headers: apiHeaders
+    });
+    if (!response.ok) throw new Error('랭킹을 불러오지 못했습니다.');
+    const scores = await response.json();
+    if (!scores.length) {
+      gameRankingList.innerHTML = '<li class="ranking-empty">아직 기록이 없습니다.</li>';
+      return;
+    }
+    gameRankingList.replaceChildren(...scores.map((score) => {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = score.nickname;
+      const value = document.createElement('span');
+      value.className = 'ranking-score';
+      value.textContent = `${score.solved_count}문제`;
+      item.append(name, value);
+      return item;
+    }));
+  } catch {
+    gameRankingList.innerHTML = '<li class="ranking-empty">랭킹을 불러오지 못했습니다.</li>';
+  }
+};
+
+loadGameRanking();
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();

@@ -91,3 +91,23 @@ revoke all on function public.update_comment(uuid, text, text) from public;
 revoke all on function public.delete_comment(uuid, text, text) from public;
 grant execute on function public.update_comment(uuid, text, text) to anon;
 grant execute on function public.delete_comment(uuid, text, text) to anon;
+
+create table if not exists public.speed_game_scores (
+  id uuid primary key default gen_random_uuid(),
+  nickname text not null check (char_length(nickname) between 1 and 24),
+  solved_count integer not null check (solved_count >= 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.speed_game_scores enable row level security;
+
+drop policy if exists "Anyone can read speed game scores" on public.speed_game_scores;
+drop policy if exists "Anyone can add speed game scores" on public.speed_game_scores;
+
+create policy "Anyone can read speed game scores"
+on public.speed_game_scores for select
+to anon using (true);
+
+create policy "Anyone can add speed game scores"
+on public.speed_game_scores for insert
+to anon with check (true);

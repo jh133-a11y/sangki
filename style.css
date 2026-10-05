@@ -106,6 +106,30 @@ section { padding: 120px 0; }
 .contact-link { text-decoration: underline; text-underline-offset: 4px; }
 footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10px var(--mono); }
 
+.speed-game { background: var(--orange); }
+.speed-game .section-head { border-color: rgba(23, 23, 23, .55); }
+.game-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(260px, .7fr); gap: 22px; }
+.game-panel { min-width: 0; }
+.game-status, .ranking-head { display: flex; justify-content: space-between; gap: 18px; font: 11px var(--mono); text-transform: uppercase; }
+.game-card { min-height: 490px; margin-top: 18px; padding: 28px; background: var(--paper); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.game-kicker { margin: 0 0 35px; font: 11px var(--mono); text-transform: uppercase; }
+.game-question { min-height: 150px; font-size: clamp(62px, 10vw, 132px); line-height: 1; letter-spacing: -.1em; font-weight: 700; }
+.game-answer-form { display: flex; width: min(100%, 430px); gap: 10px; }
+.game-answer-form input { min-width: 0; flex: 1; border: 1px solid var(--ink); padding: 15px; background: transparent; color: var(--ink); font: 18px var(--mono); outline: none; }
+.game-answer-form input:focus { box-shadow: 4px 4px 0 var(--orange); }
+.game-answer-form button, .game-start { border: 1px solid var(--ink); padding: 14px 17px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); text-transform: uppercase; }
+.game-answer-form button:disabled { cursor: not-allowed; opacity: .4; }
+.game-start { margin-top: 22px; background: var(--orange); color: var(--ink); }
+.game-start:hover, .game-answer-form button:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.game-message { min-height: 18px; margin: 25px 0 0; font: 11px var(--mono); }
+.game-ranking { padding: 21px; background: var(--acid); align-self: start; }
+.game-ranking ol { min-height: 320px; margin: 22px 0 0; padding: 0; list-style: none; counter-reset: ranking; }
+.game-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23, 23, 23, .25); font-size: 14px; }
+.game-ranking li:before { content: counter(ranking, decimal-leading-zero); font: 11px var(--mono); }
+.ranking-score { font: 11px var(--mono); }
+.ranking-empty, .ranking-note { font: 11px/1.6 var(--mono); }
+.ranking-note { margin: 0; opacity: .7; }
+
 .guestbook { background: #c6b9ff; }
 .guestbook .section-head { border-color: rgba(23, 23, 23, .45); }
 .guestbook-intro { display: flex; justify-content: space-between; gap: 40px; align-items: end; margin-bottom: 55px; }
@@ -161,6 +185,13 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .work:nth-child(4) { margin-left: 0; }
   .contact h2 { margin-bottom: 48px; }
   .contact-row { display: block; line-height: 2; }
+  .game-layout { display: block; }
+  .game-ranking { margin-top: 15px; }
+  .game-card { min-height: 420px; padding: 20px; }
+  .game-status { font-size: 9px; gap: 8px; }
+  .game-answer-form { display: block; }
+  .game-answer-form input, .game-answer-form button { width: 100%; }
+  .game-answer-form button { margin-top: 10px; }
   .guestbook-intro { display: block; }
   .guestbook-intro p { margin-top: 34px; }
   .comment-form { display: block; }
