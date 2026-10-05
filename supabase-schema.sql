@@ -8,6 +8,18 @@ create table if not exists public.comments (
 );
 
 alter table public.comments add column if not exists edited_at timestamptz;
+alter table public.comments add column if not exists parent_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'comments_parent_id_fkey'
+  ) then
+    alter table public.comments
+      add constraint comments_parent_id_fkey
+      foreign key (parent_id) references public.comments(id) on delete cascade;
+  end if;
+end $$;
 
 alter table public.comments enable row level security;
 

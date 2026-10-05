@@ -28,46 +28,86 @@ const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   timeStyle: 'short'
 }).format(new Date(value));
 
+const renderComment = (item, isReply = false) => {
+  const article = document.createElement('article');
+  article.className = isReply ? 'comment comment-reply' : 'comment';
+  article.innerHTML = `
+    <strong class="comment-author"></strong>
+    <p class="comment-body"></p>
+    <div class="comment-meta">
+      <time class="comment-date"></time>
+      <span class="edited"></span>
+      <div class="comment-actions">
+        <button class="comment-action" type="button" data-action="reply">답글</button>
+        <button class="comment-action" type="button" data-action="edit">수정</button>
+        <button class="comment-action" type="button" data-action="delete">삭제</button>
+      </div>
+    </div>
+  `;
+  article.querySelector('.comment-author').textContent = item.nickname;
+  article.querySelector('.comment-body').textContent = item.body;
+  article.querySelector('.comment-date').textContent = escapeDate(item.created_at);
+  article.querySelector('.edited').textContent = item.edited_at ? '(edited)' : '';
+  article.querySelector('[data-action="reply"]').addEventListener('click', () => addReply(item.id));
+  article.querySelector('[data-action="edit"]').addEventListener('click', () => editComment(item));
+  article.querySelector('[data-action="delete"]').addEventListener('click', () => deleteComment(item.id));
+  return article;
+};
+
 const renderComments = (items) => {
   if (!items.length) {
     comments.innerHTML = '<p class="comments-empty">아직 남겨진 흔적이 없습니다. 첫 번째 댓글을 남겨보세요.</p>';
     return;
   }
 
-  comments.replaceChildren(...items.map((item) => {
-    const article = document.createElement('article');
-    article.className = 'comment';
-    article.innerHTML = `
-      <strong class="comment-author"></strong>
-      <p class="comment-body"></p>
-      <div class="comment-meta">
-        <time class="comment-date"></time>
-        <span class="edited"></span>
-        <div class="comment-actions">
-          <button class="comment-action" type="button" data-action="edit">수정</button>
-          <button class="comment-action" type="button" data-action="delete">삭제</button>
-        </div>
-      </div>
-    `;
-    article.querySelector('.comment-author').textContent = item.nickname;
-    article.querySelector('.comment-body').textContent = item.body;
-    article.querySelector('.comment-date').textContent = escapeDate(item.created_at);
-    article.querySelector('.edited').textContent = item.edited_at ? '(edited)' : '';
-    article.querySelector('[data-action="edit"]').addEventListener('click', () => editComment(item));
-    article.querySelector('[data-action="delete"]').addEventListener('click', () => deleteComment(item.id));
-    return article;
-  }));
+  const replies = new Map();
+  items.filter((item) => item.parent_id).forEach((item) => {
+    if (!replies.has(item.parent_id)) replies.set(item.parent_id, []);
+    replies.get(item.parent_id).push(item);
+  });
+  const nodes = [];
+  items.filter((item) => !item.parent_id).forEach((item) => {
+    nodes.push(renderComment(item));
+    (replies.get(item.id) || []).forEach((reply) => nodes.push(renderComment(reply, true)));
+  });
+  comments.replaceChildren(...nodes);
 };
 
 const loadComments = async () => {
   try {
-    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at&order=created_at.desc`, {
+    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at,parent_id&order=created_at.asc`, {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
     renderComments(await response.json());
   } catch (error) {
     comments.innerHTML = '<p class="comments-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>';
+  }
+};
+
+const addReply = async (parentId) => {
+  const nickname = window.prompt('답글 작성자의 닉네임을 입력하세요.');
+  if (nickname === null || !nickname.trim()) return;
+  const password = requestPassword();
+  if (password === null) return;
+  const body = window.prompt('답글을 입력하세요.');
+  if (body === null || !body.trim()) return;
+
+  try {
+    const response = await fetch(commentsEndpoint, {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        nickname: nickname.trim(),
+        body: body.trim(),
+        password_hash: await hashPassword(password),
+        parent_id: parentId
+      })
+    });
+    if (!response.ok) throw new Error('답글 저장에 실패했습니다.');
+    await loadComments();
+  } catch (error) {
+    window.alert(error.message);
   }
 };
 
