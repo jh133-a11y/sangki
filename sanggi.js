@@ -36,6 +36,8 @@
   let advancedPotions = Math.max(0, Number(localStorage.getItem(advancedPotionStorageKey)) || 0);
   let potionMultiplier = 1n;
   let potionTimer = null;
+  let potionEffectEndsAt = 0;
+  let potionEffectInterval = null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   let audioContext = null;
   let autoTimer = null;
@@ -135,6 +137,14 @@
   const shopCompleteModal = document.querySelector('#sanggi-shop-complete-modal');
   const shopCompleteBackdrop = document.querySelector('#sanggi-shop-complete-backdrop');
   const shopCompleteMessage = document.querySelector('#sanggi-shop-complete-message');
+  const shopConfirmModal = document.querySelector('#sanggi-shop-confirm-modal');
+  const shopConfirmBackdrop = document.querySelector('#sanggi-shop-confirm-backdrop');
+  const shopConfirmMessage = document.querySelector('#sanggi-shop-confirm-message');
+  const shopConfirmQuantity = document.querySelector('#sanggi-shop-quantity');
+  const shopConfirmMax = document.querySelector('#sanggi-shop-max');
+  const shopConfirmOk = document.querySelector('#sanggi-shop-confirm-ok');
+  const shopConfirmCancel = document.querySelector('#sanggi-shop-confirm-cancel');
+  let shopConfirmResolve = null;
   const shopSession = () => getSession();
   const loadShopCash = async () => {
     const session = shopSession();
@@ -152,6 +162,35 @@
     shopModal.hidden = true;
     shopBackdrop.hidden = true;
   };
+  const closeShopConfirm = (result) => {
+    shopConfirmModal.hidden = true;
+    shopConfirmBackdrop.hidden = true;
+    if (shopConfirmResolve) shopConfirmResolve(result);
+    shopConfirmResolve = null;
+  };
+  const choosePotionQuantity = (potionName, price, maximum) => new Promise((resolve) => {
+    shopConfirmResolve = resolve;
+    shopConfirmMessage.textContent = `${potionName} ${price} / 1개\n구매하시겠습니까? 구매할 수량을 선택하세요.`;
+    shopConfirmQuantity.value = '1';
+    shopConfirmQuantity.max = String(maximum);
+    shopConfirmMax.disabled = maximum < 1;
+    shopConfirmMax.onclick = () => {
+      shopConfirmQuantity.value = String(maximum);
+    };
+    shopConfirmOk.onclick = () => {
+      const quantity = Number(shopConfirmQuantity.value);
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > maximum) {
+        shopConfirmQuantity.focus();
+        return;
+      }
+      closeShopConfirm(quantity);
+    };
+    shopConfirmModal.hidden = false;
+    shopConfirmBackdrop.hidden = false;
+    shopConfirmQuantity.focus();
+  });
+  shopConfirmCancel.addEventListener('click', () => closeShopConfirm(0));
+  shopConfirmBackdrop.addEventListener('click', () => closeShopConfirm(0));
   const buyPotion = async (type) => {
     const session = shopSession();
     if (!session?.account_id) {
@@ -163,22 +202,29 @@
     );
     const potionName = type === 'normal_potion' ? '일반 물약' : '고급 물약';
     const price = type === 'normal_potion' ? '10,000,000원' : '100,000,000원';
-    if (!window.confirm(`${potionName} ${price}을(를) 구매하시겠습니까?`)) return;
+    const owned = type === 'normal_potion' ? normalPotions : advancedPotions;
+    const maximum = Math.max(0, 100 - owned);
+    if (maximum < 1) {
+      shopStatus.textContent = `${potionName}은(는) 최대 100개까지 보유할 수 있습니다.`;
+      return;
+    }
+    const quantity = await choosePotionQuantity(potionName, price, maximum);
+    if (!quantity) return;
     button.disabled = true;
-    shopStatus.textContent = '구매 처리 중...';
+    shopStatus.textContent = `${potionName} ${quantity}개 구매 확인 중...`;
     try {
       await remoteRpc('shop_purchase', {
         p_client_id: session.account_id,
         p_item_type: type,
-        p_quantity: 1
+        p_quantity: quantity
       });
-      if (type === 'normal_potion') normalPotions = Math.min(100, normalPotions + 1);
-      else advancedPotions = Math.min(100, advancedPotions + 1);
+      if (type === 'normal_potion') normalPotions = Math.min(100, normalPotions + quantity);
+      else advancedPotions = Math.min(100, advancedPotions + quantity);
       saveState();
       renderPotions();
       await loadShopCash();
       shopStatus.textContent = '물약을 구매했습니다.';
-      shopCompleteMessage.textContent = `${potionName} 1개를 구매했습니다. 물약 수량이 늘어났습니다.`;
+      shopCompleteMessage.textContent = `${potionName} ${quantity}개 구매가 완료되었습니다.\n현재 보유 수량: ${type === 'normal_potion' ? normalPotions : advancedPotions}개`;
       shopCompleteModal.hidden = false;
       shopCompleteBackdrop.hidden = false;
     } catch (error) {
@@ -288,11 +334,28 @@
   const advancedPotionButton = document.querySelector('#sanggi-advanced-potion');
   const normalPotionCount = document.querySelector('#sanggi-normal-potion-count');
   const advancedPotionCount = document.querySelector('#sanggi-advanced-potion-count');
+  const potionEffect = document.querySelector('#sanggi-potion-effect');
+  const renderPotionEffect = () => {
+    if (potionMultiplier === 1n || potionEffectEndsAt <= Date.now()) {
+      potionMultiplier = 1n;
+      potionEffectEndsAt = 0;
+      potionEffect.hidden = true;
+      if (potionEffectInterval) {
+        window.clearInterval(potionEffectInterval);
+        potionEffectInterval = null;
+      }
+      return;
+    }
+    const remainingSeconds = Math.max(0, Math.ceil((potionEffectEndsAt - Date.now()) / 1000));
+    potionEffect.textContent = `효과 ${remainingSeconds}초 남음 · x${potionMultiplier}`;
+    potionEffect.hidden = false;
+  };
   const renderPotions = () => {
     normalPotionCount.textContent = `${normalPotions}개`;
     advancedPotionCount.textContent = `${advancedPotions}개`;
     normalPotionButton.disabled = normalPotions < 1 || accountSyncing;
     advancedPotionButton.disabled = advancedPotions < 1 || accountSyncing;
+    renderPotionEffect();
   };
   const usePotion = async (type) => {
     if (accountSyncing) return;
@@ -314,10 +377,15 @@
         normalPotions -= 1;
       }
       potionMultiplier = isAdvanced ? 10n : 2n;
+      potionEffectEndsAt = Date.now() + 10000;
       window.clearTimeout(potionTimer);
       potionTimer = window.setTimeout(() => {
         potionMultiplier = 1n;
+        potionEffectEndsAt = 0;
+        renderPotionEffect();
       }, 10000);
+      window.clearInterval(potionEffectInterval);
+      potionEffectInterval = window.setInterval(renderPotionEffect, 250);
       saveState();
       renderPotions();
     } catch (error) {

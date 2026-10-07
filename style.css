@@ -505,6 +505,15 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-potion-advanced { background: #d9ff36; }
 .sanggi-potion-button:hover { filter: brightness(.94); }
 .sanggi-potion-button:disabled { cursor: not-allowed; opacity: .45; }
+.sanggi-potion-effect {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #2a2730;
+  background: #fff7dc;
+  color: #2a2730;
+  text-align: center;
+  font: 700 10px var(--mono);
+}
 .sanggi-shop-backdrop {
   position: absolute;
   inset: 0;
@@ -572,6 +581,48 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 }
 .sanggi-shop-complete-modal h2 { margin: 0 0 12px; }
 .sanggi-shop-complete-modal p { margin: 0 0 20px; font: 11px/1.5 var(--mono); }
+.sanggi-shop-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: rgba(42, 39, 48, .5);
+}
+.sanggi-shop-confirm-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 46;
+  width: min(380px, calc(100% - 36px));
+  padding: 26px;
+  transform: translate(-50%, -50%);
+  background: #fff7dc;
+  color: #2a2730;
+  box-shadow: 7px 7px 0 #2a2730;
+}
+.sanggi-shop-confirm-modal h2 { margin: 0 0 12px; }
+.sanggi-shop-confirm-modal p { margin: 0 0 18px; white-space: pre-line; font: 11px/1.5 var(--mono); }
+.sanggi-shop-quantity-label { display: block; margin-bottom: 6px; font: 10px var(--mono); }
+.sanggi-shop-quantity-row { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
+.sanggi-shop-quantity-row input {
+  min-width: 0;
+  border: 1px solid #2a2730;
+  padding: 9px;
+  background: #fff;
+  color: #2a2730;
+  font: 13px var(--mono);
+}
+.sanggi-shop-max,
+.sanggi-shop-cancel {
+  border: 1px solid #2a2730;
+  padding: 9px 12px;
+  background: transparent;
+  color: #2a2730;
+  cursor: pointer;
+  font: 10px var(--mono);
+}
+.sanggi-shop-max:disabled { cursor: not-allowed; opacity: .45; }
+.sanggi-shop-confirm-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 20px; }
+.sanggi-shop-confirm-actions .sanggi-shop-buy { margin: 0; }
 .sanggi-coin-popup {
   position: absolute;
   z-index: 20;
