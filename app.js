@@ -501,6 +501,19 @@ const shopItemDescriptions = {
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
 };
 
+const resetBagSelection = () => {
+  selectedShopItem = null;
+  bagUsePanel.hidden = true;
+  bagNicknameLabel.hidden = true;
+  document.querySelector('#bag-letter-label').hidden = true;
+  document.querySelector('.bag-target-label').hidden = true;
+  bagNewNickname.value = '';
+  document.querySelector('#bag-letter-message').value = '';
+  document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => {
+    selected.classList.remove('is-selected');
+  });
+};
+
 const selectShopItem = (item) => {
   selectedShopItem = item;
   bagUsePanel.hidden = false;
@@ -773,6 +786,7 @@ bagUseButton.addEventListener('click', async () => {
 bagButton.addEventListener('click', async () => {
   bagModal.hidden = false;
   bagBackdrop.hidden = false;
+  resetBagSelection();
   bagStatus.textContent = '';
   try {
     await loadBag();
@@ -783,6 +797,7 @@ bagButton.addEventListener('click', async () => {
   }
 });
 const closeBag = () => {
+  resetBagSelection();
   bagModal.hidden = true;
   bagBackdrop.hidden = true;
 };
