@@ -1008,6 +1008,59 @@ begin
 end;
 $$;
 
+create or replace function public.investment_force_split_surge_stocks()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  asset_row record;
+  v_result jsonb := '[]'::jsonb;
+  v_new_price bigint;
+begin
+  for asset_row in
+    select symbol, name, current_price
+    from public.investment_assets
+    where listed = true
+      and (
+        name like '%급등%'
+        or symbol in (
+          'SURGE_STOCK',
+          'CURRENT_SURGE_STOCK',
+          'DONGHWA_SURGE_STOCK',
+          'JEONGMIN_SURGE_STOCK',
+          'JUSEONG_SURGE_STOCK'
+        )
+      )
+      and current_price >= 2000000
+    for update
+  loop
+    v_new_price := greatest(1, floor(asset_row.current_price::numeric / 1000)::bigint);
+
+    update public.investment_holdings
+    set quantity = quantity * 1000
+    where symbol = asset_row.symbol;
+
+    update public.investment_assets
+    set current_price = v_new_price,
+        split_notice = true,
+        change_pct = 0
+    where symbol = asset_row.symbol;
+
+    v_result := v_result || jsonb_build_array(jsonb_build_object(
+      'symbol', asset_row.symbol,
+      'name', asset_row.name,
+      'old_price', asset_row.current_price,
+      'new_price', v_new_price,
+      'split_factor', 1000
+    ));
+  end loop;
+
+  return v_result;
+end;
+$$;
+
 create or replace function public.track_investment_listing_status()
 returns trigger
 language plpgsql
@@ -1116,6 +1169,12 @@ revoke all on function public.investment_apply_stock_splits() from public;
 revoke all on function public.investment_relist_delisted_assets() from public;
 revoke all on function public.investment_market_cron_tick() from public;
 grant execute on function public.investment_apply_stock_splits() to anon, authenticated;
+
+revoke all on function public.investment_force_split_surge_stocks()
+from public;
+
+grant execute on function public.investment_force_split_surge_stocks()
+to anon, authenticated;
 
 create or replace function public.investment_link_account(
   p_old_client_id uuid
