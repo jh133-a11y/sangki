@@ -1840,6 +1840,12 @@ begin
 
   v_success := random() < v_chance;
   if not v_success then
+    insert into public.investment_shop_messages(client_id, message)
+    values (
+      p_client_id,
+      v_name || ' 발사 실패. ' || v_target_name
+        || '에게 명중하지 않았습니다.'
+    );
     return jsonb_build_object(
       'success', false,
       'message', v_name || '을(를) 발사했지만 ' || v_target_name || '에게 명중하지 않았습니다.'
@@ -1905,6 +1911,14 @@ begin
     v_name || ' 피격! 자산이 '
       || to_char(v_actual_loss, 'FM999,999,999,999')
       || '원 감소했습니다.'
+  );
+
+  insert into public.investment_shop_messages(client_id, message)
+  values (
+    p_client_id,
+    v_name || ' 발사 성공! ' || v_target_name || '의 자산 '
+      || to_char(v_actual_loss, 'FM999,999,999,999')
+      || '원을 감소시켰습니다.'
   );
 
   return jsonb_build_object(

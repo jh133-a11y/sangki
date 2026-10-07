@@ -516,6 +516,11 @@ const useShopItem = async (itemType) => {
     bagStatus.textContent = '공격 대상을 선택하세요.';
     return;
   }
+  const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
+  if (!window.confirm(`${targetName}에게 ${selectedShopItem?.name || '미사일'}을(를) 정말 발사하시겠습니까?`)) {
+    bagStatus.textContent = '미사일 발사를 취소했습니다.';
+    return;
+  }
   bagStatus.textContent = '아이템 사용 중...';
   try {
     const result = await callInvestmentRpc('shop_use_missile', {
@@ -524,11 +529,13 @@ const useShopItem = async (itemType) => {
       p_target_client_id: bagTarget.value
     });
     bagStatus.textContent = result.message;
+    window.alert(result.message);
     await loadMessageCount();
     await loadBag();
     if (investmentState) await loadInvestmentState();
   } catch (error) {
     bagStatus.textContent = error.message;
+    window.alert(`미사일 발사 실패: ${error.message}`);
   }
 };
 

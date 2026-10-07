@@ -46,6 +46,12 @@ const refreshShop = async () => {
 };
 document.querySelectorAll('.shop-buy').forEach((button) => {
   button.addEventListener('click', async () => {
+    const itemName = button.closest('.shop-card')?.querySelector('h2')?.textContent || '상품';
+    const itemPrice = button.closest('.shop-card')?.querySelector('.shop-price')?.textContent || '';
+    if (!window.confirm(`${itemName} ${itemPrice} 상품을 정말 구매하시겠습니까?`)) {
+      status.textContent = '구매를 취소했습니다.';
+      return;
+    }
     button.disabled = true;
     status.textContent = '구매 처리 중...';
     try {
@@ -54,9 +60,11 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
         p_item_type: button.dataset.item
       });
       status.textContent = `${result.message} 홈 화면의 가방에서 확인하세요.`;
+      window.alert(`${result.message}\n홈 화면의 가방에서 확인하세요.`);
       await refreshShop();
     } catch (error) {
       status.textContent = error.message;
+      window.alert(`구매 실패: ${error.message}`);
     } finally {
       button.disabled = false;
     }
