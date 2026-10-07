@@ -744,10 +744,12 @@ const selectShopItem = (item) => {
   ].includes(item.item_type);
   const targetLabel = document.querySelector('.bag-target-label');
   const isMegaphone = item.item_type === 'megaphone';
-  targetLabel.hidden = isShield || isMegaphone || (!isCashBox && !isNicknameTicket && !isLetter
-    && !['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type));
-  bagTarget.disabled = isShield;
-  if (isShield) bagTarget.value = '';
+  const hasTarget = isCashBox || isNicknameTicket || isLetter
+    || ['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type);
+  targetLabel.hidden = isShield || isMegaphone || !hasTarget;
+  bagTarget.hidden = isShield || isMegaphone || !hasTarget;
+  bagTarget.value = isMegaphone || isShield ? '' : bagTarget.value;
+  bagTarget.disabled = isShield || isMegaphone;
   bagDiscardButton.hidden = isOutfit;
   bagDiscardQuantity.closest('.bag-discard-label').hidden = isOutfit;
   targetLabel.firstChild.textContent = isCashBox
