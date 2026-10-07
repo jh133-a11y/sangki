@@ -1883,12 +1883,14 @@ const renderComment = (item, isReply = false) => {
   const article = document.createElement('article');
   article.className = isReply ? 'comment comment-reply' : 'comment';
   article.innerHTML = `
-    <strong class="comment-author"><span class="comment-author-name"></span></strong>
-    <p class="comment-body"></p>
-    <div class="comment-votes">
-      <button class="comment-vote" type="button" data-vote="1">추천 <span></span></button>
-      <button class="comment-vote" type="button" data-vote="-1">비추천 <span></span></button>
+    <div class="comment-side">
+      <strong class="comment-author"><span class="comment-author-name"></span></strong>
+      <div class="comment-votes">
+        <button class="comment-vote" type="button" data-vote="1">추천 <span></span></button>
+        <button class="comment-vote" type="button" data-vote="-1">비추천 <span></span></button>
+      </div>
     </div>
+    <p class="comment-body"></p>
     <div class="comment-meta">
       <time class="comment-date"></time>
       <span class="edited"></span>
