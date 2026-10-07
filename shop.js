@@ -83,9 +83,8 @@ window.alert = siteNotice;
 
 const shopSession = () => {
   try {
-    const raw = localStorage.getItem(shopKeepKey) === 'true'
-      ? localStorage.getItem(shopSessionKey)
-      : sessionStorage.getItem(shopTabSessionKey);
+    const raw = localStorage.getItem(shopSessionKey)
+      || sessionStorage.getItem(shopTabSessionKey);
     return JSON.parse(raw || 'null');
   } catch {
     return null;

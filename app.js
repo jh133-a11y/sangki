@@ -219,13 +219,11 @@ const authenticateAccount = async (username, password) => {
   }
   if (keepLogin.checked) {
     localStorage.setItem(keepLoginKey, 'true');
-    localStorage.setItem(accountStorageKey, JSON.stringify(result));
-    sessionStorage.removeItem(accountSessionStorageKey);
   } else {
     localStorage.removeItem(keepLoginKey);
-    localStorage.removeItem(accountStorageKey);
-    sessionStorage.setItem(accountSessionStorageKey, JSON.stringify(result));
   }
+  localStorage.setItem(accountStorageKey, JSON.stringify(result));
+  sessionStorage.setItem(accountSessionStorageKey, JSON.stringify(result));
   const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
     method: 'POST',
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
@@ -341,9 +339,8 @@ accountForm.addEventListener('submit', async (event) => {
   }
 });
 try {
-  const storedSession = localStorage.getItem(keepLoginKey) === 'true'
-    ? localStorage.getItem(accountStorageKey)
-    : sessionStorage.getItem(accountSessionStorageKey);
+  const storedSession = localStorage.getItem(accountStorageKey)
+    || sessionStorage.getItem(accountSessionStorageKey);
   accountSession = JSON.parse(storedSession || 'null');
 } catch {
   accountSession = null;

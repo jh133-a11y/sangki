@@ -110,9 +110,8 @@
 
   const getSession = () => {
     try {
-      const raw = localStorage.getItem(keepLoginKey) === 'true'
-        ? localStorage.getItem(sessionKey)
-        : sessionStorage.getItem(tabSessionKey);
+      const raw = localStorage.getItem(sessionKey)
+        || sessionStorage.getItem(tabSessionKey);
       return JSON.parse(raw || 'null');
     } catch {
       return null;
