@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
   <div class="noise"></div>
@@ -19,6 +19,7 @@
         <a href="#guestbook">COMMENT</a>
         <button class="notification-toggle" id="notification-toggle" type="button">알림 허용</button>
       </nav>
+      <button class="message-button" id="message-button" type="button" aria-label="메시지함 열기">메시지함 <span id="message-count">0</span></button>
       <button class="bag-button" id="bag-button" type="button" aria-label="가방 열기">가방 <span id="bag-count">0</span></button>
       <button class="account-button" id="account-button" type="button">로그인</button>
     </div>
@@ -39,6 +40,13 @@
     </form>
     <button class="account-switch" id="account-switch" type="button">회원가입으로 전환</button>
     <p class="account-status" id="account-status" role="status"></p>
+  </section>
+  <div class="message-backdrop" id="message-backdrop" hidden></div>
+  <section class="message-modal" id="message-modal" role="dialog" aria-modal="true" aria-labelledby="message-title" hidden>
+    <button class="account-close" id="message-close" type="button" aria-label="메시지함 닫기">×</button>
+    <h2 id="message-title">메시지함</h2>
+    <p class="message-subtitle">INCOMING / SYSTEM LOG</p>
+    <div id="message-list" class="message-list"><p>메시지를 불러오는 중...</p></div>
   </section>
   <button class="menu-toggle" id="menu-toggle" type="button" aria-label="사이드바 열기" aria-expanded="false" aria-controls="side-menu">
     <span></span><span></span><span></span>
@@ -264,6 +272,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=61"></script>
+  <script src="app.js?v=63"></script>
 </body>
 </html>

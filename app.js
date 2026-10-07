@@ -440,6 +440,12 @@ const bagUseName = document.querySelector('#bag-use-name');
 const bagUseDescription = document.querySelector('#bag-use-description');
 const bagUseButton = document.querySelector('#bag-use-button');
 let selectedShopItem = null;
+const messageButton = document.querySelector('#message-button');
+const messageCount = document.querySelector('#message-count');
+const messageModal = document.querySelector('#message-modal');
+const messageBackdrop = document.querySelector('#message-backdrop');
+const messageClose = document.querySelector('#message-close');
+const messageList = document.querySelector('#message-list');
 
 const getShopClientId = () => {
   if (accountSession?.account_id) return accountSession.account_id;
@@ -518,12 +524,62 @@ const useShopItem = async (itemType) => {
       p_target_client_id: bagTarget.value
     });
     bagStatus.textContent = result.message;
+    await loadMessageCount();
     await loadBag();
     if (investmentState) await loadInvestmentState();
   } catch (error) {
     bagStatus.textContent = error.message;
   }
 };
+
+const loadMessageCount = async () => {
+  try {
+    const result = await callInvestmentRpc('shop_get_unread_count', {
+      p_client_id: getShopClientId()
+    });
+    messageCount.textContent = result.count || 0;
+  } catch {
+    messageCount.textContent = '0';
+  }
+};
+
+const loadMessages = async () => {
+  const result = await callInvestmentRpc('shop_get_messages', {
+    p_client_id: getShopClientId()
+  });
+  messageList.replaceChildren(...(result.messages.length
+    ? result.messages.map((message) => {
+      const card = document.createElement('article');
+      card.className = 'message-card';
+      card.textContent = message.message;
+      const time = document.createElement('time');
+      time.textContent = new Date(message.created_at).toLocaleString('ko-KR');
+      card.append(time);
+      return card;
+    })
+    : [Object.assign(document.createElement('p'), {
+      textContent: '새 메시지가 없습니다.'
+    })]));
+  messageCount.textContent = '0';
+};
+
+messageButton.addEventListener('click', async () => {
+  messageModal.hidden = false;
+  messageBackdrop.hidden = false;
+  try {
+    await loadMessages();
+  } catch (error) {
+    messageList.replaceChildren(Object.assign(document.createElement('p'), {
+      textContent: error.message
+    }));
+  }
+});
+const closeMessages = () => {
+  messageModal.hidden = true;
+  messageBackdrop.hidden = true;
+};
+messageClose.addEventListener('click', closeMessages);
+messageBackdrop.addEventListener('click', closeMessages);
 
 bagUseButton.addEventListener('click', async () => {
   if (!selectedShopItem) {
@@ -555,6 +611,7 @@ bagClose.addEventListener('click', closeBag);
 bagBackdrop.addEventListener('click', closeBag);
 
 updateOnlinePresence();
+loadMessageCount();
 window.setInterval(updateOnlinePresence, 60000);
 window.setInterval(() => {
   if (sideMenu.classList.contains('is-open')) {
