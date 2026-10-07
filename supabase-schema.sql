@@ -1291,3 +1291,175 @@ alter function public.site_account_login(text, text)
   set search_path = public, extensions;
 alter function public.investment_link_account(uuid, uuid)
   set search_path = public, extensions;
+
+alter table public.site_accounts
+  add column if not exists signup_bonus_granted boolean
+  not null default false;
+
+create or replace function public.investment_get_state(
+  p_client_id uuid,
+  p_nickname text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  account_bonus_pending boolean := false;
+begin
+  perform public.investment_update_market();
+
+  if trim(p_nickname) is null
+     or char_length(trim(p_nickname)) = 0
+     or char_length(trim(p_nickname)) > 24 then
+    raise exception '닉네임은 1~24자로 입력하세요.';
+  end if;
+
+  if exists (
+    select 1
+    from public.investment_users
+    where nickname = trim(p_nickname)
+      and client_id <> p_client_id
+  ) then
+    raise exception '이미 사용 중인 닉네임입니다. 다른 닉네임을 입력하세요.';
+  end if;
+
+  select not signup_bonus_granted
+  into account_bonus_pending
+  from public.site_accounts
+  where id = p_client_id
+  for update;
+
+  insert into public.investment_users (client_id, nickname)
+  values (p_client_id, trim(p_nickname))
+  on conflict (client_id) do nothing;
+
+  if account_bonus_pending then
+    update public.investment_users
+    set cash = cash + 500000
+    where client_id = p_client_id;
+
+    update public.site_accounts
+    set signup_bonus_granted = true
+    where id = p_client_id;
+  end if;
+
+  return public.investment_build_state(p_client_id);
+end;
+$$;
+
+create or replace function public.investment_link_account(
+  p_session_token uuid,
+  p_old_client_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_account_id uuid;
+  v_account_username text;
+  v_target_nickname text;
+  v_suffix integer := 0;
+  v_bonus_pending boolean := false;
+  old_user public.investment_users%rowtype;
+  target_user public.investment_users%rowtype;
+begin
+  select s.account_id, a.username, not a.signup_bonus_granted
+  into v_account_id, v_account_username, v_bonus_pending
+  from public.site_account_sessions s
+  join public.site_accounts a on a.id = s.account_id
+  where s.token = p_session_token
+    and s.expires_at > now()
+  for update of a;
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  if p_old_client_id is null
+     or p_old_client_id = v_account_id then
+    return true;
+  end if;
+
+  select *
+  into old_user
+  from public.investment_users
+  where client_id = p_old_client_id
+  for update;
+
+  if old_user.client_id is null then
+    return true;
+  end if;
+
+  select *
+  into target_user
+  from public.investment_users
+  where client_id = v_account_id
+  for update;
+
+  if target_user.client_id is null then
+    v_target_nickname := old_user.nickname;
+    while exists (
+      select 1
+      from public.investment_users
+      where nickname = v_target_nickname
+    ) loop
+      v_suffix := v_suffix + 1;
+      v_target_nickname :=
+        left(v_account_username, 17) || '_' ||
+        substr(replace(v_account_id::text, '-', ''), 1, 4) ||
+        right('0' || v_suffix::text, 2);
+    end loop;
+
+    insert into public.investment_users (client_id, nickname, cash)
+    values (v_account_id, v_target_nickname, old_user.cash);
+  else
+    update public.investment_users
+    set cash = target_user.cash + old_user.cash
+    where client_id = v_account_id;
+  end if;
+
+  insert into public.investment_holdings (
+    client_id, symbol, quantity, invested_amount
+  )
+  select v_account_id, symbol, quantity, invested_amount
+  from public.investment_holdings
+  where client_id = p_old_client_id
+  on conflict (client_id, symbol)
+  do update set
+    quantity = public.investment_holdings.quantity + excluded.quantity,
+    invested_amount =
+      public.investment_holdings.invested_amount + excluded.invested_amount;
+
+  if v_bonus_pending then
+    update public.investment_users
+    set cash = cash + 500000
+    where client_id = v_account_id;
+
+    update public.site_accounts
+    set signup_bonus_granted = true
+    where id = v_account_id;
+  end if;
+
+  delete from public.investment_holdings
+  where client_id = p_old_client_id;
+
+  delete from public.investment_users
+  where client_id = p_old_client_id;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.investment_get_state(uuid, text) from public;
+grant execute on function public.investment_get_state(uuid, text)
+to anon, authenticated;
+
+revoke all on function public.investment_link_account(uuid, uuid)
+from public;
+
+grant execute on function public.investment_link_account(uuid, uuid)
+to anon, authenticated;
