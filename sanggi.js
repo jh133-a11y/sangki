@@ -568,15 +568,6 @@
   const playerCostElement = document.querySelector('#sanggi-player-cost');
   const playerUpgrade = document.querySelector('#sanggi-player-upgrade');
   const playerStatus = document.querySelector('#sanggi-player-status');
-  const playerUpgradeTab = document.querySelector('#sanggi-player-upgrade-tab');
-  const playerRankingTab = document.querySelector('#sanggi-player-ranking-tab');
-  const playerUpgradePanel = document.querySelector('#sanggi-player-upgrade-panel');
-  const playerRankingPanel = document.querySelector('#sanggi-player-ranking-panel');
-  const playerRankingList = document.querySelector('#sanggi-player-ranking-list');
-  const playerRankingPagination = document.querySelector('#sanggi-player-ranking-pagination');
-  let playerRanking = [];
-  let playerRankingPage = 1;
-  const playerRankingPerPage = 5;
   const playerLevelCost = () => 10000n * BigInt(playerLevel);
   const renderPlayer = () => {
     const cost = playerLevelCost();
@@ -585,105 +576,17 @@
     playerCostElement.textContent = `다음 레벨 ${formatCoins(cost)}원`;
     playerUpgrade.disabled = accountSyncing || coins < cost;
   };
-  const renderPlayerRanking = () => {
-    const totalPages = Math.max(1, Math.ceil(playerRanking.length / playerRankingPerPage));
-    playerRankingPage = Math.min(playerRankingPage, totalPages);
-    const start = (playerRankingPage - 1) * playerRankingPerPage;
-    const pageItems = playerRanking.slice(start, start + playerRankingPerPage);
-    playerRankingList.replaceChildren(...(pageItems.length
-      ? pageItems.map((entry) => {
-        const item = document.createElement('li');
-        const nickname = document.createElement('span');
-        nickname.textContent = entry.nickname;
-        const level = document.createElement('span');
-        level.className = 'sanggi-player-ranking-level';
-        level.textContent = `LV ${entry.player_level}`;
-        item.append(nickname, level);
-        return item;
-      })
-      : [Object.assign(document.createElement('li'), {
-        className: 'ranking-empty',
-        textContent: '아직 플레이어 랭킹이 없습니다.'
-      })]));
-    if (!playerRanking.length) {
-      playerRankingPagination.replaceChildren();
-      return;
-    }
-    const previous = document.createElement('button');
-    previous.type = 'button';
-    previous.textContent = '← 이전';
-    previous.disabled = playerRankingPage === 1;
-    previous.addEventListener('click', () => {
-      playerRankingPage -= 1;
-      renderPlayerRanking();
-    });
-    const pageNumber = document.createElement('span');
-    pageNumber.className = 'sanggi-player-ranking-page';
-    pageNumber.textContent = `${playerRankingPage} / ${totalPages}`;
-    const next = document.createElement('button');
-    next.type = 'button';
-    next.textContent = '다음 →';
-    next.disabled = playerRankingPage === totalPages;
-    next.addEventListener('click', () => {
-      playerRankingPage += 1;
-      renderPlayerRanking();
-    });
-    playerRankingPagination.replaceChildren(previous, pageNumber, next);
-  };
-  const loadPlayerRanking = async () => {
-    const session = getSession();
-    if (!session?.session_token) {
-      playerRankingList.replaceChildren(Object.assign(document.createElement('li'), {
-        className: 'ranking-empty',
-        textContent: '로그인 후 플레이어 랭킹을 확인할 수 있습니다.'
-      }));
-      playerRankingPagination.replaceChildren();
-      return;
-    }
-    playerRankingList.replaceChildren(Object.assign(document.createElement('li'), {
-      className: 'ranking-empty',
-      textContent: '랭킹을 불러오는 중...'
-    }));
-    try {
-      playerRanking = await remoteRpc('sanggi_get_player_ranking', {
-        p_session_token: session.session_token
-      });
-      playerRanking = Array.isArray(playerRanking) ? playerRanking : [];
-      playerRankingPage = 1;
-      renderPlayerRanking();
-    } catch (error) {
-      playerRanking = [];
-      playerRankingPagination.replaceChildren();
-      playerRankingList.replaceChildren(Object.assign(document.createElement('li'), {
-        className: 'ranking-empty',
-        textContent: error.message || '랭킹을 불러오지 못했습니다.'
-      }));
-    }
-  };
-  const setPlayerTab = async (tab) => {
-    const ranking = tab === 'ranking';
-    playerUpgradeTab.classList.toggle('is-active', !ranking);
-    playerRankingTab.classList.toggle('is-active', ranking);
-    playerUpgradeTab.setAttribute('aria-selected', String(!ranking));
-    playerRankingTab.setAttribute('aria-selected', String(ranking));
-    playerUpgradePanel.hidden = ranking;
-    playerRankingPanel.hidden = !ranking;
-    if (ranking) await loadPlayerRanking();
-  };
   const closePlayer = () => {
     playerModal.hidden = true;
     playerBackdrop.hidden = true;
   };
   playerButton.addEventListener('click', () => {
     renderPlayer();
-    setPlayerTab('upgrade');
     playerModal.hidden = false;
     playerBackdrop.hidden = false;
   });
   playerClose.addEventListener('click', closePlayer);
   playerBackdrop.addEventListener('click', closePlayer);
-  playerUpgradeTab.addEventListener('click', () => setPlayerTab('upgrade'));
-  playerRankingTab.addEventListener('click', () => setPlayerTab('ranking'));
   playerUpgrade.addEventListener('click', async () => {
     if (accountSyncing) return;
     const session = getSession();

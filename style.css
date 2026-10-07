@@ -721,26 +721,6 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   will-change: left, top;
 }
 .sanggi-companion.is-dragging { cursor: grabbing; }
-.sanggi-player-button {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transform: translateX(-50%);
-  border: 1px solid var(--ink);
-  padding: 10px 16px;
-  background: var(--acid);
-  color: var(--ink);
-  cursor: pointer;
-  font: 11px var(--mono);
-  text-transform: uppercase;
-}
-.sanggi-player-button:hover { background: var(--orange); }
-.sanggi-player-icon { font-size: 13px; }
-.sanggi-player-button strong { font-weight: 700; }
 .sanggi-player-backdrop {
   position: absolute;
   inset: 0;
@@ -776,44 +756,6 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   font: 10px var(--mono);
   text-transform: uppercase;
 }
-.sanggi-player-ranking-list {
-  min-height: 285px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: ranking;
-}
-.sanggi-player-ranking-list li {
-  counter-increment: ranking;
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 10px;
-  padding: 13px 0;
-  border-top: 1px solid rgba(23, 23, 23, .25);
-  font-size: 13px;
-}
-.sanggi-player-ranking-list li:before {
-  content: counter(ranking, decimal-leading-zero);
-  font: 11px var(--mono);
-}
-.sanggi-player-ranking-level { font: 11px var(--mono); }
-.sanggi-player-ranking-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin: 15px 0;
-}
-.sanggi-player-ranking-pagination button {
-  border: 1px solid var(--ink);
-  padding: 6px 8px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  font: 10px var(--mono);
-}
-.sanggi-player-ranking-pagination button:disabled { cursor: not-allowed; opacity: .4; }
-.sanggi-player-ranking-page { font: 10px var(--mono); }
 .sanggi-companion-backdrop {
   position: absolute;
   inset: 0;
@@ -840,7 +782,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   bottom: 82px;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
   gap: 12px;
   width: min(760px, calc(100% - 40px));
   transform: translateX(-50%);
@@ -874,6 +816,56 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   color: #302a35;
   font: 700 17px var(--sans);
 }
+.player-level-ranking {
+  max-width: 760px;
+  margin: 22px auto 0;
+  padding: 21px;
+  background: var(--acid);
+  color: var(--ink);
+}
+.player-level-ranking ol {
+  min-height: 285px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: ranking;
+}
+.player-level-ranking li {
+  counter-increment: ranking;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 10px;
+  padding: 13px 0;
+  border-top: 1px solid rgba(23, 23, 23, .25);
+  font-size: 13px;
+}
+.player-level-ranking li:before {
+  content: counter(ranking, decimal-leading-zero);
+  font: 11px var(--mono);
+}
+.player-level-ranking .ranking-empty {
+  display: block;
+}
+.player-level-ranking-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+.player-level-ranking-pagination button {
+  border: 1px solid var(--ink);
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 10px var(--mono);
+}
+.player-level-ranking-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+.player-level-ranking-page { font: 10px var(--mono); }
 @media (max-width: 640px) {
   .sanggi-refresh-button {
     display: block;
@@ -894,7 +886,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   }
   .sanggi-action-bar {
     bottom: 70px;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     width: calc(100% - 24px);
   }
@@ -906,7 +898,6 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .sanggi-ability-card { grid-template-columns: 1fr; }
   .sanggi-upgrade-button { width: 100%; }
   .sanggi-companion-modal { padding: 22px 16px; }
-  .sanggi-player-button { bottom: 14px; }
 }
 
 .speed-game { background: var(--orange); }

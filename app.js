@@ -55,7 +55,8 @@ const sanggiLocalStateKeys = [
   'sanggi-ability-levels',
   'sanggi-character-position',
   'sanggi-companion-position',
-  'sanggi-companion-state'
+  'sanggi-companion-state',
+  'sanggi-player-level'
 ];
 const clearSanggiLocalState = () => {
   sanggiLocalStateKeys.forEach((key) => localStorage.removeItem(key));
@@ -197,6 +198,9 @@ const authenticateAccount = async (username, password) => {
     localStorage.setItem(investmentClientKey, accountSession.account_id);
   }
   updateAccountButton();
+  if (typeof window.refreshPlayerLevelRanking === 'function') {
+    window.refreshPlayerLevelRanking();
+  }
   const savedAccountNickname = localStorage.getItem(
     `sangki-account-nickname-${accountSession.account_id}`
   );
@@ -230,6 +234,9 @@ accountButton.addEventListener('click', async () => {
     sessionStorage.removeItem(accountSessionStorageKey);
     clearSanggiLocalState();
     clearInvestmentView();
+    if (typeof window.refreshPlayerLevelRanking === 'function') {
+      window.refreshPlayerLevelRanking();
+    }
     updateAccountButton();
     return;
   }
@@ -288,6 +295,9 @@ const logoutAccount = () => {
   sessionStorage.removeItem(accountSessionStorageKey);
   clearSanggiLocalState();
   clearInvestmentView();
+  if (typeof window.refreshPlayerLevelRanking === 'function') {
+    window.refreshPlayerLevelRanking();
+  }
   updateAccountButton();
   closeSettings();
   investorStatus.textContent = '로그아웃되었습니다.';
@@ -1534,6 +1544,96 @@ if (accountSession?.session_token) {
       }
     });
 }
+
+const playerLevelRankingList = document.querySelector('#player-level-ranking-list');
+const playerLevelRankingPagination = document.querySelector('#player-level-ranking-pagination');
+let playerLevelRanking = [];
+let playerLevelRankingPage = 1;
+const PLAYER_LEVEL_RANKING_PER_PAGE = 5;
+
+const renderPlayerLevelRanking = () => {
+  if (!playerLevelRankingList || !playerLevelRankingPagination) return;
+  const totalPages = Math.max(1, Math.ceil(
+    playerLevelRanking.length / PLAYER_LEVEL_RANKING_PER_PAGE
+  ));
+  playerLevelRankingPage = Math.min(playerLevelRankingPage, totalPages);
+  const start = (playerLevelRankingPage - 1) * PLAYER_LEVEL_RANKING_PER_PAGE;
+  const pageItems = playerLevelRanking.slice(start, start + PLAYER_LEVEL_RANKING_PER_PAGE);
+  playerLevelRankingList.replaceChildren(...(pageItems.length
+    ? pageItems.map((entry) => {
+      const item = document.createElement('li');
+      const nickname = document.createElement('span');
+      nickname.textContent = entry.nickname;
+      const level = document.createElement('span');
+      level.className = 'ranking-value';
+      level.textContent = `LV ${entry.player_level}`;
+      item.append(nickname, level);
+      return item;
+    })
+    : [Object.assign(document.createElement('li'), {
+      className: 'ranking-empty',
+      textContent: '아직 플레이어 랭킹이 없습니다.'
+    })]));
+  if (!playerLevelRanking.length) {
+    playerLevelRankingPagination.replaceChildren();
+    return;
+  }
+  const previous = document.createElement('button');
+  previous.type = 'button';
+  previous.textContent = '← 이전';
+  previous.disabled = playerLevelRankingPage === 1;
+  previous.addEventListener('click', () => {
+    playerLevelRankingPage -= 1;
+    renderPlayerLevelRanking();
+  });
+  const pageNumber = document.createElement('span');
+  pageNumber.className = 'player-level-ranking-page';
+  pageNumber.textContent = `${playerLevelRankingPage} / ${totalPages}`;
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.textContent = '다음 →';
+  next.disabled = playerLevelRankingPage === totalPages;
+  next.addEventListener('click', () => {
+    playerLevelRankingPage += 1;
+    renderPlayerLevelRanking();
+  });
+  playerLevelRankingPagination.replaceChildren(previous, pageNumber, next);
+};
+
+const refreshPlayerLevelRanking = async () => {
+  if (!playerLevelRankingList) return;
+  if (!accountSession?.session_token) {
+    playerLevelRanking = [];
+    playerLevelRankingList.replaceChildren(Object.assign(document.createElement('li'), {
+      className: 'ranking-empty',
+      textContent: '로그인 후 랭킹을 불러옵니다.'
+    }));
+    playerLevelRankingPagination?.replaceChildren();
+    return;
+  }
+  playerLevelRankingList.replaceChildren(Object.assign(document.createElement('li'), {
+    className: 'ranking-empty',
+    textContent: '랭킹을 불러오는 중...'
+  }));
+  try {
+    const result = await callInvestmentRpc('sanggi_get_player_ranking', {
+      p_session_token: accountSession.session_token
+    });
+    playerLevelRanking = Array.isArray(result) ? result : [];
+    playerLevelRankingPage = 1;
+    renderPlayerLevelRanking();
+  } catch (error) {
+    playerLevelRanking = [];
+    playerLevelRankingPagination?.replaceChildren();
+    playerLevelRankingList.replaceChildren(Object.assign(document.createElement('li'), {
+      className: 'ranking-empty',
+      textContent: error.message || '랭킹을 불러오지 못했습니다.'
+    }));
+  }
+};
+
+window.refreshPlayerLevelRanking = refreshPlayerLevelRanking;
+refreshPlayerLevelRanking();
 
 window.setInterval(() => {
   if (investmentState) loadInvestmentState().catch(() => {});
