@@ -81,6 +81,11 @@ nav a:hover { opacity: .5; }
 .side-menu-intro { margin: 28px 0 34px; font-size: 14px; line-height: 1.6; }
 .side-menu a { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid rgba(23,23,23,.3); font: 14px var(--mono); }
 .side-menu a:hover { color: var(--orange); }
+.online-users { margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(23,23,23,.3); }
+.online-users strong { font: 11px var(--mono); text-transform: uppercase; }
+.online-users p { margin: 7px 0 9px; color: #777; font: 9px/1.5 var(--mono); }
+.online-users ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; font: 11px var(--mono); }
+.online-users li::before { content: '●'; margin-right: 6px; color: #62a744; font-size: 8px; }
 .side-menu-settings { width: 100%; display: flex; justify-content: flex-start; margin-top: 16px; padding: 16px 0; border: 0; border-top: 1px solid rgba(23,23,23,.3); background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
 .settings-gear { width: 25px; height: 25px; fill: currentColor; transition: transform .2s ease, color .2s ease; }
 .side-menu-settings:hover { color: var(--orange); }
@@ -187,6 +192,10 @@ section { padding: 120px 0; }
 .ranking-grant button { border: 1px solid var(--ink); padding: 6px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
 .ranking-grant button:hover { background: var(--orange); color: var(--ink); }
 .ranking-grant button:last-child { border-color: #55a5ff; }
+.ranking-rename { grid-column: 2 / -1; display: flex; gap: 5px; margin-top: 5px; }
+.ranking-rename input { min-width: 0; flex: 1; border: 1px solid var(--ink); padding: 6px; background: transparent; color: var(--ink); font: 10px var(--mono); }
+.ranking-rename button { border: 1px solid var(--ink); padding: 6px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
+.ranking-rename button:hover { background: var(--ink); color: var(--acid); }
 .investment-ranking-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; }
 .investment-page-button { border: 1px solid var(--ink); padding: 6px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 9px var(--mono); }
 .investment-page-button:hover:not(:disabled) { background: var(--ink); color: var(--acid); }

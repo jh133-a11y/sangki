@@ -1462,6 +1462,123 @@ from public;
 grant execute on function public.investment_link_account(uuid, uuid)
 to anon, authenticated;
 
+create or replace function public.investment_admin_rename_user(
+  p_admin_password text,
+  p_target_client_id uuid,
+  p_nickname text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_nickname is null
+     or char_length(trim(p_nickname)) < 1
+     or char_length(trim(p_nickname)) > 24 then
+    raise exception '닉네임은 1~24자로 입력하세요.';
+  end if;
+
+  if exists (
+    select 1
+    from public.investment_users
+    where nickname = trim(p_nickname)
+      and client_id <> p_target_client_id
+  ) then
+    raise exception '이미 사용 중인 닉네임입니다.';
+  end if;
+
+  update public.investment_users
+  set nickname = trim(p_nickname)
+  where client_id = p_target_client_id;
+
+  if not found then
+    raise exception '변경할 투자자를 찾을 수 없습니다.';
+  end if;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.investment_admin_rename_user(text, uuid, text)
+from public;
+
+grant execute on function public.investment_admin_rename_user(text, uuid, text)
+to anon, authenticated;
+
+create table if not exists public.site_account_presence (
+  account_id uuid primary key references public.site_accounts(id) on delete cascade,
+  username text not null,
+  last_seen_at timestamptz not null default now()
+);
+
+alter table public.site_account_presence enable row level security;
+revoke all on table public.site_account_presence from anon, authenticated;
+
+create or replace function public.site_account_presence_heartbeat(
+  p_session_token uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_username text;
+begin
+  select s.account_id, a.username
+  into v_account_id, v_username
+  from public.site_account_sessions s
+  join public.site_accounts a on a.id = s.account_id
+  where s.token = p_session_token
+    and s.expires_at > now();
+
+  if v_account_id is null then
+    return false;
+  end if;
+
+  insert into public.site_account_presence(account_id, username, last_seen_at)
+  values (v_account_id, v_username, now())
+  on conflict (account_id) do update
+  set username = excluded.username,
+      last_seen_at = now();
+
+  return true;
+end;
+$$;
+
+create or replace function public.site_account_online_users()
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object('username', username)
+      order by username
+    ),
+    '[]'::jsonb
+  )
+  from public.site_account_presence
+  where last_seen_at > now() - interval '2 minutes';
+$$;
+
+revoke all on function public.site_account_presence_heartbeat(uuid)
+from public;
+revoke all on function public.site_account_online_users()
+from public;
+
+grant execute on function public.site_account_presence_heartbeat(uuid)
+to anon, authenticated;
+grant execute on function public.site_account_online_users()
+to anon, authenticated;
+
 drop function if exists public.site_account_delete(uuid, text);
 
 create or replace function public.site_account_delete(

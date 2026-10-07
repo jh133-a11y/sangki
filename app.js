@@ -10,6 +10,45 @@ const apiHeaders = {
   Authorization: `Bearer ${SUPABASE_KEY}`
 };
 
+const updateOnlinePresence = async () => {
+  if (!accountSession?.session_token) {
+    onlineUsersList.replaceChildren(Object.assign(document.createElement('li'), {
+      textContent: '로그인 후 표시됩니다.'
+    }));
+    return;
+  }
+  try {
+    await callInvestmentRpc('site_account_presence_heartbeat', {
+      p_session_token: accountSession.session_token
+    });
+  } catch (error) {
+    console.warn('presence heartbeat failed:', error.message);
+  }
+};
+
+const loadOnlineUsers = async () => {
+  if (!accountSession?.session_token) {
+    onlineUsersList.replaceChildren(Object.assign(document.createElement('li'), {
+      textContent: '로그인 후 표시됩니다.'
+    }));
+    return;
+  }
+  try {
+    const users = await callInvestmentRpc('site_account_online_users', {});
+    onlineUsersList.replaceChildren(...(users.length
+      ? users.map((user) => Object.assign(document.createElement('li'), {
+        textContent: user.username
+      }))
+      : [Object.assign(document.createElement('li'), {
+        textContent: '현재 접속 중인 로그인 유저가 없습니다.'
+      })]));
+  } catch (error) {
+    onlineUsersList.replaceChildren(Object.assign(document.createElement('li'), {
+      textContent: error.message
+    }));
+  }
+};
+
 const accountStorageKey = 'sangki-auth-session';
 const accountSessionStorageKey = 'sangki-auth-session-tab';
 const rememberedUsernameKey = 'sangki-remembered-username';
@@ -36,6 +75,7 @@ const settingsLogout = document.querySelector('#settings-logout');
 const settingsDeleteAccount = document.querySelector('#settings-delete-account');
 const settingsAccountStatus = document.querySelector('#settings-account-status');
 const settingsStatus = document.querySelector('#settings-status');
+const onlineUsersList = document.querySelector('#online-users-list');
 
 const updateAccountButton = () => {
   accountButton.textContent = accountSession?.username
@@ -80,11 +120,11 @@ const authenticateAccount = async (username, password) => {
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || result.hint || '계정 요청에 실패했습니다.');
   const previousClientId = localStorage.getItem(investmentClientKey);
-  if (previousClientId && previousClientId !== result.account_id) {
-    localStorage.setItem(legacyInvestmentClientKey, previousClientId);
-  }
+  const previousNickname = localStorage.getItem('sangki-investor-nickname');
+  const oldClientId = previousClientId && previousClientId !== result.account_id
+    ? previousClientId
+    : null;
   accountSession = result;
-  const oldClientId = localStorage.getItem(legacyInvestmentClientKey) || previousClientId;
   if (rememberUsername.checked) {
     localStorage.setItem(rememberedUsernameKey, normalizedUsername);
   } else {
@@ -118,7 +158,21 @@ const authenticateAccount = async (username, password) => {
     console.error('investment_link_account failed:', detail || linkResponse.status);
     accountSession.linkError = detail || `연결 요청 실패 (${linkResponse.status})`;
   }
-  localStorage.setItem(investmentClientKey, accountSession.account_id);
+  if (linkResponse.ok) {
+    if (previousNickname) {
+      localStorage.setItem(
+        `sangki-account-nickname-${accountSession.account_id}`,
+        previousNickname
+      );
+    }
+    localStorage.setItem(investmentClientKey, accountSession.account_id);
+    localStorage.removeItem(legacyInvestmentClientKey);
+  } else if (oldClientId) {
+    localStorage.setItem(investmentClientKey, oldClientId);
+    localStorage.setItem(legacyInvestmentClientKey, oldClientId);
+  } else {
+    localStorage.setItem(investmentClientKey, accountSession.account_id);
+  }
   updateAccountButton();
   const savedAccountNickname = localStorage.getItem(
     `sangki-account-nickname-${accountSession.account_id}`
@@ -287,6 +341,11 @@ menuToggle.addEventListener('click', () => {
 
 sideMenuClose.addEventListener('click', closeSideMenu);
 sideMenuBackdrop.addEventListener('click', closeSideMenu);
+sideMenu.addEventListener('transitionend', (event) => {
+  if (event.propertyName === 'transform' && sideMenu.classList.contains('is-open')) {
+    loadOnlineUsers();
+  }
+});
 
 const investorForm = document.querySelector('#investor-form');
 const investorNickname = document.querySelector('#investor-nickname');
@@ -343,6 +402,9 @@ const callInvestmentRpc = async (name, payload) => {
   }
   return response.json();
 };
+
+updateOnlinePresence();
+window.setInterval(updateOnlinePresence, 60000);
 
 const renderInvestmentState = (state) => {
   investmentState = state;
@@ -505,6 +567,35 @@ const renderInvestmentState = (state) => {
     total.textContent = formatWon(entry.total_asset);
     item.append(name, total);
     if (investmentAdminMode) {
+      const rename = document.createElement('div');
+      rename.className = 'ranking-rename';
+      const renameInput = document.createElement('input');
+      renameInput.type = 'text';
+      renameInput.maxLength = 24;
+      renameInput.placeholder = '새 닉네임';
+      const renameButton = document.createElement('button');
+      renameButton.type = 'button';
+      renameButton.textContent = '닉네임 변경';
+      renameButton.addEventListener('click', async () => {
+        const nickname = renameInput.value.trim();
+        if (!nickname) return;
+        renameButton.disabled = true;
+        try {
+          await callInvestmentRpc('investment_admin_rename_user', {
+            p_admin_password: '8170',
+            p_target_client_id: entry.client_id,
+            p_nickname: nickname
+          });
+          await loadInvestmentState();
+          investorStatus.textContent = '유저 닉네임을 변경했습니다.';
+        } catch (error) {
+          investorStatus.textContent = error.message;
+        } finally {
+          renameButton.disabled = false;
+        }
+      });
+      rename.append(renameInput, renameButton);
+      item.append(rename);
       const grant = document.createElement('div');
       grant.className = 'ranking-grant';
       const amount = document.createElement('input');
