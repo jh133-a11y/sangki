@@ -174,7 +174,7 @@
       p_client_id: session.account_id,
       p_nickname: localStorage.getItem(shopNicknameKey) || null
     });
-    shopCash.textContent = `투자 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
+    shopCash.textContent = `보유 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
   };
   const closeShop = () => {
     shopModal.hidden = true;
@@ -892,7 +892,7 @@
     shopModal.hidden = false;
     shopBackdrop.hidden = false;
     loadShopCash().catch((error) => {
-      shopCash.textContent = error.message || '투자 현금을 불러오지 못했습니다.';
+      shopCash.textContent = error.message || '보유 현금을 불러오지 못했습니다.';
     });
   });
   document.querySelector('#sanggi-shop-close')?.addEventListener('click', closeShop);
