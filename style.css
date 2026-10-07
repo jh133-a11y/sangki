@@ -202,6 +202,11 @@ nav a:hover { opacity: .5; }
 .hero:before { width: 52vw; height: 52vw; right: -19vw; top: 11vw; }
 .hero:after { width: 25vw; height: 25vw; right: 8vw; top: 26vw; background: var(--orange); mix-blend-mode: multiply; }
 .hero-grid { position: relative; z-index: 1; }
+.hero-player-level-ranking {
+  position: absolute;
+  top: 92px;
+  right: 0;
+}
 .hero h1 {
   max-width: 920px; margin: 18px 0 0; font-size: clamp(72px, 12vw, 180px);
   line-height: .88; letter-spacing: -.07em; font-weight: 700;
@@ -334,6 +339,37 @@ section { padding: 120px 0; }
 .holding-trade button:disabled { cursor: wait; opacity: .4; }
 
 .works { display: grid; grid-template-columns: repeat(12, 1fr); gap: 22px; }
+.hero-player-level-ranking {
+  grid-column: 3 / -1;
+  grid-row: 2 / span 3;
+  align-self: center;
+  width: min(360px, 100%);
+  margin-left: auto;
+  padding: 18px;
+  background: var(--acid);
+  color: var(--ink);
+}
+.hero-player-level-ranking ol {
+  min-height: 220px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: ranking;
+}
+.hero-player-level-ranking li {
+  counter-increment: ranking;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(23, 23, 23, .25);
+  font-size: 12px;
+}
+.hero-player-level-ranking li:before {
+  content: counter(ranking, decimal-leading-zero);
+  font: 10px var(--mono);
+}
+.hero-player-level-ranking .ranking-empty { display: block; }
 .work { position: relative; min-height: 390px; padding: 21px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
 .work:nth-child(1) { grid-column: span 7; background: var(--orange); }
 .work:nth-child(2) { grid-column: span 5; min-height: 520px; background: #c6b9ff; }
@@ -847,6 +883,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   font: 700 14px var(--sans);
   transition: transform .18s, background .18s;
 }
+.hero-player-level-ranking {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  width: 100%;
+  margin-top: 18px;
+}
 .sanggi-action-button:hover {
   background: #ffd45c;
   transform: translateY(-3px);
@@ -1054,6 +1096,13 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .shop-balance { margin-top: 20px; }
   .shop-products { grid-template-columns: 1fr; }
   .hero { min-height: 700px; padding-top: 140px; }
+  .hero-player-level-ranking {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 28px;
+  }
   .hero h1 { font-size: 18vw; margin-top: 36px; line-height: .9; }
   .hero h1 span { margin-left: 8vw; }
   .hero:before { width: 90vw; height: 90vw; top: 47vw; right: -36vw; }
