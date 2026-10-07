@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>상점 — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=52">
+  <link rel="stylesheet" href="style.css?v=57">
 </head>
 <body class="shop-page">
   <main class="shop-shell">
@@ -17,6 +17,18 @@
       <div class="shop-balance" id="shop-balance">보유 현금 확인 중...</div>
     </div>
     <section class="shop-products" aria-label="판매 상품">
+      <article class="shop-card">
+        <div>
+          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="편지 아이콘" role="img">
+            <path d="M12 22h76v56H12z" fill="#8ed8d2" stroke="#171717" stroke-width="4"/>
+            <path d="m14 25 36 29 36-29M14 75l25-24M86 75 61 51" fill="none" stroke="#171717" stroke-width="4"/>
+            <path d="M72 15v20M62 25h20" stroke="#ff5b36" stroke-width="4"/>
+          </svg>
+          <h2>편지</h2>
+          <p>선택한 유저에게 마음을 담은 메시지를 보내는 일회용 편지입니다.</p>
+        </div>
+        <div><span class="shop-price">₩10,000</span><button class="shop-buy" data-item="letter" type="button">구매하기</button></div>
+      </article>
       <article class="shop-card">
         <div>
           <svg class="shop-icon" viewBox="0 0 100 100" aria-label="닉네임 변경권 아이콘" role="img">
@@ -68,6 +80,6 @@
     </section>
     <p class="shop-status" id="shop-status" role="status"></p>
   </main>
-  <script src="shop.js?v=6"></script>
+  <script src="shop.js?v=7"></script>
 </body>
 </html>

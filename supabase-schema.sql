@@ -1732,7 +1732,7 @@ to anon, authenticated;
 
 create table if not exists public.investment_shop_items (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
-  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nickname_ticket')),
+  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nickname_ticket', 'letter')),
   quantity bigint not null default 0 check (quantity >= 0),
   primary key (client_id, item_type)
 );
@@ -1747,7 +1747,8 @@ alter table public.investment_shop_items
     'low_missile',
     'mid_missile',
     'high_missile',
-    'nickname_ticket'
+    'nickname_ticket',
+    'letter'
   ));
 
 create table if not exists public.investment_shop_messages (
@@ -1835,7 +1836,8 @@ begin
           when 'low_missile' then '하급 미사일'
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
-          else '닉네임 변경권'
+          when 'nickname_ticket' then '닉네임 변경권'
+          else '편지'
         end,
         'quantity', quantity
       ) order by item_type)
@@ -1898,7 +1900,8 @@ begin
           when 'low_missile' then '하급 미사일'
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
-          else '닉네임 변경권'
+          when 'nickname_ticket' then '닉네임 변경권'
+          else '편지'
         end,
         'quantity', quantity
       ) order by item_type)
@@ -1941,7 +1944,8 @@ begin
     ('low_missile', 20000000::bigint, '하급 미사일'),
     ('mid_missile', 50000000::bigint, '중급 미사일'),
     ('high_missile', 150000000::bigint, '고급 미사일'),
-    ('nickname_ticket', 5000000000::bigint, '닉네임 변경권')
+    ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
+    ('letter', 10000::bigint, '편지')
   ) items(item_type, price, name)
   where item_type = p_item_type;
 
@@ -2059,6 +2063,95 @@ begin
     'message',
     v_old_nickname || '의 닉네임이 "' || v_new_nickname
       || '"(으)로 변경되었습니다.'
+  );
+end;
+$$;
+
+create or replace function public.shop_send_letter(
+  p_client_id uuid,
+  p_target_client_id uuid,
+  p_message text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_sender_name text;
+  v_target_name text;
+  v_quantity bigint;
+  v_message text := trim(p_message);
+begin
+  if p_target_client_id is null then
+    raise exception '편지를 받을 유저를 선택하세요.';
+  end if;
+
+  if char_length(v_message) < 1
+     or char_length(v_message) > 500 then
+    raise exception '편지 내용은 1~500자로 입력하세요.';
+  end if;
+
+  select nickname into v_sender_name
+  from public.investment_users
+  where client_id = p_client_id
+  for update;
+
+  if v_sender_name is null then
+    raise exception '편지를 보내는 투자자를 찾을 수 없습니다.';
+  end if;
+
+  select nickname into v_target_name
+  from public.investment_users
+  where client_id = p_target_client_id
+  for update;
+
+  if v_target_name is null then
+    raise exception '편지를 받을 유저를 찾을 수 없습니다.';
+  end if;
+
+  select quantity into v_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'letter'
+  for update;
+
+  if coalesce(v_quantity, 0) < 1 then
+    raise exception '가방에 편지가 없습니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - 1
+  where client_id = p_client_id
+    and item_type = 'letter';
+
+  delete from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'letter'
+    and quantity <= 0;
+
+  insert into public.investment_shop_messages(client_id, message)
+  values (
+    p_target_client_id,
+    v_sender_name || '님이 보낸 편지: ' || v_message
+  );
+
+  if p_target_client_id = p_client_id then
+    return jsonb_build_object(
+      'message',
+      '나에게 편지를 보냈습니다.'
+    );
+  end if;
+
+  insert into public.investment_shop_messages(client_id, message)
+  values (
+    p_client_id,
+    v_target_name || '에게 편지를 보냈습니다.'
+  );
+
+  return jsonb_build_object(
+    'message',
+    v_target_name || '에게 편지를 보냈습니다.'
   );
 end;
 $$;
@@ -2353,6 +2446,7 @@ revoke all on function public.shop_get_unread_count(uuid) from public;
 revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
+revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
 revoke all on function public.shop_change_nickname(uuid, uuid, text) from public;
 revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
@@ -2361,6 +2455,7 @@ grant execute on function public.shop_get_unread_count(uuid) to anon, authentica
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
+grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
 

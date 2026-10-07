@@ -490,13 +490,15 @@ const shopItemIcons = {
   low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
-  ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>'
+  ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
+  letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>'
 };
 const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
   mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
   high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
-  ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.'
+  ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
+  letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
 };
 
 const selectShopItem = (item) => {
@@ -506,19 +508,25 @@ const selectShopItem = (item) => {
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
   const isNicknameTicket = item.item_type === 'nickname_ticket';
+  const isLetter = item.item_type === 'letter';
   const targetLabel = document.querySelector('.bag-target-label');
   targetLabel.hidden = false;
-  targetLabel.firstChild.textContent = isNicknameTicket ? '닉네임 변경 대상 선택' : '공격 대상 선택';
+  targetLabel.firstChild.textContent = isNicknameTicket
+    ? '닉네임 변경 대상 선택'
+    : isLetter ? '편지 받을 유저 선택' : '공격 대상 선택';
   bagTarget.replaceChildren(...bagTargets
-    .filter((target) => isNicknameTicket || target.client_id !== activeShopClientId)
+    .filter((target) => isNicknameTicket || isLetter || target.client_id !== activeShopClientId)
     .map((target) => new Option(
       `${target.nickname}${target.client_id === activeShopClientId ? ' (나)' : ''} · ${formatWon(target.total_asset)}`,
       target.client_id
     )));
-  bagNicknameLabel.hidden = false;
+  bagNicknameLabel.hidden = !isNicknameTicket;
+  document.querySelector('#bag-letter-label').hidden = !isLetter;
   bagStatus.textContent = isNicknameTicket
     ? '대상을 선택하고 새 닉네임을 입력한 뒤 사용하기를 누르세요.'
-    : '공격 대상을 선택한 뒤 사용하기를 누르세요.';
+    : isLetter
+      ? '받는 유저와 편지 내용을 입력한 뒤 사용하기를 누르세요.'
+      : '공격 대상을 선택한 뒤 사용하기를 누르세요.';
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
 };
 
@@ -560,12 +568,46 @@ const loadBag = async () => {
       selectedShopItem = null;
       bagUsePanel.hidden = true;
       bagNicknameLabel.hidden = true;
+      document.querySelector('#bag-letter-label').hidden = true;
       document.querySelector('.bag-target-label').hidden = true;
       }
   }
 };
 
 const useShopItem = async (itemType) => {
+  if (itemType === 'letter') {
+    if (!bagTarget.value) {
+      bagStatus.textContent = '편지를 받을 유저를 선택하세요.';
+      return;
+    }
+    const message = document.querySelector('#bag-letter-message').value.trim();
+    if (!message) {
+      bagStatus.textContent = '편지 내용을 입력하세요.';
+      return;
+    }
+    const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
+    if (!window.confirm(`${targetName}에게 편지를 보내시겠습니까?`)) {
+      bagStatus.textContent = '편지 보내기를 취소했습니다.';
+      return;
+    }
+    bagStatus.textContent = '편지 보내는 중...';
+    try {
+      const result = await callInvestmentRpc('shop_send_letter', {
+        p_client_id: await resolveShopClientId(),
+        p_target_client_id: bagTarget.value,
+        p_message: message
+      });
+      bagStatus.textContent = result.message;
+      window.alert(result.message);
+      document.querySelector('#bag-letter-message').value = '';
+      await loadMessageCount();
+      await loadBag();
+    } catch (error) {
+      bagStatus.textContent = error.message;
+      window.alert(`편지 보내기 실패: ${error.message}`);
+    }
+    return;
+  }
   if (itemType === 'nickname_ticket') {
     if (!bagTarget.value) {
       bagStatus.textContent = '닉네임 변경 대상을 선택하세요.';
