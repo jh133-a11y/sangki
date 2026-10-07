@@ -61,8 +61,9 @@ nav a:hover { opacity: .5; }
 .bag-button:hover { background: var(--ink); color: var(--acid); }
 .bag-button span { display: inline-block; min-width: 12px; margin-left: 3px; color: var(--orange); }
 .bag-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
-.bag-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(460px, calc(100% - 30px)); max-height: 85vh; overflow: auto; transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 7px 7px 0 var(--ink); }
+.bag-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(560px, calc(100% - 30px)); max-height: 85vh; overflow: auto; transform: translate(-50%, -50%); padding: 28px; background: #e6e6e6; box-shadow: 8px 8px 0 var(--ink); }
 .bag-modal h2 { margin: 0 0 8px; font-size: 34px; }
+.bag-subtitle { margin: -2px 0 12px !important; color: #666; letter-spacing: .08em; }
 .bag-modal > p { font: 11px/1.5 var(--mono); }
 .bag-items { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px; margin: 20px 0; padding: 8px; border: 3px solid #6e6e6e; background: #b9b9b9; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #555; }
 .bag-slot { position: relative; aspect-ratio: 1; min-width: 0; border: 2px solid #777; background: #8f8f8f; box-shadow: inset 2px 2px 0 #555, inset -2px -2px 0 #d5d5d5; color: var(--ink); cursor: pointer; }
