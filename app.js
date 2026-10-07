@@ -1198,16 +1198,18 @@ const adjustInvestmentCash = async (clientId, amountInput, action) => {
   }
 };
 
-adminBroadcastCash.addEventListener('click', async () => {
+adminBroadcastCash?.addEventListener('click', async () => {
   if (!requireInvestmentAdmin()) return;
   const amountText = adminBroadcastAmount.value.trim().replace(/,/g, '');
   const message = adminBroadcastMessage.value.trim();
   if (!/^[0-9]+$/.test(amountText) || BigInt(amountText) < 1n) {
     adminMarketStatus.textContent = '전체 지급액은 1원 이상의 정수로 입력하세요.';
+    window.alert('전체 지급액은 1원 이상의 정수로 입력하세요.');
     return;
   }
   if (!message) {
     adminMarketStatus.textContent = '전달할 메시지를 입력하세요.';
+    window.alert('전달할 메시지를 입력하세요.');
     return;
   }
   const displayAmount = `₩${BigInt(amountText).toLocaleString('ko-KR')}`;
@@ -1225,10 +1227,12 @@ adminBroadcastCash.addEventListener('click', async () => {
     await loadInvestmentState();
     await loadMessageCount();
     adminMarketStatus.textContent = `${result.user_count}명에게 현금 지급과 메시지 전달을 완료했습니다.`;
+    window.alert(`${result.user_count}명에게 현금 지급과 메시지 전달을 완료했습니다.`);
   } catch (error) {
     adminMarketStatus.textContent = error.message;
+    window.alert(`전체 지급 실패: ${error.message}`);
   } finally {
-    adminBroadcastCash.disabled = false;
+    if (adminBroadcastCash) adminBroadcastCash.disabled = false;
   }
 });
 
