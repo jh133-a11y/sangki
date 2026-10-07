@@ -212,6 +212,12 @@ section { padding: 120px 0; }
 .portfolio-summary div:last-child { border: 0; }
 .portfolio-summary span, .investment-list-head { font: 10px var(--mono); text-transform: uppercase; }
 .portfolio-summary strong { font-size: 20px; letter-spacing: -.04em; }
+.investment-transfer { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; margin: 18px 0; padding: 14px; border: 1px solid var(--ink); background: #fff; }
+.investment-transfer label { display: grid; gap: 6px; font: 10px var(--mono); }
+.investment-transfer select, .investment-transfer input { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px var(--mono); }
+.investment-transfer button { border: 1px solid var(--ink); padding: 10px 16px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
+.investment-transfer button:hover { background: var(--orange); color: var(--ink); }
+.investment-transfer p { grid-column: 1 / -1; min-height: 16px; margin: 0; color: var(--orange); font: 10px var(--mono); }
 .investment-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(260px, .7fr); gap: 22px; margin-top: 22px; }
 .investment-products { min-width: 0; }
 .investment-list-head { display: flex; justify-content: space-between; gap: 12px; padding: 0 0 13px; border-bottom: 1px solid rgba(241,238,231,.35); }
@@ -443,6 +449,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .investor-status { margin-top: 13px; }
   .portfolio-summary { grid-template-columns: 1fr 1fr; }
   .portfolio-summary div:nth-child(2) { border-right: 0; }
+  .investment-transfer { grid-template-columns: 1fr; }
+  .investment-transfer button { width: 100%; }
   .investment-layout { display: block; }
   .investment-ranking { margin-top: 18px; }
   .investment-holdings { margin-top: 8px; margin-bottom: 25px; padding: 20px 16px; box-shadow: 5px 5px 0 rgba(217,255,54,.35); }

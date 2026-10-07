@@ -386,6 +386,10 @@ const portfolioCash = document.querySelector('#portfolio-cash');
 const portfolioTotal = document.querySelector('#portfolio-total');
 const marketUpdated = document.querySelector('#market-updated');
 const investmentProducts = document.querySelector('#investment-products');
+const investmentTransfer = document.querySelector('#investment-transfer');
+const transferTarget = document.querySelector('#transfer-target');
+const transferAmount = document.querySelector('#transfer-amount');
+const transferStatus = document.querySelector('#transfer-status');
 const investmentRefresh = document.querySelector('#investment-refresh');
 const investmentHoldings = document.querySelector('#investment-holdings');
 const holdingsList = document.querySelector('#holdings-list');
@@ -717,6 +721,14 @@ const renderInvestmentState = (state) => {
   investorNickname.disabled = true;
   investorForm.querySelector('button').disabled = true;
   portfolioSummary.hidden = false;
+  investmentTransfer.hidden = false;
+  transferTarget.replaceChildren(new Option('유저를 선택하세요', ''));
+  transferTarget.append(...state.ranking
+    .filter((entry) => entry.client_id !== getInvestmentClientId())
+    .map((entry) => new Option(
+      `${entry.nickname} · ${formatWon(entry.total_asset)}`,
+      entry.client_id
+    )));
   investmentHoldings.hidden = false;
   portfolioNickname.textContent = state.nickname;
   portfolioCash.textContent = formatWon(state.cash);
@@ -947,6 +959,43 @@ const renderInvestmentState = (state) => {
   });
   investmentRankingPagination.replaceChildren(previous, pageNumber, next);
 };
+
+investmentTransfer.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const targetClientId = transferTarget.value;
+  const amount = Number(transferAmount.value);
+  if (!targetClientId) {
+    transferStatus.textContent = '받는 유저를 선택하세요.';
+    return;
+  }
+  if (!Number.isSafeInteger(amount) || amount < 1) {
+    transferStatus.textContent = '송금액은 1원 이상의 정수로 입력하세요.';
+    return;
+  }
+  const targetName = transferTarget.options[transferTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
+  if (!window.confirm(`${targetName}에게 ${formatWon(amount)}을 송금할까요?`)) return;
+  transferAmount.disabled = true;
+  transferTarget.disabled = true;
+  transferStatus.textContent = '송금 처리 중...';
+  try {
+    const result = await callInvestmentRpc('investment_transfer_cash', {
+      p_sender_client_id: getInvestmentClientId(),
+      p_recipient_client_id: targetClientId,
+      p_amount: amount
+    });
+    transferStatus.textContent = result.message;
+    window.alert(result.message);
+    transferAmount.value = '';
+    await loadInvestmentState();
+    await loadMessageCount();
+  } catch (error) {
+    transferStatus.textContent = error.message;
+    window.alert(`송금 실패: ${error.message}`);
+  } finally {
+    transferAmount.disabled = false;
+    transferTarget.disabled = false;
+  }
+});
 
 const grantInvestmentCash = async (clientId, amountInput) => {
   const amount = Number(amountInput.value);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=51">
+  <link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
   <div class="noise"></div>
@@ -133,6 +133,18 @@
           <div><span>총 자산</span><strong id="portfolio-total">₩0</strong></div>
           <div><span>시장 상태</span><strong id="market-updated">—</strong></div>
         </div>
+        <form class="investment-transfer" id="investment-transfer" hidden>
+          <label>받는 유저
+            <select id="transfer-target" required>
+              <option value="">유저를 선택하세요</option>
+            </select>
+          </label>
+          <label>송금액
+            <input id="transfer-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="보낼 금액" required>
+          </label>
+          <button type="submit">송금하기 ↗</button>
+          <p id="transfer-status" role="status"></p>
+        </form>
         <div class="investment-holdings" id="investment-holdings" hidden>
           <div class="holdings-heading">
             <div>
@@ -275,6 +287,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=70"></script>
+  <script src="app.js?v=71"></script>
 </body>
 </html>

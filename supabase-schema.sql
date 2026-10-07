@@ -579,7 +579,100 @@ begin
     raise exception '지급할 투자자를 찾을 수 없습니다.';
   end if;
 
+  insert into public.investment_shop_messages(client_id, message)
+  values (
+    p_target_client_id,
+    '관리자가 ' || to_char(p_amount, 'FM999,999,999,999')
+      || '원을 지급했습니다.'
+  );
+
   return true;
+end;
+$$;
+
+create or replace function public.investment_transfer_cash(
+  p_sender_client_id uuid,
+  p_recipient_client_id uuid,
+  p_amount bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  sender_user public.investment_users%rowtype;
+  recipient_user public.investment_users%rowtype;
+begin
+  if p_sender_client_id is null
+     or p_recipient_client_id is null
+     or p_sender_client_id = p_recipient_client_id then
+    raise exception '자기 자신에게는 송금할 수 없습니다.';
+  end if;
+
+  if p_amount is null or p_amount < 1 then
+    raise exception '송금액은 1원 이상이어야 합니다.';
+  end if;
+
+  if p_sender_client_id < p_recipient_client_id then
+    select * into sender_user
+    from public.investment_users
+    where client_id = p_sender_client_id
+    for update;
+    select * into recipient_user
+    from public.investment_users
+    where client_id = p_recipient_client_id
+    for update;
+  else
+    select * into recipient_user
+    from public.investment_users
+    where client_id = p_recipient_client_id
+    for update;
+    select * into sender_user
+    from public.investment_users
+    where client_id = p_sender_client_id
+    for update;
+  end if;
+
+  if sender_user.client_id is null then
+    raise exception '송금하는 투자자를 찾을 수 없습니다.';
+  end if;
+  if recipient_user.client_id is null then
+    raise exception '받는 투자자를 찾을 수 없습니다.';
+  end if;
+  if sender_user.cash < p_amount then
+    raise exception '보유 현금이 부족합니다.';
+  end if;
+
+  update public.investment_users
+  set cash = cash - p_amount
+  where client_id = p_sender_client_id;
+
+  update public.investment_users
+  set cash = cash + p_amount
+  where client_id = p_recipient_client_id;
+
+  insert into public.investment_shop_messages(client_id, message)
+  values
+    (
+      p_sender_client_id,
+      recipient_user.nickname || '에게 '
+        || to_char(p_amount, 'FM999,999,999,999')
+        || '원을 송금했습니다.'
+    ),
+    (
+      p_recipient_client_id,
+      sender_user.nickname || '님이 '
+        || to_char(p_amount, 'FM999,999,999,999')
+        || '원을 송금했습니다.'
+    );
+
+  return jsonb_build_object(
+    'message',
+    recipient_user.nickname || '에게 '
+      || to_char(p_amount, 'FM999,999,999,999')
+      || '원을 송금했습니다.'
+  );
 end;
 $$;
 
@@ -688,6 +781,7 @@ grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, integer) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
+grant execute on function public.investment_transfer_cash(uuid, uuid, bigint) to anon, authenticated;
 
 alter table public.investment_assets
   add column if not exists surge_spike boolean not null default false;
