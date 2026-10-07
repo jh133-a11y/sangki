@@ -442,26 +442,26 @@ begin
     end if;
 
     update public.investment_assets
-    set current_price = case when next_price < 100 then 0 else next_price end,
+    set current_price = case when next_price <= 10 then 0 else next_price end,
         change_pct = pct,
-        listed = next_price >= 100
+        listed = next_price > 10
     where symbol = asset.symbol;
 
-    if next_price < 100 then
+    if next_price <= 10 then
       delete from public.investment_holdings where symbol = asset.symbol;
     end if;
 
     if asset.symbol = 'SANGI_ROCKET' then
       update public.investment_assets
-      set current_price = case when round(current_price * (1 + pct_two / 100)) < 100 then 0 else round(current_price * (1 + pct_two / 100)) end,
+      set current_price = case when round(current_price * (1 + pct_two / 100)) <= 10 then 0 else round(current_price * (1 + pct_two / 100)) end,
           change_pct = pct_two,
-          listed = round(current_price * (1 + pct_two / 100)) >= 100
+          listed = round(current_price * (1 + pct_two / 100)) > 10
       where symbol = 'JEONGMIN_ROCKET';
     elsif asset.symbol = 'SAMSUNG_MICROWAVE' then
       update public.investment_assets
-      set current_price = case when round(current_price * (1 + pct_two / 100)) < 100 then 0 else round(current_price * (1 + pct_two / 100)) end,
+      set current_price = case when round(current_price * (1 + pct_two / 100)) <= 10 then 0 else round(current_price * (1 + pct_two / 100)) end,
           change_pct = pct_two,
-          listed = round(current_price * (1 + pct_two / 100)) >= 100
+          listed = round(current_price * (1 + pct_two / 100)) > 10
       where symbol = 'SEOK_HYNIX';
     end if;
   end loop;
@@ -856,7 +856,7 @@ begin
     next_price := round(old.current_price * (1 + movement_pct / 100));
     new.current_price := greatest(next_price, 0);
     new.change_pct := movement_pct;
-    new.listed := next_price >= 100;
+    new.listed := next_price > 10;
     new.surge_spike := false;
     return new;
   end if;
@@ -881,7 +881,7 @@ begin
   next_price := round(old.current_price * (1 + movement_pct / 100));
   new.current_price := greatest(next_price, 0);
   new.change_pct := movement_pct;
-  new.listed := next_price >= 100;
+  new.listed := next_price > 10;
   new.surge_spike := false;
   return new;
 end;
@@ -922,27 +922,21 @@ set search_path = public
 as $$
 declare
   asset_row record;
-  digit_gap integer;
-  divisor bigint;
 begin
   for asset_row in
     select symbol, base_price, current_price
     from public.investment_assets
     where listed
-      and current_price >= 5000000
-      and length(current_price::text) > length(base_price::text)
+      and symbol = 'SEOK_HYNIX'
+      and current_price > 10000000
     for update
   loop
-    digit_gap := length(asset_row.current_price::text)
-      - length(asset_row.base_price::text);
-    divisor := power(10, digit_gap)::bigint;
-
     update public.investment_holdings
-    set quantity = quantity * divisor
+    set quantity = quantity * 10
     where symbol = asset_row.symbol;
 
     update public.investment_assets
-    set current_price = greatest(1, round(current_price::numeric / divisor)::bigint),
+    set current_price = greatest(1, round(current_price::numeric / 10)::bigint),
         split_notice = true
     where symbol = asset_row.symbol;
   end loop;
