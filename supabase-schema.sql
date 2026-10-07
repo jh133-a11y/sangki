@@ -929,21 +929,40 @@ set search_path = public
 as $$
 declare
   asset_row record;
+  v_base_digits integer;
+  v_current_digits integer;
+  v_split_factor bigint;
 begin
   for asset_row in
     select symbol, base_price, current_price
     from public.investment_assets
     where listed
-      and symbol = 'SEOK_HYNIX'
-      and current_price > 10000000
+      and symbol <> 'SEOK_HYNIX'
+      and current_price >= 5000000
     for update
   loop
+    v_base_digits := length(asset_row.base_price::text);
+    v_current_digits := length(asset_row.current_price::text);
+    v_split_factor := 1;
+
+    while v_current_digits > v_base_digits loop
+      v_split_factor := v_split_factor * 10;
+      v_current_digits := v_current_digits - 1;
+    end loop;
+
+    if v_split_factor = 1 then
+      continue;
+    end if;
+
     update public.investment_holdings
-    set quantity = quantity * 10
+    set quantity = quantity * v_split_factor
     where symbol = asset_row.symbol;
 
     update public.investment_assets
-    set current_price = greatest(1, round(current_price::numeric / 10)::bigint),
+    set current_price = greatest(
+          1,
+          round(current_price::numeric / v_split_factor)::bigint
+        ),
         split_notice = true
     where symbol = asset_row.symbol;
   end loop;
@@ -988,7 +1007,8 @@ as $$
 begin
   if pg_trigger_depth() = 1
      and new.listed
-     and new.current_price >= 5000000 then
+     and new.current_price >= 5000000
+     and new.symbol <> 'SEOK_HYNIX' then
     perform public.investment_apply_stock_splits();
   end if;
   return new;

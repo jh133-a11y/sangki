@@ -713,7 +713,7 @@ const renderInvestmentState = (state) => {
     name.querySelector('strong').textContent = asset.name;
     name.querySelector('span').textContent = asset.listed ? asset.symbol : '상장폐지 · 다음 갱신 시 재상장';
     const notices = [];
-    if (asset.split_notice) notices.push('주식 분할 된 상품입니다');
+    if (asset.split_notice) notices.push('주식 분할 상품입니다');
     if (asset.was_delisted && asset.listed) notices.push('이전에 상장폐지 되었던 상품입니다');
     name.querySelector('.investment-product-notices').textContent = notices.join(' · ');
     const price = document.createElement('strong');
