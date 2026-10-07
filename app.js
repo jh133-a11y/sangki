@@ -185,6 +185,23 @@ const authenticateAccount = async (username, password) => {
   if (savedAccountNickname) {
     investorNickname.value = savedAccountNickname;
     await loadInvestmentState(savedAccountNickname);
+  } else {
+    try {
+      const accountInvestmentState = await callInvestmentRpc('investment_build_state', {
+        p_client_id: accountSession.account_id
+      });
+      if (accountInvestmentState?.nickname) {
+        localStorage.setItem(
+          `sangki-account-nickname-${accountSession.account_id}`,
+          accountInvestmentState.nickname
+        );
+        localStorage.setItem('sangki-investor-nickname', accountInvestmentState.nickname);
+        investorNickname.value = accountInvestmentState.nickname;
+        renderInvestmentState(accountInvestmentState);
+      }
+    } catch (error) {
+      console.warn('account investment restore failed:', error.message);
+    }
   }
 };
 accountButton.addEventListener('click', () => {

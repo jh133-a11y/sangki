@@ -1445,6 +1445,11 @@ revoke all on function public.investment_get_state(uuid, text) from public;
 grant execute on function public.investment_get_state(uuid, text)
 to anon, authenticated;
 
+revoke all on function public.investment_build_state(uuid)
+from public;
+grant execute on function public.investment_build_state(uuid)
+to anon, authenticated;
+
 revoke all on function public.investment_link_account(uuid, uuid)
 from public;
 
