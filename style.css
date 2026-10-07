@@ -345,7 +345,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   min-height: 100vh;
   padding: 0;
   overflow: hidden;
-  background: #8ed7f2;
+  background: #f5e8d3;
 }
 .sanggi-page main {
   position: relative;
@@ -354,7 +354,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   min-height: 600px;
   overflow: hidden;
   isolation: isolate;
-  background: #8ed7f2;
+  background: #f5e8d3;
 }
 .sanggi-coin-display {
   position: absolute;
@@ -455,39 +455,46 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   inset: 0;
   z-index: -5;
   background:
-    radial-gradient(ellipse at 16% 22%, rgba(255, 255, 255, .9) 0 4%, transparent 4.5%),
-    radial-gradient(ellipse at 22% 23%, rgba(255, 255, 255, .75) 0 3%, transparent 3.5%),
-    radial-gradient(ellipse at 78% 18%, rgba(255, 255, 255, .82) 0 5%, transparent 5.5%),
-    linear-gradient(180deg, #55b9e9 0%, #b7eaf4 58%, #f6c88b 100%);
+    linear-gradient(90deg, rgba(255,255,255,.42) 0 2px, transparent 2px 100%),
+    linear-gradient(180deg, #fffaf0 0%, #f7e7ce 67%, #ddbd92 67.2%, #c3976b 100%);
 }
 .sanggi-moon {
-  width: clamp(70px, 9vw, 130px);
-  aspect-ratio: 1;
-  top: 10%;
-  right: 15%;
+  width: clamp(150px, 24vw, 320px);
+  height: clamp(110px, 22vw, 240px);
+  top: 11%;
+  right: 13%;
   z-index: -4;
-  border-radius: 50%;
-  background: #fff3a7;
-  box-shadow: 0 0 45px rgba(255, 229, 121, .45);
+  border: 12px solid #fffaf0;
+  border-bottom-width: 18px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, transparent 47%, rgba(255,255,255,.8) 47% 53%, transparent 53%),
+    linear-gradient(180deg, transparent 45%, rgba(255,255,255,.8) 45% 55%, transparent 55%),
+    linear-gradient(180deg, #8fd1df, #d3f0e8);
+  box-shadow: 0 7px 0 rgba(91, 62, 44, .15), inset 0 0 0 4px #d59b67;
   transform: translateY(-3vh);
 }
 .sanggi-city {
   left: 0;
   right: 0;
-  bottom: 35%;
-  height: 36%;
+  bottom: 34%;
+  height: 29%;
   transform: translateY(-3vh);
   z-index: -3;
   background:
-    linear-gradient(90deg, #202538 0 12%, #2b2e43 12% 25%, #1d2235 25% 39%, #303149 39% 52%, #202538 52% 68%, #2e3045 68% 83%, #1b2030 83%);
-  clip-path: polygon(0 25%, 8% 25%, 8% 5%, 19% 5%, 19% 31%, 27% 31%, 27% 13%, 39% 13%, 39% 27%, 50% 27%, 50% 0, 62% 0, 62% 25%, 73% 25%, 73% 8%, 87% 8%, 87% 28%, 100% 28%, 100% 100%, 0 100%);
+    linear-gradient(180deg, transparent 0 28%, #c97954 28% 34%, #a85a42 34% 100%);
+  clip-path: polygon(0 28%, 9% 28%, 9% 11%, 30% 11%, 30% 28%, 42% 28%, 42% 0, 64% 0, 64% 28%, 78% 28%, 78% 15%, 100% 15%, 100% 100%, 0 100%);
 }
 .sanggi-city::after {
   content: "";
   position: absolute;
-  inset: 24% 0 10%;
-  opacity: .7;
-  background: repeating-linear-gradient(90deg, transparent 0 5%, rgba(255, 216, 141, .65) 5% 6%, transparent 6% 11%);
+  left: 7%;
+  right: 7%;
+  bottom: 15%;
+  height: 34%;
+  opacity: .9;
+  background: repeating-linear-gradient(90deg, #f8c96b 0 3%, #8d4d3e 3% 4%, transparent 4% 9%);
+  border-radius: 8px;
 }
 .sanggi-street {
   left: -12%;
@@ -497,29 +504,28 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   transform: translateY(-2vh);
   z-index: -2;
   background:
-    linear-gradient(90deg, transparent 0 17%, rgba(255, 222, 154, .2) 17.1% 17.5%, transparent 17.6% 82.4%, rgba(255, 222, 154, .2) 82.5% 82.9%, transparent 83%),
-    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 2px, transparent 2px 46px),
-    linear-gradient(180deg, #4b4754 0%, #292d39 100%);
-  clip-path: polygon(19% 0, 81% 0, 100% 100%, 0 100%);
+    repeating-linear-gradient(90deg, rgba(123,77,45,.2) 0 2px, transparent 2px 72px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.22) 0 2px, transparent 2px 46px),
+    linear-gradient(180deg, #c89262 0%, #a96f4e 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
 }
 .sanggi-street::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 8%;
-  width: 9px;
-  height: 94%;
+  width: 34%;
+  height: 34%;
   transform: translateX(-50%);
-  background: repeating-linear-gradient(180deg, #d6ae72 0 38px, transparent 38px 76px);
-  opacity: .7;
+  border-radius: 50%;
+  background: rgba(238, 178, 117, .55);
+  box-shadow: 0 8px 14px rgba(93, 53, 35, .15);
 }
 .sanggi-lamp {
-  bottom: 33%;
-  width: 7px;
-  height: 27%;
+  display: none;
   transform: translateY(-2vh);
   z-index: -1;
-  background: #171b28;
+  background: transparent;
 }
 .sanggi-lamp::before {
   content: "";
@@ -536,13 +542,13 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-lamp-right { right: 14%; transform: translateY(-2vh) rotate(-5deg); }
 .sanggi-character {
   position: absolute;
-  left: 17%;
-  top: 8%;
+  left: 9%;
+  top: 7%;
   z-index: 2;
   display: block;
   width: auto;
-  height: min(62vh, 500px);
-  max-width: 48vw;
+  height: min(55vh, 440px);
+  max-width: 40vw;
   object-fit: contain;
   object-position: top center;
 }
@@ -593,13 +599,13 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
     right: 66px;
   }
   .sanggi-character {
-    left: 8%;
-    top: 13%;
-    height: min(48vh, 360px);
+    left: 5%;
+    top: 11%;
+    height: min(42vh, 315px);
     max-width: 55vw;
   }
   .sanggi-action-bar {
-    bottom: 16px;
+    bottom: 70px;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: calc(100% - 24px);
