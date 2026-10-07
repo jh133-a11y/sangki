@@ -330,7 +330,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .wrap { width: min(100% - 30px, 1240px); }
   header { padding: 18px 0; }
   .brand { display: none; }
-  #site-nav { position: absolute; top: 18px; right: 78px; gap: 0; }
+  #site-nav { position: absolute; top: 18px; right: 62px; gap: 0; }
   #site-nav a { display: none; }
   #site-nav .notification-toggle { display: inline-block; }
   .account-button { position: absolute; top: 18px; right: 15px; }
