@@ -584,6 +584,8 @@ const selectShopItem = (item) => {
   const isShield = item.item_type === 'missile_shield';
   const targetLabel = document.querySelector('.bag-target-label');
   targetLabel.hidden = isShield;
+  bagTarget.disabled = isShield;
+  if (isShield) bagTarget.value = '';
   targetLabel.firstChild.textContent = isNicknameTicket
     ? '닉네임 변경 대상 선택'
     : isLetter ? '편지 받을 유저 선택' : '공격 대상 선택';
