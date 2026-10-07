@@ -1435,39 +1435,40 @@ adminSaveVolatility.addEventListener('click', () => {
   );
 });
 
+const hydrateInvestmentRankingLevels = async (state) => {
+  if (!Array.isArray(state?.ranking) || !accountSession?.session_token) return state;
+  try {
+    const playerRanking = await callInvestmentRpc('sanggi_get_player_ranking', {
+      p_session_token: accountSession.session_token
+    });
+    const levelsByNickname = new Map(
+      (Array.isArray(playerRanking) ? playerRanking : []).map((entry) => [
+        String(entry.nickname || '').trim(),
+        Math.max(0, Number(entry.player_level) || 0)
+      ])
+    );
+    return {
+      ...state,
+      ranking: state.ranking.map((entry) => ({
+        ...entry,
+        player_level: levelsByNickname.get(String(entry.nickname || '').trim())
+          ?? Math.max(0, Number(entry.player_level) || 0)
+      }))
+    };
+  } catch (error) {
+    console.warn('투자 랭킹의 플레이어 레벨을 보완하지 못했습니다.', error);
+    return state;
+  }
+};
+
 const loadInvestmentState = async (nickname = investorNickname.value.trim()) => {
   if (!nickname) return;
   const state = await callInvestmentRpc('investment_get_state', {
     p_client_id: getInvestmentClientId(),
     p_nickname: nickname
   });
-  if (Array.isArray(state.ranking) && accountSession?.session_token) {
-    const missingPlayerLevels = state.ranking.some((entry) => {
-      const level = Number(entry.player_level);
-      return !Number.isFinite(level) || level <= 0;
-    });
-    if (missingPlayerLevels) {
-      try {
-        const playerRanking = await callInvestmentRpc('sanggi_get_player_ranking', {
-          p_session_token: accountSession.session_token
-        });
-        const levelsByNickname = new Map(
-          (Array.isArray(playerRanking) ? playerRanking : []).map((entry) => [
-            String(entry.nickname || '').trim(),
-            Math.max(0, Number(entry.player_level) || 0)
-          ])
-        );
-        state.ranking = state.ranking.map((entry) => ({
-          ...entry,
-          player_level: levelsByNickname.get(String(entry.nickname || '').trim())
-            ?? Math.max(0, Number(entry.player_level) || 0)
-        }));
-      } catch (error) {
-        console.warn('투자 랭킹의 플레이어 레벨을 보완하지 못했습니다.', error);
-      }
-    }
-  }
-  renderInvestmentState(state);
+  const hydratedState = await hydrateInvestmentRankingLevels(state);
+  renderInvestmentState(hydratedState);
 };
 
 const retryAccountInvestmentLink = async () => {
@@ -1525,7 +1526,7 @@ const tradeInvestment = async (symbol, side, quantityInput) => {
       p_quantity: quantityText
     });
     investorStatus.textContent = side === 'buy' ? `${quantityText}주 매수했습니다.` : `${quantityText}주 매도했습니다.`;
-    renderInvestmentState(state);
+    hydrateInvestmentRankingLevels(state).then(renderInvestmentState);
   } catch (error) {
     window.alert(error.message);
   } finally {
@@ -1578,7 +1579,7 @@ if (accountSession?.session_token) {
       );
       localStorage.setItem('sangki-investor-nickname', state.nickname);
       investorNickname.value = state.nickname;
-      renderInvestmentState(state);
+      hydrateInvestmentRankingLevels(state).then(renderInvestmentState);
     })
     .catch(() => {
       const savedNickname = localStorage.getItem('sangki-investor-nickname');
