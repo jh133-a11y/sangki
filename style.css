@@ -341,6 +341,15 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .placeholder-page h1 { margin: 20vh 0 18px; font-size: clamp(56px, 12vw, 150px); line-height: .85; letter-spacing: -.08em; }
 .placeholder-page p:not(.eyebrow) { margin-bottom: 30px; font-size: 16px; }
 .placeholder-page a { text-decoration: underline; text-underline-offset: 4px; font: 11px var(--mono); }
+.sanggi-page { background: #fff; }
+.sanggi-page main { position: relative; }
+.sanggi-character {
+  display: block;
+  width: min(230px, 25vw);
+  height: auto;
+  margin: 0 0 0 0;
+  object-fit: contain;
+}
 
 .speed-game { background: var(--orange); }
 .speed-game .section-head { border-color: rgba(23, 23, 23, .55); }
