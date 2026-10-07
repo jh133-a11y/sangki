@@ -215,6 +215,11 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .ranking-delete:hover { color: var(--orange); }
 .ranking-empty, .ranking-note { font: 11px/1.6 var(--mono); }
 .ranking-note { margin: 0; opacity: .7; }
+.game-ranking-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 15px 0; }
+.game-page-button { border: 1px solid var(--ink); padding: 6px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 9px var(--mono); }
+.game-page-button:hover:not(:disabled) { background: var(--ink); color: var(--acid); }
+.game-page-button:disabled { cursor: not-allowed; opacity: .35; }
+.game-page-number { min-width: 32px; text-align: center; font: 10px var(--mono); }
 
 .guestbook { background: #c6b9ff; }
 .guestbook .section-head { border-color: rgba(23, 23, 23, .45); }

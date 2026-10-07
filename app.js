@@ -743,8 +743,11 @@ const gameQuestionNumber = document.querySelector('#game-question-number');
 const gamePlayer = document.querySelector('#game-player');
 const gameMessage = document.querySelector('#game-message');
 const gameRankingList = document.querySelector('#game-ranking-list');
+const gameRankingPagination = document.querySelector('#game-ranking-pagination');
 let gameState = null;
 let gameTimer = null;
+let gameRankingPage = 1;
+const GAME_RANKING_PER_PAGE = 5;
 
 const randomInteger = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -826,16 +829,21 @@ gameAnswerForm.addEventListener('submit', (event) => {
 
 const loadGameRanking = async () => {
   try {
-    const response = await fetch(`${scoresEndpoint}?select=id,nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=10`, {
+    const response = await fetch(`${scoresEndpoint}?select=id,nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=1000`, {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('랭킹을 불러오지 못했습니다.');
     const scores = await response.json();
     if (!scores.length) {
       gameRankingList.innerHTML = '<li class="ranking-empty">아직 기록이 없습니다.</li>';
+      gameRankingPagination.replaceChildren();
       return;
     }
-    gameRankingList.replaceChildren(...scores.map((score) => {
+    const totalPages = Math.max(1, Math.ceil(scores.length / GAME_RANKING_PER_PAGE));
+    gameRankingPage = Math.min(gameRankingPage, totalPages);
+    const start = (gameRankingPage - 1) * GAME_RANKING_PER_PAGE;
+    const visibleScores = scores.slice(start, start + GAME_RANKING_PER_PAGE);
+    gameRankingList.replaceChildren(...visibleScores.map((score) => {
       const item = document.createElement('li');
       const name = document.createElement('span');
       name.textContent = score.nickname;
@@ -850,8 +858,34 @@ const loadGameRanking = async () => {
       item.append(name, value, deleteButton);
       return item;
     }));
+    const previous = document.createElement('button');
+    previous.type = 'button';
+    previous.className = 'game-page-button';
+    previous.textContent = '← 이전';
+    previous.disabled = gameRankingPage === 1;
+    previous.addEventListener('click', () => {
+      gameRankingPage -= 1;
+      loadGameRanking();
+    });
+
+    const pageNumber = document.createElement('span');
+    pageNumber.className = 'game-page-number';
+    pageNumber.textContent = `${gameRankingPage} / ${totalPages}`;
+
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'game-page-button';
+    next.textContent = '다음 →';
+    next.disabled = gameRankingPage === totalPages;
+    next.addEventListener('click', () => {
+      gameRankingPage += 1;
+      loadGameRanking();
+    });
+
+    gameRankingPagination.replaceChildren(previous, pageNumber, next);
   } catch {
     gameRankingList.innerHTML = '<li class="ranking-empty">랭킹을 불러오지 못했습니다.</li>';
+    gameRankingPagination.replaceChildren();
   }
 };
 
