@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=81">
+  <link rel="stylesheet" href="style.css?v=82">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -109,25 +109,19 @@
       </div>
       <p class="sanggi-shop-status" id="sanggi-shop-status" role="status"></p>
     </section>
-    <div class="sanggi-shop-complete-backdrop" id="sanggi-shop-complete-backdrop" hidden></div>
-    <section class="sanggi-shop-complete-modal" id="sanggi-shop-complete-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-complete-title" hidden>
+    <div class="site-confirm-backdrop" id="sanggi-shop-complete-backdrop" hidden></div>
+    <section class="site-confirm-modal" id="sanggi-shop-complete-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-complete-title" hidden>
       <h2 id="sanggi-shop-complete-title">구매 완료</h2>
       <p id="sanggi-shop-complete-message"></p>
-      <button class="sanggi-shop-buy" id="sanggi-shop-complete-close" type="button">확인</button>
+      <div><button id="sanggi-shop-complete-close" type="button">확인</button></div>
     </section>
-    <div class="sanggi-shop-confirm-backdrop" id="sanggi-shop-confirm-backdrop" hidden></div>
-    <section class="sanggi-shop-confirm-modal" id="sanggi-shop-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-confirm-title" hidden>
+    <div class="site-confirm-backdrop" id="sanggi-shop-confirm-backdrop" hidden></div>
+    <section class="site-confirm-modal" id="sanggi-shop-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-confirm-title" hidden>
       <h2 id="sanggi-shop-confirm-title">물약 구매</h2>
       <p id="sanggi-shop-confirm-message"></p>
-      <label class="sanggi-shop-quantity-label" for="sanggi-shop-quantity">구매 수량</label>
-      <div class="sanggi-shop-quantity-row">
-        <input id="sanggi-shop-quantity" type="number" min="1" max="100" value="1" inputmode="numeric">
-        <button class="sanggi-shop-max" id="sanggi-shop-max" type="button">최대</button>
-      </div>
-      <div class="sanggi-shop-confirm-actions">
-        <button class="sanggi-shop-cancel" id="sanggi-shop-confirm-cancel" type="button">취소</button>
-        <button class="sanggi-shop-buy" id="sanggi-shop-confirm-ok" type="button">구매하기</button>
-      </div>
+      <label class="shop-modal-quantity-label" for="sanggi-shop-quantity">구매 수량<input id="sanggi-shop-quantity" type="text" min="1" max="100" value="1" inputmode="numeric"></label>
+      <button class="shop-modal-max" id="sanggi-shop-max" type="button">최대 수량</button>
+      <div><button id="sanggi-shop-confirm-cancel" type="button">취소</button><button id="sanggi-shop-confirm-ok" type="button">확인</button></div>
     </section>
     <div class="sanggi-player-backdrop" id="sanggi-player-backdrop" hidden></div>
     <section class="sanggi-ability-modal sanggi-player-modal" id="sanggi-player-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-player-title" hidden>
@@ -199,6 +193,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=45"></script>
+  <script src="sanggi.js?v=46"></script>
 </body>
 </html>
