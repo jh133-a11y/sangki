@@ -256,7 +256,18 @@
     character.addEventListener('pointermove', moveCharacter);
     character.addEventListener('pointerup', stopCharacterDrag);
     character.addEventListener('pointercancel', stopCharacterDrag);
-  }
+      window.addEventListener('pointermove', (event) => {
+        if (!dragState) return;
+        event.preventDefault();
+        moveCharacter(event);
+      }, { passive: false });
+      window.addEventListener('pointerup', (event) => {
+        if (dragState) stopCharacterDrag(event);
+      });
+      window.addEventListener('pointercancel', (event) => {
+        if (dragState) stopCharacterDrag(event);
+      });
+    }
 
   main.addEventListener('pointerdown', (event) => {
     if (isInteractiveControl(event.target)) return;

@@ -686,6 +686,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   cursor: grab;
   touch-action: none;
   user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
   will-change: left, top;
 }
 .sanggi-character.is-dragging {
