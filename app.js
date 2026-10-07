@@ -66,6 +66,65 @@ const clearSanggiLocalState = () => {
 };
 let accountMode = 'login';
 let accountSession = null;
+let siteStateSaveTimer = null;
+const siteStateStorageKeys = {
+  notifications: 'sangki-notifications-enabled',
+  watchedComments: 'sangki-watched-comments',
+  commentVoter: 'sangki-comment-voter-key'
+};
+const callSiteStateRpc = async (name, payload) => {
+  const response = await fetch(`${rpcEndpoint}/${name}`, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || result.hint || '계정 상태를 저장하지 못했습니다.');
+  return result;
+};
+const getSiteStateSnapshot = () => ({
+  notifications_enabled: localStorage.getItem(siteStateStorageKeys.notifications) !== 'false',
+  watched_comments: getWatchedComments(),
+  comment_voter_key: localStorage.getItem(siteStateStorageKeys.commentVoter) || null
+});
+const saveSiteAccountState = async () => {
+  if (!accountSession?.session_token) return;
+  await callSiteStateRpc('site_save_account_state', {
+    p_session_token: accountSession.session_token,
+    p_state: getSiteStateSnapshot()
+  });
+};
+const scheduleSiteAccountStateSave = () => {
+  if (!accountSession?.session_token) return;
+  window.clearTimeout(siteStateSaveTimer);
+  siteStateSaveTimer = window.setTimeout(() => {
+    saveSiteAccountState().catch((error) => {
+      console.warn('account site state save failed:', error.message);
+    });
+  }, 400);
+};
+const loadSiteAccountState = async () => {
+  if (!accountSession?.session_token) return;
+  const state = await callSiteStateRpc('site_get_account_state', {
+    p_session_token: accountSession.session_token
+  });
+  if (typeof state.notifications_enabled === 'boolean') {
+    localStorage.setItem(
+      siteStateStorageKeys.notifications,
+      String(state.notifications_enabled)
+    );
+  }
+  if (Array.isArray(state.watched_comments)) {
+    localStorage.setItem(
+      siteStateStorageKeys.watchedComments,
+      JSON.stringify(state.watched_comments.filter((id) => typeof id === 'string'))
+    );
+  }
+  if (typeof state.comment_voter_key === 'string' && state.comment_voter_key.length >= 16) {
+    localStorage.setItem(siteStateStorageKeys.commentVoter, state.comment_voter_key);
+    commentVoterKey = state.comment_voter_key;
+  }
+};
 const accountButton = document.querySelector('#account-button');
 const accountModal = document.querySelector('#account-modal');
 const accountBackdrop = document.querySelector('#account-backdrop');
@@ -201,6 +260,11 @@ const authenticateAccount = async (username, password) => {
   } else {
     localStorage.setItem(investmentClientKey, accountSession.account_id);
   }
+  try {
+    await loadSiteAccountState();
+  } catch (error) {
+    console.warn('account site state restore failed:', error.message);
+  }
   updateAccountButton();
   if (typeof window.refreshPlayerLevelRanking === 'function') {
     window.refreshPlayerLevelRanking();
@@ -233,6 +297,9 @@ const authenticateAccount = async (username, password) => {
 accountButton.addEventListener('click', async () => {
   if (accountSession) {
     if (!await siteConfirm('정말로 로그아웃하시겠습니까?')) return;
+    await saveSiteAccountState().catch((error) => {
+      console.warn('account site state save failed:', error.message);
+    });
     accountSession = null;
     window.dispatchEvent(new CustomEvent('sanggi-account-changed'));
     localStorage.removeItem(accountStorageKey);
@@ -294,7 +361,10 @@ const closeSettings = () => {
   settingsModal.hidden = true;
   settingsBackdrop.hidden = true;
 };
-const logoutAccount = () => {
+const logoutAccount = async () => {
+  await saveSiteAccountState().catch((error) => {
+    console.warn('account site state save failed:', error.message);
+  });
   accountSession = null;
   window.dispatchEvent(new CustomEvent('sanggi-account-changed'));
   localStorage.removeItem(accountStorageKey);
@@ -318,12 +388,12 @@ settingsOpen.addEventListener('click', () => {
 });
 settingsClose.addEventListener('click', closeSettings);
 settingsBackdrop.addEventListener('click', closeSettings);
-settingsLogout.addEventListener('click', () => {
+settingsLogout.addEventListener('click', async () => {
   if (!accountSession) {
     settingsStatus.textContent = '로그인된 계정이 없습니다.';
     return;
   }
-  logoutAccount();
+  await logoutAccount();
 });
 settingsDeleteAccount.addEventListener('click', async () => {
   if (!accountSession) {
@@ -1735,6 +1805,7 @@ const watchComment = (id) => {
   const watched = new Set(getWatchedComments());
   watched.add(id);
   localStorage.setItem(WATCHED_COMMENTS_KEY, JSON.stringify([...watched]));
+  scheduleSiteAccountStateSave();
 };
 
 const showNotification = (title, body, tag) => {
@@ -1782,10 +1853,12 @@ notificationToggle.addEventListener('click', async () => {
   if (Notification.permission === 'granted') {
     const enabled = localStorage.getItem(NOTIFICATIONS_ENABLED_KEY) !== 'false';
     localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, String(!enabled));
+    scheduleSiteAccountStateSave();
   } else {
     await requestNotifications();
     if (Notification.permission === 'granted') {
       localStorage.setItem(NOTIFICATIONS_ENABLED_KEY, 'true');
+      scheduleSiteAccountStateSave();
     }
   }
   updateNotificationButton();
@@ -2367,5 +2440,10 @@ form.addEventListener('submit', async (event) => {
 
 requestNotifications().then(updateNotificationButton);
 updateNotificationButton();
+if (accountSession?.session_token) {
+  loadSiteAccountState()
+    .then(updateNotificationButton)
+    .catch((error) => console.warn('account site state restore failed:', error.message));
+}
 loadComments();
 window.setInterval(loadComments, 20000);

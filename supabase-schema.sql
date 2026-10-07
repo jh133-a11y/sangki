@@ -2994,6 +2994,88 @@ grant execute on function public.shop_purchase(uuid, text) to anon, authenticate
 
 notify pgrst, 'reload schema';
 
+-- Account-scoped site preferences and comment state.
+create table if not exists public.site_account_state (
+  account_id uuid primary key references public.site_accounts(id) on delete cascade,
+  state jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_account_state enable row level security;
+revoke all on table public.site_account_state from anon, authenticated;
+
+create or replace function public.site_get_account_state(
+  p_session_token uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_state jsonb;
+begin
+  select account_id into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  select state into v_state
+  from public.site_account_state
+  where account_id = v_account_id;
+
+  return coalesce(v_state, '{}'::jsonb);
+end;
+$$;
+
+create or replace function public.site_save_account_state(
+  p_session_token uuid,
+  p_state jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_state jsonb;
+begin
+  select account_id into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  v_state := case
+    when jsonb_typeof(coalesce(p_state, '{}'::jsonb)) = 'object'
+      then coalesce(p_state, '{}'::jsonb)
+    else '{}'::jsonb
+  end;
+
+  insert into public.site_account_state(account_id, state, updated_at)
+  values (v_account_id, v_state, now())
+  on conflict (account_id) do update set
+    state = excluded.state,
+    updated_at = now();
+
+  return v_state;
+end;
+$$;
+
+revoke all on function public.site_get_account_state(uuid) from public;
+revoke all on function public.site_save_account_state(uuid, jsonb) from public;
+grant execute on function public.site_get_account_state(uuid) to anon, authenticated;
+grant execute on function public.site_save_account_state(uuid, jsonb) to anon, authenticated;
+
+notify pgrst, 'reload schema';
+
 -- Sanggi game account state.
 create table if not exists public.sanggi_game_states (
   account_id uuid primary key references public.site_accounts(id) on delete cascade,
