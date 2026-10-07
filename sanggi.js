@@ -4,6 +4,11 @@
   const storageKey = 'sanggi-coin-balance';
   const abilityStorageKey = 'sanggi-ability-levels';
   const characterPositionKey = 'sanggi-character-position';
+  const sessionKey = 'sangki-auth-session';
+  const tabSessionKey = 'sangki-auth-session-tab';
+  const keepLoginKey = 'sangki-keep-login';
+  const rpcEndpoint = 'https://ejrwrwjsgizzxhqybtff.supabase.co/rest/v1/rpc';
+  const rpcKey = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
   const maxBreathLevel = 3000;
   const maxAutoLevel = 50;
 
@@ -22,6 +27,8 @@
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   let audioContext = null;
   let autoTimer = null;
+  let remoteReady = false;
+  let remoteSaveTimer = null;
   const character = document.querySelector('.sanggi-character');
   let dragState = null;
 
@@ -41,6 +48,66 @@
   const saveState = () => {
     localStorage.setItem(storageKey, coins.toString());
     localStorage.setItem(abilityStorageKey, JSON.stringify({ breathLevel, autoLevel }));
+    if (remoteReady) scheduleRemoteSave();
+  };
+
+  const getSession = () => {
+    try {
+      const raw = localStorage.getItem(keepLoginKey) === 'true'
+        ? localStorage.getItem(sessionKey)
+        : sessionStorage.getItem(tabSessionKey);
+      return JSON.parse(raw || 'null');
+    } catch {
+      return null;
+    }
+  };
+
+  const remoteRpc = async (name, payload) => {
+    const response = await fetch(`${rpcEndpoint}/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: rpcKey,
+        Authorization: `Bearer ${rpcKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.hint || '상기 키우기 정보를 저장하지 못했습니다.');
+    return result;
+  };
+
+  const getLocalPosition = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(characterPositionKey) || 'null');
+      return {
+        x: Number.isFinite(saved?.x) ? saved.x : 0.09,
+        y: Number.isFinite(saved?.y) ? saved.y : 0.07
+      };
+    } catch {
+      return { x: 0.09, y: 0.07 };
+    }
+  };
+
+  const scheduleRemoteSave = () => {
+    window.clearTimeout(remoteSaveTimer);
+    remoteSaveTimer = window.setTimeout(async () => {
+      const session = getSession();
+      if (!session?.session_token) return;
+      const position = getLocalPosition();
+      try {
+        await remoteRpc('sanggi_save_state', {
+          p_session_token: session.session_token,
+          p_coins: coins.toString(),
+          p_breath_level: breathLevel,
+          p_auto_level: autoLevel,
+          p_character_x: position.x,
+          p_character_y: position.y
+        });
+      } catch (error) {
+        console.warn('Sanggi state save failed:', error.message);
+      }
+    }, 400);
   };
 
   const playCoinSound = () => {
@@ -149,9 +216,34 @@
     const characterBounds = character.getBoundingClientRect();
     const maxX = Math.max(1, mainBounds.width - characterBounds.width);
     const maxY = Math.max(1, mainBounds.height - characterBounds.height);
-    localStorage.setItem(characterPositionKey, JSON.stringify({
+    const position = {
       x: Math.max(0, Math.min(1, (characterBounds.left - mainBounds.left) / maxX)),
       y: Math.max(0, Math.min(1, (characterBounds.top - mainBounds.top) / maxY))
+    };
+    localStorage.setItem(characterPositionKey, JSON.stringify(position));
+    if (remoteReady) scheduleRemoteSave();
+  };
+
+  const syncAccountState = async () => {
+    const session = getSession();
+    if (!session?.session_token) return;
+    const position = getLocalPosition();
+    const state = await remoteRpc('sanggi_sync_state', {
+      p_session_token: session.session_token,
+      p_guest_coins: coins.toString(),
+      p_guest_breath_level: breathLevel,
+      p_guest_auto_level: autoLevel,
+      p_guest_character_x: position.x,
+      p_guest_character_y: position.y
+    });
+    coins = BigInt(String(state.coins || '0'));
+    breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(state.breath_level) || 1));
+    autoLevel = Math.min(maxAutoLevel, Math.max(1, Number(state.auto_level) || 1));
+    localStorage.setItem(storageKey, coins.toString());
+    localStorage.setItem(abilityStorageKey, JSON.stringify({ breathLevel, autoLevel }));
+    localStorage.setItem(characterPositionKey, JSON.stringify({
+      x: Number(state.character_x),
+      y: Number(state.character_y)
     }));
   };
 
@@ -297,7 +389,17 @@
     collectCoin(clickReward());
   });
 
-  renderBalance();
-  renderAbilities();
-  scheduleAutoCoin();
+  const initialize = async () => {
+    try {
+      await syncAccountState();
+      remoteReady = Boolean(getSession()?.session_token);
+    } catch (error) {
+      console.warn('Sanggi account sync failed:', error.message);
+    }
+    loadCharacterPosition();
+    renderBalance();
+    renderAbilities();
+    scheduleAutoCoin();
+  };
+  initialize();
 })();
