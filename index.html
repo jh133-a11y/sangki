@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=30">
+  <link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
   <div class="noise"></div>
@@ -19,8 +19,22 @@
         <a href="#guestbook">COMMENT</a>
         <button class="notification-toggle" id="notification-toggle" type="button">알림 허용</button>
       </nav>
+      <button class="account-button" id="account-button" type="button">로그인</button>
     </div>
   </header>
+  <div class="account-backdrop" id="account-backdrop" hidden></div>
+  <section class="account-modal" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title" hidden>
+    <button class="account-close" id="account-close" type="button" aria-label="로그인 창 닫기">×</button>
+    <h2 id="account-title">account</h2>
+    <p id="account-description">사이트 전체에서 사용할 아이디를 만들어주세요.</p>
+    <form id="account-form">
+      <label>아이디<input id="account-username" type="text" minlength="3" maxlength="24" autocomplete="username" required></label>
+      <label>비밀번호<input id="account-password" type="password" minlength="8" autocomplete="current-password" required></label>
+      <button type="submit" id="account-submit">로그인</button>
+    </form>
+    <button class="account-switch" id="account-switch" type="button">회원가입으로 전환</button>
+    <p class="account-status" id="account-status" role="status"></p>
+  </section>
   <button class="menu-toggle" id="menu-toggle" type="button" aria-label="사이드바 열기" aria-expanded="false" aria-controls="side-menu">
     <span></span><span></span><span></span>
   </button>
@@ -206,6 +220,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=38"></script>
+  <script src="app.js?v=40"></script>
 </body>
 </html>

@@ -9,6 +9,104 @@ const apiHeaders = {
   Authorization: `Bearer ${SUPABASE_KEY}`
 };
 
+const accountStorageKey = 'sangki-auth-session';
+let accountMode = 'login';
+let accountSession = null;
+const accountButton = document.querySelector('#account-button');
+const accountModal = document.querySelector('#account-modal');
+const accountBackdrop = document.querySelector('#account-backdrop');
+const accountClose = document.querySelector('#account-close');
+const accountForm = document.querySelector('#account-form');
+const accountUsername = document.querySelector('#account-username');
+const accountPassword = document.querySelector('#account-password');
+const accountSubmit = document.querySelector('#account-submit');
+const accountSwitch = document.querySelector('#account-switch');
+const accountStatus = document.querySelector('#account-status');
+
+const accountEmail = (username) => `${username.trim().toLowerCase()}@account.sangki.local`;
+const accountHeaders = () => ({
+  ...apiHeaders,
+  ...(accountSession?.access_token ? { Authorization: `Bearer ${accountSession.access_token}` } : {})
+});
+const setAccountStatus = (message) => { accountStatus.textContent = message; };
+const updateAccountButton = () => {
+  accountButton.textContent = accountSession?.user?.user_metadata?.username
+    ? `${accountSession.user.user_metadata.username} · 로그아웃`
+    : '로그인';
+};
+const closeAccountModal = () => {
+  accountModal.hidden = true;
+  accountBackdrop.hidden = true;
+};
+const authenticateAccount = async (username, password) => {
+  const endpoint = accountMode === 'signup'
+    ? `${SUPABASE_URL}/auth/v1/signup`
+    : `${SUPABASE_URL}/auth/v1/token?grant_type=password`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(accountMode === 'signup'
+      ? { email: accountEmail(username), password, data: { username: username.trim() } }
+      : { email: accountEmail(username), password })
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.msg || result.error_description || result.message || '계정 요청에 실패했습니다.');
+  if (!result.access_token) throw new Error('회원가입은 완료됐지만 이메일 확인이 필요한 설정입니다.');
+  accountSession = result;
+  localStorage.setItem(accountStorageKey, JSON.stringify(result));
+  const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
+    method: 'POST',
+    headers: { ...accountHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_old_client_id: getInvestmentClientId() })
+  });
+  if (!linkResponse.ok) throw new Error('기존 투자 정보를 계정에 연결하지 못했습니다.');
+  localStorage.setItem(investmentClientKey, accountSession.user.id);
+  updateAccountButton();
+};
+accountButton.addEventListener('click', () => {
+  if (accountSession) {
+    accountSession = null;
+    localStorage.removeItem(accountStorageKey);
+    updateAccountButton();
+    return;
+  }
+  accountModal.hidden = false;
+  accountBackdrop.hidden = false;
+  accountUsername.focus();
+});
+accountClose.addEventListener('click', closeAccountModal);
+accountBackdrop.addEventListener('click', closeAccountModal);
+accountSwitch.addEventListener('click', () => {
+  accountMode = accountMode === 'login' ? 'signup' : 'login';
+  accountSubmit.textContent = accountMode === 'login' ? '로그인' : '회원가입';
+  accountSwitch.textContent = accountMode === 'login' ? '회원가입으로 전환' : '로그인으로 전환';
+  accountPassword.autocomplete = accountMode === 'login' ? 'current-password' : 'new-password';
+  setAccountStatus('');
+});
+accountForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  accountSubmit.disabled = true;
+  setAccountStatus('처리 중...');
+  try {
+    await authenticateAccount(accountUsername.value, accountPassword.value);
+    closeAccountModal();
+    if (document.querySelector('#investor-nickname')?.value.trim()) await loadInvestmentState();
+  } catch (error) {
+    setAccountStatus(error.message);
+  } finally {
+    accountSubmit.disabled = false;
+  }
+});
+try {
+  accountSession = JSON.parse(localStorage.getItem(accountStorageKey) || 'null');
+} catch {
+  accountSession = null;
+}
+if (accountSession?.user?.id) {
+  localStorage.setItem(investmentClientKey, accountSession.user.id);
+}
+updateAccountButton();
+
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener('click', (event) => {
     const target = document.querySelector(link.getAttribute('href'));

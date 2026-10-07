@@ -1037,5 +1037,69 @@ revoke all on function public.investment_apply_stock_splits() from public;
 revoke all on function public.investment_relist_delisted_assets() from public;
 revoke all on function public.investment_market_cron_tick() from public;
 grant execute on function public.investment_apply_stock_splits() to anon, authenticated;
+
+create or replace function public.investment_link_account(
+  p_old_client_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  account_id uuid := auth.uid();
+  old_user public.investment_users%rowtype;
+  target_user public.investment_users%rowtype;
+begin
+  if account_id is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  if p_old_client_id is null or p_old_client_id = account_id then
+    return true;
+  end if;
+
+  select * into old_user
+  from public.investment_users
+  where client_id = p_old_client_id
+  for update;
+
+  if old_user.client_id is null then
+    return true;
+  end if;
+
+  select * into target_user
+  from public.investment_users
+  where client_id = account_id
+  for update;
+
+  if target_user.client_id is null then
+    insert into public.investment_users (client_id, nickname, cash)
+    values (account_id, old_user.nickname, old_user.cash);
+  else
+    update public.investment_users
+    set cash = target_user.cash + old_user.cash
+    where client_id = account_id;
+  end if;
+
+  insert into public.investment_holdings (client_id, symbol, quantity, invested_amount)
+  select account_id, symbol, quantity, invested_amount
+  from public.investment_holdings
+  where client_id = p_old_client_id
+  on conflict (client_id, symbol) do update
+  set quantity = public.investment_holdings.quantity + excluded.quantity,
+      invested_amount = public.investment_holdings.invested_amount + excluded.invested_amount;
+
+  delete from public.investment_holdings
+  where client_id = p_old_client_id;
+  delete from public.investment_users
+  where client_id = p_old_client_id;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.investment_link_account(uuid) from public;
+grant execute on function public.investment_link_account(uuid) to authenticated;
 grant execute on function public.investment_relist_delisted_assets() to anon, authenticated;
 grant execute on function public.investment_market_cron_tick() to anon, authenticated;
