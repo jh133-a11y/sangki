@@ -4,6 +4,7 @@ const commentsEndpoint = `${SUPABASE_URL}/rest/v1/comments`;
 const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
 const scoresEndpoint = `${SUPABASE_URL}/rest/v1/speed_game_scores`;
 const investmentClientKey = 'sangki-investment-client-id';
+const legacyInvestmentClientKey = 'sangki-legacy-investment-client-id';
 const apiHeaders = {
   apikey: SUPABASE_KEY,
   Authorization: `Bearer ${SUPABASE_KEY}`
@@ -45,6 +46,11 @@ const authenticateAccount = async (username, password) => {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || result.hint || '계정 요청에 실패했습니다.');
+  const previousClientId = localStorage.getItem(investmentClientKey);
+  if (previousClientId && previousClientId !== result.account_id) {
+    localStorage.setItem(legacyInvestmentClientKey, previousClientId);
+  }
+  const oldClientId = localStorage.getItem(legacyInvestmentClientKey) || previousClientId;
   accountSession = result;
   localStorage.setItem(accountStorageKey, JSON.stringify(result));
   const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
@@ -52,7 +58,7 @@ const authenticateAccount = async (username, password) => {
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       p_session_token: accountSession.session_token,
-      p_old_client_id: getInvestmentClientId()
+      p_old_client_id: oldClientId
     })
   });
   if (!linkResponse.ok) {
@@ -107,6 +113,10 @@ try {
   accountSession = null;
 }
 if (accountSession?.account_id) {
+  const currentClientId = localStorage.getItem(investmentClientKey);
+  if (currentClientId && currentClientId !== accountSession.account_id) {
+    localStorage.setItem(legacyInvestmentClientKey, currentClientId);
+  }
   localStorage.setItem(investmentClientKey, accountSession.account_id);
 }
 updateAccountButton();

@@ -1213,6 +1213,7 @@ declare
   v_account_id uuid;
   v_account_username text;
   v_target_nickname text;
+  v_suffix integer := 0;
   old_user public.investment_users%rowtype;
   target_user public.investment_users%rowtype;
 begin
@@ -1245,6 +1246,16 @@ begin
       v_target_nickname := left(v_account_username, 18) || '_' ||
         substr(replace(v_account_id::text, '-', ''), 1, 5);
     end if;
+    while exists (
+      select 1
+      from public.investment_users
+      where nickname = v_target_nickname
+    ) loop
+      v_suffix := v_suffix + 1;
+      v_target_nickname := left(v_account_username, 18) || '_' ||
+        substr(replace(v_account_id::text, '-', ''), 1, 4) ||
+        right('0' || v_suffix::text, 2);
+    end loop;
     insert into public.investment_users (client_id, nickname, cash)
     values (v_account_id, v_target_nickname, old_user.cash);
   else
@@ -1273,3 +1284,10 @@ revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.site_account_signup(text, text) to anon, authenticated;
 grant execute on function public.site_account_login(text, text) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
+
+alter function public.site_account_signup(text, text)
+  set search_path = public, extensions;
+alter function public.site_account_login(text, text)
+  set search_path = public, extensions;
+alter function public.investment_link_account(uuid, uuid)
+  set search_path = public, extensions;
