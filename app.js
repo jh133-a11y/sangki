@@ -964,6 +964,7 @@ const renderInvestmentState = (state) => {
 investmentTransferToggle.addEventListener('click', () => {
   const willOpen = investmentTransfer.hidden;
   investmentTransfer.hidden = !willOpen;
+  investmentTransfer.style.display = willOpen ? 'grid' : 'none';
   if (willOpen) {
     transferStatus.textContent = '';
     transferTarget.focus();
