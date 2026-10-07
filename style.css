@@ -345,97 +345,116 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   min-height: 100vh;
   padding: 0;
   overflow: hidden;
-  background: #9ddcf2;
+  background: #1b202c;
 }
 .sanggi-page main {
   position: relative;
   width: 100vw;
   height: 100vh;
-  min-height: 620px;
+  min-height: 600px;
   overflow: hidden;
   isolation: isolate;
-  background: linear-gradient(180deg, #82cbed 0%, #c4eff7 48%, #f8d39c 49%, #efb16f 100%);
+  background: #1b202c;
 }
 .sanggi-sky,
-.sanggi-buildings,
-.sanggi-sidewalk,
-.sanggi-road,
-.sanggi-road-lines {
+.sanggi-moon,
+.sanggi-city,
+.sanggi-street,
+.sanggi-lamp {
   position: absolute;
   pointer-events: none;
 }
 .sanggi-sky {
-  inset: 0 0 45% 0;
+  inset: 0;
   z-index: -5;
   background:
-    radial-gradient(ellipse at 16% 25%, rgba(255, 255, 255, .9) 0 4%, transparent 4.5%),
-    radial-gradient(ellipse at 20% 26%, rgba(255, 255, 255, .82) 0 3%, transparent 3.5%),
-    radial-gradient(ellipse at 76% 18%, rgba(255, 255, 255, .75) 0 5%, transparent 5.5%),
-    linear-gradient(180deg, #68bdea 0%, #b8ecf4 100%);
+    radial-gradient(circle at 20% 18%, rgba(242, 224, 176, .9) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 24%, rgba(242, 224, 176, .8) 0 1px, transparent 2px),
+    radial-gradient(circle at 58% 12%, rgba(242, 224, 176, .8) 0 1px, transparent 2px),
+    linear-gradient(180deg, #161b2a 0%, #30354c 54%, #5d4852 100%);
 }
-.sanggi-buildings {
+.sanggi-moon {
+  width: clamp(70px, 9vw, 130px);
+  aspect-ratio: 1;
+  top: 10%;
+  right: 15%;
+  z-index: -4;
+  border-radius: 50%;
+  background: #f4dfad;
+  box-shadow: 0 0 45px rgba(244, 223, 173, .28);
+}
+.sanggi-city {
   left: 0;
   right: 0;
-  bottom: 43%;
-  height: 27%;
-  z-index: -4;
+  bottom: 35%;
+  height: 36%;
+  z-index: -3;
   background:
-    linear-gradient(90deg, transparent 0 3%, #ef9c63 3% 12%, transparent 12% 14%, #e66e59 14% 25%, transparent 25% 27%, #f6b66c 27% 39%, transparent 39% 42%, #d66d66 42% 53%, transparent 53% 56%, #eda474 56% 69%, transparent 69% 72%, #d36b5d 72% 85%, transparent 85% 87%, #f2b073 87% 100%);
-  clip-path: polygon(0 28%, 4% 28%, 4% 8%, 13% 8%, 13% 34%, 18% 34%, 18% 0, 28% 0, 28% 23%, 34% 23%, 34% 12%, 45% 12%, 45% 35%, 51% 35%, 51% 4%, 62% 4%, 62% 27%, 68% 27%, 68% 10%, 79% 10%, 79% 30%, 86% 30%, 86% 2%, 96% 2%, 96% 24%, 100% 24%, 100% 100%, 0 100%);
-  filter: saturate(.9);
+    linear-gradient(90deg, #202538 0 12%, #2b2e43 12% 25%, #1d2235 25% 39%, #303149 39% 52%, #202538 52% 68%, #2e3045 68% 83%, #1b2030 83%);
+  clip-path: polygon(0 25%, 8% 25%, 8% 5%, 19% 5%, 19% 31%, 27% 31%, 27% 13%, 39% 13%, 39% 27%, 50% 27%, 50% 0, 62% 0, 62% 25%, 73% 25%, 73% 8%, 87% 8%, 87% 28%, 100% 28%, 100% 100%, 0 100%);
 }
-.sanggi-buildings::after {
+.sanggi-city::after {
   content: "";
   position: absolute;
-  inset: 12% 0 8%;
-  opacity: .65;
-  background: repeating-linear-gradient(90deg, transparent 0 3.4%, rgba(255, 241, 182, .9) 3.4% 4.5%, transparent 4.5% 7%);
-  clip-path: polygon(0 20%, 13% 20%, 13% 0, 28% 0, 28% 25%, 45% 25%, 45% 10%, 62% 10%, 62% 22%, 79% 22%, 79% 5%, 96% 5%, 96% 18%, 100% 18%, 100% 100%, 0 100%);
+  inset: 24% 0 10%;
+  opacity: .7;
+  background: repeating-linear-gradient(90deg, transparent 0 5%, rgba(255, 216, 141, .65) 5% 6%, transparent 6% 11%);
 }
-.sanggi-sidewalk {
-  bottom: 0;
-  height: 52%;
+.sanggi-street {
+  left: -12%;
+  right: -12%;
+  bottom: -8%;
+  height: 47%;
   z-index: -2;
-  background: repeating-linear-gradient(135deg, rgba(255,255,255,.18) 0 3px, transparent 3px 38px), #d7a06f;
+  background:
+    linear-gradient(90deg, transparent 0 17%, rgba(255, 222, 154, .2) 17.1% 17.5%, transparent 17.6% 82.4%, rgba(255, 222, 154, .2) 82.5% 82.9%, transparent 83%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 2px, transparent 2px 46px),
+    linear-gradient(180deg, #4b4754 0%, #292d39 100%);
+  clip-path: polygon(19% 0, 81% 0, 100% 100%, 0 100%);
 }
-.sanggi-sidewalk-left {
-  left: 0;
-  width: 25%;
-  clip-path: polygon(0 0, 100% 27%, 100% 100%, 0 100%);
-}
-.sanggi-sidewalk-right {
-  right: 0;
-  width: 25%;
-  clip-path: polygon(0 27%, 100% 0, 100% 100%, 0 100%);
-}
-.sanggi-road {
-  left: 15%;
-  right: 15%;
-  bottom: 0;
-  height: 53%;
-  z-index: -3;
-  background: linear-gradient(100deg, #535968, #343944 48%, #555965);
-  clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%);
-}
-.sanggi-road-lines {
+.sanggi-street::after {
+  content: "";
+  position: absolute;
   left: 50%;
-  bottom: -2%;
-  width: 10px;
-  height: 52%;
-  z-index: -1;
+  top: 8%;
+  width: 9px;
+  height: 94%;
   transform: translateX(-50%);
-  background: repeating-linear-gradient(180deg, #ffe4a4 0 48px, transparent 48px 92px);
-  clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%);
+  background: repeating-linear-gradient(180deg, #d6ae72 0 38px, transparent 38px 76px);
+  opacity: .7;
 }
+.sanggi-lamp {
+  bottom: 33%;
+  width: 7px;
+  height: 27%;
+  z-index: -1;
+  background: #171b28;
+}
+.sanggi-lamp::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -13px;
+  width: 34px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f2c477;
+  box-shadow: 0 0 35px rgba(242, 196, 119, .65);
+}
+.sanggi-lamp-left { left: 14%; transform: rotate(5deg); }
+.sanggi-lamp-right { right: 14%; transform: rotate(-5deg); }
 .sanggi-character {
   position: absolute;
-  top: 20px;
-  left: 24px;
+  left: 50%;
+  bottom: 0;
   z-index: 2;
   display: block;
-  width: min(270px, 27vw);
-  height: auto;
+  width: auto;
+  height: min(92vh, 760px);
+  max-width: 82vw;
+  transform: translateX(-50%);
   object-fit: contain;
+  object-position: bottom center;
 }
 
 .speed-game { background: var(--orange); }
