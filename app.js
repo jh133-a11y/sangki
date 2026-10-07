@@ -21,23 +21,30 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
 });
 
 const menuToggle = document.querySelector('#menu-toggle');
-const siteNav = document.querySelector('#site-nav');
+const sideMenu = document.querySelector('#side-menu');
+const sideMenuClose = document.querySelector('#side-menu-close');
+const sideMenuBackdrop = document.querySelector('#side-menu-backdrop');
+
+const closeSideMenu = () => {
+  sideMenu.classList.remove('is-open');
+  sideMenuBackdrop.classList.remove('is-open');
+  menuToggle.classList.remove('is-open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('aria-label', '사이드바 열기');
+  sideMenu.setAttribute('aria-hidden', 'true');
+};
 
 menuToggle.addEventListener('click', () => {
-  const isOpen = siteNav.classList.toggle('is-open');
+  const isOpen = sideMenu.classList.toggle('is-open');
+  sideMenuBackdrop.classList.toggle('is-open', isOpen);
   menuToggle.classList.toggle('is-open', isOpen);
   menuToggle.setAttribute('aria-expanded', String(isOpen));
-  menuToggle.setAttribute('aria-label', isOpen ? '메뉴 닫기' : '메뉴 열기');
+  menuToggle.setAttribute('aria-label', isOpen ? '사이드바 닫기' : '사이드바 열기');
+  sideMenu.setAttribute('aria-hidden', String(!isOpen));
 });
 
-siteNav.querySelectorAll('a').forEach((link) => {
-  link.addEventListener('click', () => {
-    siteNav.classList.remove('is-open');
-    menuToggle.classList.remove('is-open');
-    menuToggle.setAttribute('aria-expanded', 'false');
-    menuToggle.setAttribute('aria-label', '메뉴 열기');
-  });
-});
+sideMenuClose.addEventListener('click', closeSideMenu);
+sideMenuBackdrop.addEventListener('click', closeSideMenu);
 
 const investorForm = document.querySelector('#investor-form');
 const investorNickname = document.querySelector('#investor-nickname');

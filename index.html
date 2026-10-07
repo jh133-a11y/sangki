@@ -12,7 +12,7 @@
   <header>
     <div class="wrap eyebrow">
       <div class="header-left">
-        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="메뉴 열기" aria-expanded="false" aria-controls="site-nav">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="사이드바 열기" aria-expanded="false" aria-controls="side-menu">
           <span></span><span></span><span></span>
         </button>
         <a class="brand" href="#">byungsin<span style="color:var(--orange)">.</span></a>
@@ -26,6 +26,17 @@
       </nav>
     </div>
   </header>
+  <div class="side-menu-backdrop" id="side-menu-backdrop"></div>
+  <aside class="side-menu" id="side-menu" aria-label="추가 메뉴" aria-hidden="true">
+    <div class="side-menu-head">
+      <span>new rooms</span>
+      <button class="side-menu-close" id="side-menu-close" type="button" aria-label="사이드바 닫기">×</button>
+    </div>
+    <p class="side-menu-intro">새로운 콘텐츠를 준비 중입니다.</p>
+    <a href="projects.html" target="_blank" rel="noopener">PROJECTS <span>↗</span></a>
+    <a href="playground.html" target="_blank" rel="noopener">PLAYGROUND <span>↗</span></a>
+    <a href="archive.html" target="_blank" rel="noopener">ARCHIVE <span>↗</span></a>
+  </aside>
 
   <main>
     <section class="hero">
