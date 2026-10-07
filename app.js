@@ -1119,7 +1119,19 @@ const renderInvestmentState = (state) => {
     const name = document.createElement('span');
     name.className = 'investment-ranking-name';
     const level = document.createElement('small');
-    level.textContent = String(Math.max(0, Number(entry.player_level) || 0));
+    const playerLevel = Math.max(0, Number(entry.player_level) || 0);
+    level.className = playerLevel <= 10
+      ? 'investment-level investment-level-gray'
+      : playerLevel <= 50
+        ? 'investment-level investment-level-lime'
+        : playerLevel <= 100
+          ? 'investment-level investment-level-blue'
+          : playerLevel <= 500
+            ? 'investment-level investment-level-red'
+            : playerLevel <= 1000
+              ? 'investment-level investment-level-orange'
+              : 'investment-level investment-level-purple';
+    level.textContent = String(playerLevel);
     const nickname = document.createElement('span');
     nickname.textContent = entry.nickname;
     name.append(level, nickname);
@@ -1429,6 +1441,32 @@ const loadInvestmentState = async (nickname = investorNickname.value.trim()) => 
     p_client_id: getInvestmentClientId(),
     p_nickname: nickname
   });
+  if (Array.isArray(state.ranking) && accountSession?.session_token) {
+    const missingPlayerLevels = state.ranking.some((entry) => {
+      const level = Number(entry.player_level);
+      return !Number.isFinite(level) || level <= 0;
+    });
+    if (missingPlayerLevels) {
+      try {
+        const playerRanking = await callInvestmentRpc('sanggi_get_player_ranking', {
+          p_session_token: accountSession.session_token
+        });
+        const levelsByNickname = new Map(
+          (Array.isArray(playerRanking) ? playerRanking : []).map((entry) => [
+            String(entry.nickname || '').trim(),
+            Math.max(0, Number(entry.player_level) || 0)
+          ])
+        );
+        state.ranking = state.ranking.map((entry) => ({
+          ...entry,
+          player_level: levelsByNickname.get(String(entry.nickname || '').trim())
+            ?? Math.max(0, Number(entry.player_level) || 0)
+        }));
+      } catch (error) {
+        console.warn('투자 랭킹의 플레이어 레벨을 보완하지 못했습니다.', error);
+      }
+    }
+  }
   renderInvestmentState(state);
 };
 
