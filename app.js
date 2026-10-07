@@ -1592,7 +1592,7 @@ const renderPlayerLevelRanking = () => {
     renderPlayerLevelRanking();
   });
   const pageNumber = document.createElement('span');
-  pageNumber.className = 'player-level-ranking-page';
+  pageNumber.className = 'hero-player-level-ranking-page';
   pageNumber.textContent = `${playerLevelRankingPage} / ${totalPages}`;
   const next = document.createElement('button');
   next.type = 'button';
