@@ -582,7 +582,7 @@ begin
   insert into public.investment_shop_messages(client_id, message)
   values (
     p_target_client_id,
-    '관리자가 ' || to_char(p_amount, 'FM999,999,999,999')
+    '관리자가 ' || to_char(p_amount, 'FM999,999,999,999,999,999,999')
       || '원을 지급했습니다.'
   );
 
@@ -657,20 +657,20 @@ begin
     (
       p_sender_client_id,
       recipient_user.nickname || '에게 '
-        || to_char(p_amount, 'FM999,999,999,999')
+        || to_char(p_amount, 'FM999,999,999,999,999,999,999')
         || '원을 송금했습니다.'
     ),
     (
       p_recipient_client_id,
       sender_user.nickname || '님이 '
-        || to_char(p_amount, 'FM999,999,999,999')
+        || to_char(p_amount, 'FM999,999,999,999,999,999,999')
         || '원을 송금했습니다.'
     );
 
   return jsonb_build_object(
     'message',
     recipient_user.nickname || '에게 '
-      || to_char(p_amount, 'FM999,999,999,999')
+      || to_char(p_amount, 'FM999,999,999,999,999,999,999')
       || '원을 송금했습니다.'
   );
 end;
@@ -2307,7 +2307,7 @@ begin
   values (
     p_target_client_id,
     v_name || ' 피격! 자산이 '
-      || to_char(v_actual_loss, 'FM999,999,999,999')
+      || to_char(v_actual_loss, 'FM999,999,999,999,999,999,999')
       || '원 감소했습니다.'
   );
 
@@ -2315,14 +2315,14 @@ begin
   values (
     p_client_id,
     v_name || ' 발사 성공! ' || v_target_name || '의 자산 '
-      || to_char(v_actual_loss, 'FM999,999,999,999')
+      || to_char(v_actual_loss, 'FM999,999,999,999,999,999,999')
       || '원을 감소시켰습니다.'
   );
 
   return jsonb_build_object(
     'success', true,
     'message', v_name || ' 명중! ' || v_target_name || '의 자산 '
-      || to_char(v_actual_loss, 'FM999,999,999,999')
+      || to_char(v_actual_loss, 'FM999,999,999,999,999,999,999')
       || '원이 감소했습니다.'
   );
 end;
