@@ -48,12 +48,14 @@
 
     const popup = document.createElement('span');
     const bounds = main.getBoundingClientRect();
+    const coinDisplay = document.querySelector('.sanggi-coin-display');
+    const coinBounds = coinDisplay.getBoundingClientRect();
     popup.className = 'sanggi-coin-popup';
     popup.textContent = '+1원';
-    popup.style.left = `${event.clientX - bounds.left}px`;
-    popup.style.top = `${event.clientY - bounds.top}px`;
+    popup.style.left = `${coinBounds.right - bounds.left + 10}px`;
+    popup.style.top = `${coinBounds.top - bounds.top + coinBounds.height / 2}px`;
     main.appendChild(popup);
-    popup.addEventListener('animationend', () => popup.remove(), { once: true });
+    window.setTimeout(() => popup.remove(), 750);
   });
 
   renderBalance();
