@@ -1509,3 +1509,38 @@ from public;
 
 grant execute on function public.site_account_delete(uuid, text)
 to anon, authenticated;
+
+-- Compatibility fix for databases that still have the old integer overload.
+drop function if exists public.investment_next_direction(integer, integer);
+
+create or replace function public.investment_next_direction(
+  p_previous_pct numeric,
+  p_daily_direction integer
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_previous_pct <= -10 and random() < 0.7 then
+    return 1;
+  end if;
+
+  if p_previous_pct = 0 then
+    return p_daily_direction;
+  end if;
+
+  if random() < 0.7 then
+    return sign(p_previous_pct)::integer;
+  end if;
+
+  return -sign(p_previous_pct)::integer;
+end;
+$$;
+
+revoke all on function public.investment_next_direction(numeric, integer)
+from public;
+
+grant execute on function public.investment_next_direction(numeric, integer)
+to anon, authenticated;

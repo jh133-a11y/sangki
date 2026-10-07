@@ -747,7 +747,9 @@ try {
   const savedNickname = localStorage.getItem('sangki-investor-nickname');
   if (savedNickname) {
     investorNickname.value = savedNickname;
-    loadInvestmentState(savedNickname).catch(() => {});
+      loadInvestmentState(savedNickname).catch((error) => {
+      investorStatus.textContent = `투자 정보를 불러오지 못했습니다: ${error.message}`;
+    });
   }
 } catch {
   // Private browsing can block localStorage; the form remains usable.
