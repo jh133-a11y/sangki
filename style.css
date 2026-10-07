@@ -55,6 +55,7 @@ nav a:hover { opacity: .5; }
 .notification-toggle:hover { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-enabled { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-blocked { opacity: .55; }
+.side-menu-notification { width: 100%; margin: 16px 0 0; text-align: left; }
 .account-button { border: 1px solid var(--ink); padding: 5px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
 .account-button:hover { background: var(--ink); color: var(--acid); }
 .bag-button { border: 1px solid var(--ink); padding: 5px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
@@ -393,7 +394,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .eyebrow { position: relative; min-height: 26px; }
   #site-nav { position: absolute; top: 0; right: 240px; gap: 0; }
   #site-nav a { display: none; }
-  #site-nav .notification-toggle { display: inline-block; }
+  #site-nav .notification-toggle { display: none; }
   .account-button,
   .bag-button,
   .message-button { position: absolute; top: 0; z-index: 1; }
