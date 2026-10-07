@@ -157,20 +157,52 @@
 
   const moveCharacter = (event) => {
     if (!dragState) return;
-    const mainBounds = main.getBoundingClientRect();
-    const characterWidth = character.offsetWidth;
-    const characterHeight = character.offsetHeight;
-    const maxLeft = Math.max(0, mainBounds.width - characterWidth);
-    const maxTop = Math.max(0, mainBounds.height - characterHeight);
-    const nextLeft = Math.max(0, Math.min(maxLeft, event.clientX - mainBounds.left - dragState.offsetX));
-    const nextTop = Math.max(0, Math.min(maxTop, event.clientY - mainBounds.top - dragState.offsetY));
-    character.style.left = `${nextLeft}px`;
-    character.style.top = `${nextTop}px`;
-    dragState.moved = dragState.moved || Math.abs(nextLeft - dragState.startLeft) > 5 || Math.abs(nextTop - dragState.startTop) > 5;
+    dragState.clientX = event.clientX;
+    dragState.clientY = event.clientY;
+    if (dragState.frame) return;
+    dragState.frame = window.requestAnimationFrame(() => {
+      dragState.frame = 0;
+      if (!dragState) return;
+      const nextLeft = Math.max(0, Math.min(
+        dragState.maxLeft,
+        dragState.clientX - dragState.mainLeft - dragState.offsetX
+      ));
+      const nextTop = Math.max(0, Math.min(
+        dragState.maxTop,
+        dragState.clientY - dragState.mainTop - dragState.offsetY
+      ));
+      character.style.left = `${nextLeft}px`;
+      character.style.top = `${nextTop}px`;
+      dragState.moved = dragState.moved
+        || Math.abs(nextLeft - dragState.startLeft) > 5
+        || Math.abs(nextTop - dragState.startTop) > 5;
+    });
   };
 
   const stopCharacterDrag = (event) => {
     if (!dragState) return;
+    if (dragState.frame) {
+      window.cancelAnimationFrame(dragState.frame);
+      dragState.frame = 0;
+    }
+    moveCharacter(event);
+    if (dragState.frame) {
+      window.cancelAnimationFrame(dragState.frame);
+      dragState.frame = 0;
+    }
+    const finalLeft = Math.max(0, Math.min(
+      dragState.maxLeft,
+      event.clientX - dragState.mainLeft - dragState.offsetX
+    ));
+    const finalTop = Math.max(0, Math.min(
+      dragState.maxTop,
+      event.clientY - dragState.mainTop - dragState.offsetY
+    ));
+    character.style.left = `${finalLeft}px`;
+    character.style.top = `${finalTop}px`;
+    dragState.moved = dragState.moved
+      || Math.abs(finalLeft - dragState.startLeft) > 5
+      || Math.abs(finalTop - dragState.startTop) > 5;
     character.releasePointerCapture?.(event.pointerId);
     const wasMoved = dragState.moved;
     dragState = null;
@@ -207,9 +239,16 @@
       dragState = {
         offsetX: event.clientX - characterBounds.left,
         offsetY: event.clientY - characterBounds.top,
+        mainLeft: mainBounds.left,
+        mainTop: mainBounds.top,
+        maxLeft: Math.max(0, mainBounds.width - character.offsetWidth),
+        maxTop: Math.max(0, mainBounds.height - character.offsetHeight),
         startLeft: characterBounds.left - mainBounds.left,
         startTop: characterBounds.top - mainBounds.top,
-        moved: false
+        moved: false,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        frame: 0
       };
       character.classList.add('is-dragging');
       character.setPointerCapture?.(event.pointerId);
