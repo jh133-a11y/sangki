@@ -10,6 +10,72 @@ const shopLegacyInvestmentKey = 'sangki-legacy-investment-client-id';
 const shopNicknameKey = 'sangki-investor-nickname';
 const balance = document.querySelector('#shop-balance');
 const status = document.querySelector('#shop-status');
+const confirmBackdrop = document.querySelector('#shop-confirm-backdrop');
+const confirmModal = document.querySelector('#shop-confirm-modal');
+const confirmMessage = document.querySelector('#shop-confirm-message');
+const confirmTitle = document.querySelector('#shop-confirm-title');
+const quantityInput = document.querySelector('#shop-modal-quantity');
+const quantityLabel = document.querySelector('#shop-quantity-label');
+const maxQuantityButton = document.querySelector('#shop-modal-max');
+const confirmOk = document.querySelector('#shop-confirm-ok');
+const confirmCancel = document.querySelector('#shop-confirm-cancel');
+let confirmResolve = null;
+let currentCashExact = '0';
+
+const siteConfirm = (message) => new Promise((resolve) => {
+  confirmResolve = resolve;
+  confirmMessage.textContent = message;
+  confirmTitle.textContent = '구매 확인';
+  quantityLabel.hidden = true;
+  maxQuantityButton.hidden = true;
+  confirmCancel.hidden = false;
+  confirmOk.textContent = '확인';
+  confirmOk.onclick = () => closeConfirm(true);
+  confirmModal.hidden = false;
+  confirmBackdrop.hidden = false;
+});
+const chooseQuantity = (itemName, itemPrice, price, cash) => new Promise((resolve) => {
+  confirmResolve = resolve;
+  confirmTitle.textContent = `${itemName} 구매`;
+  confirmMessage.textContent = `${itemPrice}\n구매할 수량을 선택하세요.`;
+  quantityLabel.hidden = false;
+  maxQuantityButton.hidden = false;
+  quantityInput.value = '1';
+  maxQuantityButton.onclick = () => {
+    quantityInput.value = String(price > 0n ? BigInt(cash) / price : 0n);
+  };
+  confirmOk.textContent = '다음';
+  confirmCancel.hidden = false;
+  confirmModal.hidden = false;
+  confirmBackdrop.hidden = false;
+  confirmOk.onclick = () => {
+    const value = quantityInput.value.trim();
+    if (!/^[0-9]+$/.test(value) || BigInt(value) < 1n) {
+      quantityInput.focus();
+      return;
+    }
+    closeConfirm(value);
+  };
+});
+const closeConfirm = (result) => {
+  confirmModal.hidden = true;
+  confirmBackdrop.hidden = true;
+  if (confirmResolve) confirmResolve(result);
+  confirmResolve = null;
+};
+confirmCancel.addEventListener('click', () => closeConfirm(false));
+confirmBackdrop.addEventListener('click', () => closeConfirm(false));
+const siteNotice = (message) => {
+  confirmMessage.textContent = message;
+  confirmCancel.hidden = true;
+  confirmOk.textContent = '확인';
+  confirmModal.hidden = false;
+  confirmBackdrop.hidden = false;
+  confirmOk.onclick = () => {
+    closeConfirm(true);
+  };
+};
+window.alert = siteNotice;
 
 const shopSession = () => {
   try {
@@ -56,7 +122,7 @@ const resolveShopClientId = async () => {
   activeShopClientId = session.account_id;
   return activeShopClientId;
 };
-const won = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
+const won = (value) => `₩${BigInt(String(value || 0)).toLocaleString('ko-KR')}`;
 const rpc = async (name, payload) => {
   const response = await fetch(`${shopRpc}/${name}`, {
     method: 'POST',
@@ -77,26 +143,31 @@ const refreshShop = async () => {
     activeShopClientId = state.client_id;
     localStorage.setItem(shopInvestmentKey, state.client_id);
   }
-  balance.textContent = `보유 현금 ${won(state.cash)}`;
+  const cashExact = String(state.cash_exact || state.cash || '0');
+  currentCashExact = cashExact;
+  balance.textContent = `보유 현금 ${won(cashExact)}`;
 };
 document.querySelectorAll('.shop-buy').forEach((button) => {
   button.addEventListener('click', async () => {
     const itemName = button.closest('.shop-card')?.querySelector('h2')?.textContent || '상품';
     const itemPrice = button.closest('.shop-card')?.querySelector('.shop-price')?.textContent || '';
-    if (!window.confirm(`${itemName} ${itemPrice} 상품을 정말 구매하시겠습니까?`)) {
+    const price = BigInt(itemPrice.replace(/[^\d]/g, '') || '0');
+    const quantityText = await chooseQuantity(itemName, itemPrice, price, currentCashExact);
+    if (!quantityText) {
       status.textContent = '구매를 취소했습니다.';
       return;
     }
+    if (!await siteConfirm(`${itemName} ${itemPrice}\n${quantityText}개를 정말 구매하시겠습니까?`)) return;
     button.disabled = true;
     status.textContent = '구매 처리 중...';
     try {
       const clientId = await resolveShopClientId();
       const result = await rpc('shop_purchase', {
         p_client_id: clientId,
-        p_item_type: button.dataset.item
+        p_item_type: button.dataset.item,
+        p_quantity: quantityText
       });
       status.textContent = `${result.message} 홈 화면의 가방에서 확인하세요.`;
-      window.alert(`${result.message}\n홈 화면의 가방에서 확인하세요.`);
       await refreshShop();
     } catch (error) {
       status.textContent = error.message;

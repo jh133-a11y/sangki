@@ -1893,6 +1893,7 @@ begin
 
   return jsonb_build_object(
     'cash', v_cash,
+    'cash_exact', v_cash::text,
     'items', coalesce((
       select jsonb_agg(jsonb_build_object(
         'item_type', item_type,
@@ -1989,9 +1990,12 @@ begin
 end;
 $$;
 
+drop function if exists public.shop_purchase(uuid, text);
+
 create or replace function public.shop_purchase(
   p_client_id uuid,
-  p_item_type text
+  p_item_type text,
+  p_quantity bigint
 )
 returns jsonb
 language plpgsql
@@ -2016,6 +2020,9 @@ begin
   if v_price is null then
     raise exception '존재하지 않는 상품입니다.';
   end if;
+  if p_quantity is null or p_quantity < 1 then
+    raise exception '구매 수량은 1개 이상이어야 합니다.';
+  end if;
 
   select cash into v_cash
   from public.investment_users
@@ -2025,21 +2032,34 @@ begin
   if v_cash is null then
     raise exception '먼저 투자 닉네임을 설정하세요.';
   end if;
-  if v_cash < v_price then
+  if v_cash < v_price * p_quantity then
     raise exception '보유 현금이 부족합니다.';
   end if;
 
   update public.investment_users
-  set cash = cash - v_price
+  set cash = cash - v_price * p_quantity
   where client_id = p_client_id;
 
   insert into public.investment_shop_items(client_id, item_type, quantity)
-  values (p_client_id, p_item_type, 1)
+  values (p_client_id, p_item_type, p_quantity)
   on conflict (client_id, item_type)
-  do update set quantity = public.investment_shop_items.quantity + 1;
+  do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
 
-  return jsonb_build_object('message', v_name || '을(를) 구매했습니다.');
+  return jsonb_build_object('message', v_name || ' ' || p_quantity || '개를 구매했습니다.');
 end;
+$$;
+
+-- 기존 1개 구매 호출과의 호환성을 유지합니다.
+create or replace function public.shop_purchase(
+  p_client_id uuid,
+  p_item_type text
+)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select public.shop_purchase(p_client_id, p_item_type, 1::bigint);
 $$;
 
 drop function if exists public.shop_change_nickname(uuid, text);
@@ -2508,6 +2528,7 @@ $$;
 revoke all on function public.shop_get_state(uuid) from public;
 revoke all on function public.shop_get_unread_count(uuid) from public;
 revoke all on function public.shop_get_messages(uuid) from public;
+revoke all on function public.shop_purchase(uuid, text, bigint) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
@@ -2517,7 +2538,10 @@ grant execute on function public.shop_get_state(uuid) to anon, authenticated;
 grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
 grant execute on function public.shop_get_unread_count(uuid) to anon, authenticated;
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
+grant execute on function public.shop_purchase(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;

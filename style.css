@@ -127,6 +127,13 @@ nav a:hover { opacity: .5; }
 .shop-buy { width: 100%; margin-top: 16px; border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: #fff; cursor: pointer; font: 11px var(--mono); }
 .shop-buy:hover { background: var(--orange); color: var(--ink); }
 .shop-buy:disabled { cursor: wait; opacity: .45; }
+.shop-purchase-controls { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 10px; }
+.shop-quantity { min-width: 0; border: 1px solid var(--ink); padding: 9px; background: #fff; color: var(--ink); font: 11px var(--mono); }
+.shop-max { border: 1px solid var(--ink); padding: 9px; background: var(--paper); color: var(--ink); cursor: pointer; font: 10px var(--mono); }
+.shop-purchase-controls .shop-buy { grid-column: 1 / -1; margin-top: 0; }
+.shop-modal-quantity-label { display: grid; gap: 7px; margin: 18px 0 8px; font: 10px var(--mono); }
+.shop-modal-quantity-label input { border: 1px solid var(--ink); padding: 11px; background: #fff; color: var(--ink); font: 15px var(--mono); }
+.shop-modal-max { width: 100%; margin-bottom: 18px; border: 1px solid var(--ink); padding: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
 .shop-status { min-height: 18px; margin-top: 28px; color: var(--orange); font: 11px var(--mono); }
 .account-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
 .account-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(380px, calc(100% - 30px)); transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 7px 7px 0 var(--ink); }
@@ -170,6 +177,13 @@ nav a:hover { opacity: .5; }
 .settings-action { width: 100%; margin-top: 10px; border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
 .settings-action:hover { background: var(--orange); color: var(--ink); }
 .settings-danger { background: transparent; color: var(--orange); }
+.site-confirm-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(23,23,23,.42); }
+.site-confirm-modal { position: fixed; top: 50%; left: 50%; z-index: 81; width: min(380px, calc(100% - 30px)); transform: translate(-50%, -50%); padding: 26px; background: var(--paper); color: var(--ink); box-shadow: 7px 7px 0 var(--ink); }
+.site-confirm-modal h2 { margin: 0 0 10px; font-size: 25px; }
+.site-confirm-modal p { margin: 0 0 22px; font: 12px/1.6 var(--mono); white-space: pre-line; }
+.site-confirm-modal > div { display: flex; justify-content: flex-end; gap: 8px; }
+.site-confirm-modal button { border: 1px solid var(--ink); padding: 10px 16px; background: transparent; color: var(--ink); cursor: pointer; font: 11px var(--mono); }
+.site-confirm-modal button:last-child { background: var(--ink); color: var(--paper); }
 .settings-status { min-height: 18px; margin-bottom: 0; color: var(--orange); }
 
 .hero {

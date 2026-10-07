@@ -212,9 +212,9 @@ const authenticateAccount = async (username, password) => {
     }
   }
 };
-accountButton.addEventListener('click', () => {
+accountButton.addEventListener('click', async () => {
   if (accountSession) {
-    if (!window.confirm('정말로 로그아웃하시겠습니까?')) return;
+    if (!await siteConfirm('정말로 로그아웃하시겠습니까?')) return;
     accountSession = null;
     localStorage.removeItem(accountStorageKey);
     sessionStorage.removeItem(accountSessionStorageKey);
@@ -302,7 +302,7 @@ settingsDeleteAccount.addEventListener('click', async () => {
     settingsStatus.textContent = '로그인된 계정이 없습니다.';
     return;
   }
-  if (!window.confirm('아이디와 연결된 투자 정보, 세션을 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+  if (!await siteConfirm('아이디와 연결된 투자 정보, 세션을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다.')) return;
   const password = window.prompt('삭제를 확인하려면 현재 비밀번호를 입력하세요.');
   if (password === null) return;
   settingsDeleteAccount.disabled = true;
@@ -419,6 +419,41 @@ const getInvestmentClientId = () => {
 };
 
 const formatWon = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
+const confirmBackdrop = document.querySelector('#confirm-backdrop');
+const confirmModal = document.querySelector('#confirm-modal');
+const confirmMessage = document.querySelector('#confirm-message');
+const confirmOk = document.querySelector('#confirm-ok');
+const confirmCancel = document.querySelector('#confirm-cancel');
+let confirmResolve = null;
+const siteConfirm = (message) => new Promise((resolve) => {
+  confirmResolve = resolve;
+  confirmMessage.textContent = message;
+  confirmCancel.hidden = false;
+  confirmOk.textContent = '확인';
+  confirmModal.hidden = false;
+  confirmBackdrop.hidden = false;
+});
+const closeSiteConfirm = (result) => {
+  confirmModal.hidden = true;
+  confirmBackdrop.hidden = true;
+  if (confirmResolve) confirmResolve(result);
+  confirmResolve = null;
+};
+confirmOk.addEventListener('click', () => closeSiteConfirm(true));
+confirmCancel.addEventListener('click', () => closeSiteConfirm(false));
+confirmBackdrop.addEventListener('click', () => closeSiteConfirm(false));
+const siteNotice = (message) => {
+  confirmMessage.textContent = message;
+  confirmCancel.hidden = true;
+  confirmModal.hidden = false;
+  confirmBackdrop.hidden = false;
+  confirmOk.onclick = () => {
+    confirmCancel.hidden = false;
+    confirmOk.onclick = () => closeSiteConfirm(true);
+    closeSiteConfirm(true);
+  };
+};
+window.alert = siteNotice;
 
 const callInvestmentRpc = async (name, payload) => {
   const response = await fetch(`${rpcEndpoint}/${name}`, {
@@ -602,7 +637,7 @@ const useShopItem = async (itemType) => {
       return;
     }
     const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
-    if (!window.confirm(`${targetName}에게 편지를 보내시겠습니까?`)) {
+    if (!await siteConfirm(`${targetName}에게 편지를 보내시겠습니까?`)) {
       bagStatus.textContent = '편지 보내기를 취소했습니다.';
       return;
     }
@@ -635,7 +670,7 @@ const useShopItem = async (itemType) => {
       return;
     }
     const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
-    if (!window.confirm(`${targetName}의 닉네임을 "${nickname}"(으)로 정말 변경하시겠습니까?`)) {
+    if (!await siteConfirm(`${targetName}의 닉네임을 "${nickname}"(으)로 정말 변경하시겠습니까?`)) {
       bagStatus.textContent = '닉네임 변경을 취소했습니다.';
       return;
     }
@@ -669,7 +704,7 @@ const useShopItem = async (itemType) => {
     return;
   }
   const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
-  if (!window.confirm(`${targetName}에게 ${selectedShopItem?.name || '미사일'}을(를) 정말 발사하시겠습니까?`)) {
+  if (!await siteConfirm(`${targetName}에게 ${selectedShopItem?.name || '미사일'}을(를) 정말 발사하시겠습니까?`)) {
     bagStatus.textContent = '미사일 발사를 취소했습니다.';
     return;
   }
@@ -1088,7 +1123,7 @@ investmentTransfer.addEventListener('submit', async (event) => {
     return;
   }
   const targetName = transferTarget.options[transferTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
-  if (!window.confirm(`${targetName}에게 ${formatWon(amount)}을 송금할까요?`)) return;
+  if (!await siteConfirm(`${targetName}에게 ${formatWon(amount)}을 송금할까요?`)) return;
   transferAmount.disabled = true;
   transferTarget.disabled = true;
   transferStatus.textContent = '송금 처리 중...';
@@ -1118,7 +1153,7 @@ const grantInvestmentCash = async (clientId, amountInput) => {
     window.alert('지급액은 1원 이상의 정수로 입력하세요.');
     return;
   }
-  if (!window.confirm(`${formatWon(amount)}을 지급할까요?`)) return;
+  if (!await siteConfirm(`${formatWon(amount)}을 지급할까요?`)) return;
   try {
     amountInput.disabled = true;
     await callInvestmentRpc('investment_admin_grant_cash', {
@@ -1142,7 +1177,7 @@ const adjustInvestmentCash = async (clientId, amountInput, action) => {
     window.alert('차감액은 1원 이상의 정수로 입력하세요.');
     return;
   }
-  if (!window.confirm(`${formatWon(amount)}을 차감할까요?`)) return;
+  if (!await siteConfirm(`${formatWon(amount)}을 차감할까요?`)) return;
   try {
     amountInput.disabled = true;
     await callInvestmentRpc('investment_admin_adjust_cash', {
@@ -1206,9 +1241,9 @@ adminResetAsset.addEventListener('click', () => {
   );
 });
 
-adminSplitAsset.addEventListener('click', () => {
+adminSplitAsset.addEventListener('click', async () => {
   const selectedName = adminAssetSelect.options[adminAssetSelect.selectedIndex]?.textContent || '선택한 종목';
-  if (!window.confirm(`${selectedName}을(를) 1000분의 1 액면분할할까요?\n가격은 1/1000, 보유 수량은 1000배가 됩니다.`)) return;
+  if (!await siteConfirm(`${selectedName}을(를) 1000분의 1 액면분할할까요?\n가격은 1/1000, 보유 수량은 1000배가 됩니다.`)) return;
   runAdminMarketAction(
     'investment_admin_split_asset',
     { p_symbol: adminAssetSelect.value },
@@ -1216,8 +1251,8 @@ adminSplitAsset.addEventListener('click', () => {
   );
 });
 
-adminResetAllAssets.addEventListener('click', () => {
-  if (!window.confirm('모든 종목의 가격과 변동률을 초기화할까요?')) return;
+adminResetAllAssets.addEventListener('click', async () => {
+  if (!await siteConfirm('모든 종목의 가격과 변동률을 초기화할까요?')) return;
   runAdminMarketAction(
     'investment_admin_reset_all_assets',
     {},
@@ -1671,7 +1706,7 @@ const deleteComment = async (id) => {
   const password = requestPassword();
   if (password === null) return;
   const isAdmin = password === '8170';
-  if (!window.confirm(isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
+  if (!await siteConfirm(isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
 
   try {
     const deleted = await callCommentRpc('delete_comment', {
@@ -1851,7 +1886,7 @@ const loadGameRanking = async () => {
 
 const deleteGameScore = async (id) => {
   const password = window.prompt('관리자 비밀번호를 입력하세요.');
-  if (password === null || !window.confirm('이 랭킹 기록을 삭제할까요?')) return;
+  if (password === null || !await siteConfirm('이 랭킹 기록을 삭제할까요?')) return;
 
   try {
     const response = await fetch(`${rpcEndpoint}/delete_speed_game_score`, {

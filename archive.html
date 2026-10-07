@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>상점 — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=57">
+  <link rel="stylesheet" href="style.css?v=59">
 </head>
 <body class="shop-page">
   <main class="shop-shell">
@@ -80,6 +80,14 @@
     </section>
     <p class="shop-status" id="shop-status" role="status"></p>
   </main>
-  <script src="shop.js?v=7"></script>
+  <div class="site-confirm-backdrop" id="shop-confirm-backdrop" hidden></div>
+  <section class="site-confirm-modal" id="shop-confirm-modal" role="dialog" aria-modal="true" hidden>
+    <h2 id="shop-confirm-title">구매 수량</h2>
+    <p id="shop-confirm-message"></p>
+    <label class="shop-modal-quantity-label" id="shop-quantity-label">구매 수량<input id="shop-modal-quantity" type="text" inputmode="numeric" value="1"></label>
+    <button class="shop-modal-max" id="shop-modal-max" type="button">보유 현금으로 최대 구매</button>
+    <div><button id="shop-confirm-cancel" type="button">취소</button><button id="shop-confirm-ok" type="button">확인</button></div>
+  </section>
+  <script src="shop.js?v=9"></script>
 </body>
 </html>
