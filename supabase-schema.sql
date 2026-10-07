@@ -473,6 +473,9 @@ begin
     end if;
   end loop;
 
+  -- 시장 가격 계산이 끝난 뒤 분할을 적용해 다음 갱신이 분할 가격을 기준으로 시작되게 한다.
+  perform public.investment_apply_stock_splits();
+
   update public.investment_market
   set last_market_date = today,
       last_price_update = current_bucket
@@ -929,8 +932,6 @@ set search_path = public
 as $$
 declare
   asset_row record;
-  v_base_digits integer;
-  v_current_digits integer;
   v_split_factor bigint;
 begin
   for asset_row in
@@ -941,13 +942,10 @@ begin
       and current_price >= 5000000
     for update
   loop
-    v_base_digits := length(asset_row.base_price::text);
-    v_current_digits := length(asset_row.current_price::text);
     v_split_factor := 1;
 
-    while v_current_digits > v_base_digits loop
+    while asset_row.current_price / v_split_factor >= 5000000 loop
       v_split_factor := v_split_factor * 10;
-      v_current_digits := v_current_digits - 1;
     end loop;
 
     if v_split_factor = 1 then
@@ -965,6 +963,12 @@ begin
         ),
         split_notice = true
     where symbol = asset_row.symbol;
+
+    asset_row.current_price :=
+      greatest(
+        1,
+        round(asset_row.current_price::numeric / v_split_factor)::bigint
+      );
   end loop;
 end;
 $$;
