@@ -1354,15 +1354,12 @@ set search_path = public, extensions
 as $$
 declare
   v_account_id uuid;
-  v_account_username text;
-  v_target_nickname text;
-  v_suffix integer := 0;
   v_bonus_pending boolean := false;
   old_user public.investment_users%rowtype;
   target_user public.investment_users%rowtype;
 begin
-  select s.account_id, a.username, not a.signup_bonus_granted
-  into v_account_id, v_account_username, v_bonus_pending
+  select s.account_id, not a.signup_bonus_granted
+  into v_account_id, v_bonus_pending
   from public.site_account_sessions s
   join public.site_accounts a on a.id = s.account_id
   where s.token = p_session_token
@@ -1395,24 +1392,31 @@ begin
   for update;
 
   if target_user.client_id is null then
-    v_target_nickname := old_user.nickname;
-    while exists (
+    if exists (
       select 1
       from public.investment_users
-      where nickname = v_target_nickname
-    ) loop
-      v_suffix := v_suffix + 1;
-      v_target_nickname :=
-        left(v_account_username, 17) || '_' ||
-        substr(replace(v_account_id::text, '-', ''), 1, 4) ||
-        right('0' || v_suffix::text, 2);
-    end loop;
+      where nickname = old_user.nickname
+        and client_id <> p_old_client_id
+    ) then
+      raise exception '기존 닉네임이 이미 사용 중이어서 투자 정보를 연동할 수 없습니다.';
+    end if;
 
     insert into public.investment_users (client_id, nickname, cash)
-    values (v_account_id, v_target_nickname, old_user.cash);
+    values (v_account_id, old_user.nickname, old_user.cash);
   else
+    if target_user.nickname <> old_user.nickname
+       and exists (
+         select 1
+         from public.investment_users
+         where nickname = old_user.nickname
+           and client_id <> p_old_client_id
+       ) then
+      raise exception '기존 닉네임이 이미 사용 중이어서 투자 정보를 연동할 수 없습니다.';
+    end if;
+
     update public.investment_users
-    set cash = target_user.cash + old_user.cash
+    set nickname = old_user.nickname,
+        cash = target_user.cash + old_user.cash
     where client_id = v_account_id;
   end if;
 
