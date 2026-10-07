@@ -1908,6 +1908,12 @@ begin
       v_name || ' 발사 실패. ' || v_target_name
         || '에게 명중하지 않았습니다.'
     );
+    insert into public.investment_shop_messages(client_id, message)
+    values (
+      p_target_client_id,
+      v_name || ' 공격을 받았지만 회피했습니다. '
+        || '누군가가 당신을 맞힐 뻔했습니다.'
+    );
     return jsonb_build_object(
       'success', false,
       'message', v_name || '을(를) 발사했지만 ' || v_target_name || '에게 명중하지 않았습니다.'
