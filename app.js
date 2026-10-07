@@ -37,7 +37,7 @@ const loadOnlineUsers = async () => {
     const users = await callInvestmentRpc('site_account_online_users', {});
     onlineUsersList.replaceChildren(...(users.length
       ? users.map((user) => Object.assign(document.createElement('li'), {
-        textContent: user.nickname
+        textContent: user.nickname || user.username || '닉네임 없음'
       }))
       : [Object.assign(document.createElement('li'), {
         textContent: '현재 접속 중인 로그인 유저가 없습니다.'

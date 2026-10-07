@@ -1570,8 +1570,11 @@ set search_path = public
 as $$
   select coalesce(
     jsonb_agg(
-      jsonb_build_object('nickname', iu.nickname)
-      order by iu.nickname
+      jsonb_build_object(
+        'nickname', coalesce(iu.nickname, p.username),
+        'username', coalesce(iu.nickname, p.username)
+      )
+      order by coalesce(iu.nickname, p.username)
     ),
     '[]'::jsonb
   )
