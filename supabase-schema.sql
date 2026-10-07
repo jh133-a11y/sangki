@@ -940,15 +940,12 @@ begin
     where listed = true
       and (
         (
-          (
-            symbol in (
-              'SURGE_STOCK',
-              'CURRENT_SURGE_STOCK',
-              'DONGHWA_SURGE_STOCK',
-              'JEONGMIN_SURGE_STOCK',
-              'JUSEONG_SURGE_STOCK'
-            )
-            or name like '%급등%'
+          symbol in (
+            'SURGE_STOCK',
+            'CURRENT_SURGE_STOCK',
+            'DONGHWA_SURGE_STOCK',
+            'JEONGMIN_SURGE_STOCK',
+            'JUSEONG_SURGE_STOCK'
           )
           and current_price >= 2000000
         )
@@ -984,7 +981,7 @@ begin
       'DONGHWA_SURGE_STOCK',
       'JEONGMIN_SURGE_STOCK',
       'JUSEONG_SURGE_STOCK'
-    ) or asset_row.name like '%급등%' then
+    ) then
       v_split_factor := 1000;
     elsif asset_row.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE') then
       v_split_factor := 10;
@@ -1005,59 +1002,6 @@ begin
     where symbol = asset_row.symbol;
 
   end loop;
-end;
-$$;
-
-create or replace function public.investment_force_split_surge_stocks()
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  asset_row record;
-  v_result jsonb := '[]'::jsonb;
-  v_new_price bigint;
-begin
-  for asset_row in
-    select symbol, name, current_price
-    from public.investment_assets
-    where listed = true
-      and (
-        name like '%급등%'
-        or symbol in (
-          'SURGE_STOCK',
-          'CURRENT_SURGE_STOCK',
-          'DONGHWA_SURGE_STOCK',
-          'JEONGMIN_SURGE_STOCK',
-          'JUSEONG_SURGE_STOCK'
-        )
-      )
-      and current_price >= 2000000
-    for update
-  loop
-    v_new_price := greatest(1, floor(asset_row.current_price::numeric / 1000)::bigint);
-
-    update public.investment_holdings
-    set quantity = quantity * 1000
-    where symbol = asset_row.symbol;
-
-    update public.investment_assets
-    set current_price = v_new_price,
-        split_notice = true,
-        change_pct = 0
-    where symbol = asset_row.symbol;
-
-    v_result := v_result || jsonb_build_array(jsonb_build_object(
-      'symbol', asset_row.symbol,
-      'name', asset_row.name,
-      'old_price', asset_row.current_price,
-      'new_price', v_new_price,
-      'split_factor', 1000
-    ));
-  end loop;
-
-  return v_result;
 end;
 $$;
 
@@ -1090,46 +1034,7 @@ execute function public.track_investment_listing_status();
 drop trigger if exists investment_stock_split_trigger
 on public.investment_assets;
 
-create or replace function public.investment_stock_split_trigger()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if pg_trigger_depth() = 1
-     and new.listed = true
-     and (
-       new.symbol in (
-         'SURGE_STOCK',
-         'CURRENT_SURGE_STOCK',
-         'DONGHWA_SURGE_STOCK',
-         'JEONGMIN_SURGE_STOCK',
-         'JUSEONG_SURGE_STOCK'
-       )
-       or new.name like '%급등%'
-     )
-     and new.current_price >= 2000000 then
-    update public.investment_holdings
-    set quantity = quantity * 1000
-    where symbol = new.symbol;
-
-    update public.investment_assets
-    set
-      current_price = greatest(1, floor(current_price::numeric / 1000)::bigint),
-      split_notice = true
-    where symbol = new.symbol
-      and current_price >= 2000000;
-  end if;
-
-  return new;
-end;
-$$;
-
-create trigger investment_stock_split_trigger
-after update of current_price on public.investment_assets
-for each row
-execute function public.investment_stock_split_trigger();
+drop function if exists public.investment_stock_split_trigger();
 
 create or replace function public.investment_relist_delisted_assets()
 returns void
@@ -1169,12 +1074,6 @@ revoke all on function public.investment_apply_stock_splits() from public;
 revoke all on function public.investment_relist_delisted_assets() from public;
 revoke all on function public.investment_market_cron_tick() from public;
 grant execute on function public.investment_apply_stock_splits() to anon, authenticated;
-
-revoke all on function public.investment_force_split_surge_stocks()
-from public;
-
-grant execute on function public.investment_force_split_surge_stocks()
-to anon, authenticated;
 
 create or replace function public.investment_link_account(
   p_old_client_id uuid
