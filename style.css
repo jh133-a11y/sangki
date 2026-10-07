@@ -214,10 +214,10 @@ nav a:hover { opacity: .5; }
 .admin-item-card:hover, .admin-item-card.is-selected { background: var(--acid); box-shadow: 3px 3px 0 var(--ink); }
 .admin-item-card strong { font: 10px var(--mono); text-align: center; }
 .admin-item-visual { width: 55px; height: 55px; display: grid; place-items: center; color: var(--orange); font: 34px/1 var(--mono); }
-.admin-item-visual.is-image img { width: 55px; height: 55px; object-fit: contain; }
-.admin-grant-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+.admin-item-visual svg, .admin-item-visual img { width: 55px; height: 55px; object-fit: contain; }
+.admin-grant-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 18px; }
 .admin-grant-actions button { border: 1px solid var(--ink); padding: 12px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
-.admin-grant-actions button:last-child { background: var(--orange); color: var(--ink); }
+.admin-grant-actions button:nth-child(2), .admin-grant-actions button:nth-child(3) { background: var(--orange); color: var(--ink); }
 .admin-grant-actions button:disabled { cursor: wait; opacity: .5; }
 .admin-status { min-height: 18px; margin: 14px 0 20px !important; color: var(--orange); }
 .admin-back { display: inline-block; border: 1px solid var(--ink); padding: 11px 14px; background: var(--ink); color: var(--paper); font: 11px var(--mono); }

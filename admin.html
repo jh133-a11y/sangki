@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin 관리자 전용 페이지">
   <title>byungsin — 관리자 전용</title>
-  <link rel="stylesheet" href="style.css?v=63">
+  <link rel="stylesheet" href="style.css?v=64">
 </head>
 <body>
   <main class="admin-page">
@@ -17,7 +17,7 @@
       <section class="admin-card admin-console">
         <span class="admin-kicker">restricted access</span>
         <h1>관리자 전용</h1>
-        <p>아이템을 선택해 특정 유저 또는 모든 유저에게 메시지와 함께 지급할 수 있습니다.</p>
+        <p>아이템을 선택해 특정 유저 또는 모든 유저에게 메시지와 함께 지급하거나, 선택한 유저의 아이템을 차감할 수 있습니다.</p>
         <form id="admin-grant-form">
           <div class="admin-form-grid">
             <label>지급 대상
@@ -30,7 +30,7 @@
             </label>
           </div>
           <div class="admin-item-heading">
-            <span>지급 아이템 선택</span>
+            <span>아이템 선택</span>
             <strong id="admin-selected-item">아이템을 선택하세요.</strong>
           </div>
           <div class="admin-item-grid" id="admin-item-grid"></div>
@@ -40,6 +40,7 @@
           <div class="admin-grant-actions">
             <button type="submit" id="admin-grant-target">선택 유저에게 지급</button>
             <button type="button" id="admin-grant-all">모든 유저에게 지급</button>
+            <button type="button" id="admin-remove-target">선택 유저에게서 차감</button>
           </div>
           <p class="admin-status" id="admin-status" role="status"></p>
         </form>
@@ -47,6 +48,6 @@
       </section>
     </div>
   </main>
-  <script src="admin.js?v=2"></script>
+  <script src="admin.js?v=3"></script>
 </body>
 </html>

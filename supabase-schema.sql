@@ -998,6 +998,111 @@ begin
 end;
 $$;
 
+create or replace function public.investment_admin_remove_item(
+  p_admin_password text,
+  p_target_client_id uuid,
+  p_item_type text,
+  p_quantity bigint,
+  p_message text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item_name text;
+  v_owned_quantity bigint;
+  v_message text;
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_target_client_id is null
+     or not exists (
+       select 1 from public.investment_users
+       where client_id = p_target_client_id
+     ) then
+    raise exception '차감할 유저를 선택하세요.';
+  end if;
+
+  if p_item_type not in (
+    'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
+    'missile_shield', 'nickname_ticket', 'letter',
+    'normal_potion', 'advanced_potion', 'legendary_potion',
+    'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
+    'juseong_spacesuit', 'cash_box', 'weird_cash_box'
+  ) then
+    raise exception '차감할 수 없는 아이템입니다.';
+  end if;
+
+  if p_quantity is null or p_quantity < 1 or p_quantity > 1000000 then
+    raise exception '수량은 1개 이상 1,000,000개 이하로 입력하세요.';
+  end if;
+
+  if p_message is null or char_length(trim(p_message)) < 1 then
+    raise exception '전달할 메시지를 입력하세요.';
+  end if;
+
+  if char_length(trim(p_message)) > 500 then
+    raise exception '메시지는 500자 이하로 입력하세요.';
+  end if;
+
+  v_item_name := case p_item_type
+    when 'low_missile' then '하급 미사일'
+    when 'mid_missile' then '중급 미사일'
+    when 'high_missile' then '고급 미사일'
+    when 'nuclear_missile' then '핵 미사일'
+    when 'missile_shield' then '미사일 방어막'
+    when 'nickname_ticket' then '닉네임 변경권'
+    when 'letter' then '편지'
+    when 'normal_potion' then '일반 물약'
+    when 'advanced_potion' then '고급 물약'
+    when 'legendary_potion' then '전설 물약'
+    when 'sanggi_hanbok' then '상기 한복'
+    when 'sanggi_spacesuit' then '상기 우주복'
+    when 'juseong_hanbok' then '주성 한복'
+    when 'juseong_spacesuit' then '주성 우주복'
+    when 'cash_box' then '랜덤 현금 박스'
+    when 'weird_cash_box' then '이상한 랜덤 현금 박스'
+  end;
+
+  select quantity
+  into v_owned_quantity
+  from public.investment_shop_items
+  where client_id = p_target_client_id
+    and item_type = p_item_type
+  for update;
+
+  if coalesce(v_owned_quantity, 0) < p_quantity then
+    raise exception '해당 유저의 보유 수량이 부족합니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - p_quantity
+  where client_id = p_target_client_id
+    and item_type = p_item_type;
+
+  delete from public.investment_shop_items
+  where client_id = p_target_client_id
+    and item_type = p_item_type
+    and quantity <= 0;
+
+  v_message := '관리자가 ' || v_item_name || ' ' || p_quantity
+    || '개를 차감했습니다.' || E'\n' || trim(p_message);
+
+  insert into public.investment_shop_messages(client_id, message)
+  values (p_target_client_id, v_message);
+
+  return jsonb_build_object(
+    'item_type', p_item_type,
+    'quantity', p_quantity,
+    'message', v_message
+  );
+end;
+$$;
+
 create or replace function public.investment_transfer_cash(
   p_sender_client_id uuid,
   p_recipient_client_id uuid,
@@ -1201,6 +1306,7 @@ revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) fr
 revoke all on function public.investment_admin_grant_cash_to_all(text, bigint, text) from public;
 revoke all on function public.investment_admin_get_users(text) from public;
 revoke all on function public.investment_admin_grant_item(text, uuid, text, bigint, text) from public;
+revoke all on function public.investment_admin_remove_item(text, uuid, text, bigint, text) from public;
 revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, bigint) to anon;
@@ -1208,6 +1314,7 @@ grant execute on function public.investment_admin_grant_cash(text, uuid, bigint)
 grant execute on function public.investment_admin_grant_cash_to_all(text, bigint, text) to anon;
 grant execute on function public.investment_admin_get_users(text) to anon, authenticated;
 grant execute on function public.investment_admin_grant_item(text, uuid, text, bigint, text) to anon, authenticated;
+grant execute on function public.investment_admin_remove_item(text, uuid, text, bigint, text) to anon, authenticated;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_transfer_cash(uuid, uuid, bigint) to anon, authenticated;
 
