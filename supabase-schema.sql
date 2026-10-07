@@ -935,21 +935,58 @@ declare
   v_split_factor bigint;
 begin
   for asset_row in
-    select symbol, base_price, current_price
+    select symbol, current_price
     from public.investment_assets
-    where listed
-      and symbol <> 'SEOK_HYNIX'
-      and current_price >= 5000000
+    where listed = true
+      and (
+        (
+          symbol in (
+            'SURGE_STOCK',
+            'CURRENT_SURGE_STOCK',
+            'DONGHWA_SURGE_STOCK',
+            'JEONGMIN_SURGE_STOCK',
+            'JUSEONG_SURGE_STOCK'
+          )
+          and current_price > 2000000
+        )
+        or (
+          symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET', 'SANGI_BIO')
+          and current_price > 1000000
+        )
+        or (
+          symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE')
+          and current_price > 10000000
+        )
+        or (
+          symbol not in (
+            'SURGE_STOCK',
+            'CURRENT_SURGE_STOCK',
+            'DONGHWA_SURGE_STOCK',
+            'JEONGMIN_SURGE_STOCK',
+            'JUSEONG_SURGE_STOCK',
+            'SANGI_ROCKET',
+            'JEONGMIN_ROCKET',
+            'SANGI_BIO',
+            'SEOK_HYNIX',
+            'SAMSUNG_MICROWAVE'
+          )
+          and current_price > 1000000
+        )
+      )
     for update
   loop
-    v_split_factor := 1;
-
-    while asset_row.current_price / v_split_factor >= 5000000 loop
-      v_split_factor := v_split_factor * 10;
-    end loop;
-
-    if v_split_factor = 1 then
-      continue;
+    if asset_row.symbol in (
+      'SURGE_STOCK',
+      'CURRENT_SURGE_STOCK',
+      'DONGHWA_SURGE_STOCK',
+      'JEONGMIN_SURGE_STOCK',
+      'JUSEONG_SURGE_STOCK'
+    ) then
+      v_split_factor := 1000;
+    elsif asset_row.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE') then
+      v_split_factor := 10;
+    else
+      v_split_factor := 100;
     end if;
 
     update public.investment_holdings
@@ -964,11 +1001,6 @@ begin
         split_notice = true
     where symbol = asset_row.symbol;
 
-    asset_row.current_price :=
-      greatest(
-        1,
-        round(asset_row.current_price::numeric / v_split_factor)::bigint
-      );
   end loop;
 end;
 $$;
@@ -1010,9 +1042,42 @@ set search_path = public
 as $$
 begin
   if pg_trigger_depth() = 1
-     and new.listed
-     and new.current_price >= 5000000
-     and new.symbol <> 'SEOK_HYNIX' then
+     and new.listed = true
+     and (
+       (
+         new.symbol in (
+           'SURGE_STOCK',
+           'CURRENT_SURGE_STOCK',
+           'DONGHWA_SURGE_STOCK',
+           'JEONGMIN_SURGE_STOCK',
+           'JUSEONG_SURGE_STOCK'
+         )
+         and new.current_price > 2000000
+       )
+       or (
+         new.symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET', 'SANGI_BIO')
+         and new.current_price > 1000000
+       )
+       or (
+         new.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE')
+         and new.current_price > 10000000
+       )
+       or (
+         new.symbol not in (
+           'SURGE_STOCK',
+           'CURRENT_SURGE_STOCK',
+           'DONGHWA_SURGE_STOCK',
+           'JEONGMIN_SURGE_STOCK',
+           'JUSEONG_SURGE_STOCK',
+           'SANGI_ROCKET',
+           'JEONGMIN_ROCKET',
+           'SANGI_BIO',
+           'SEOK_HYNIX',
+           'SAMSUNG_MICROWAVE'
+         )
+         and new.current_price > 1000000
+       )
+     ) then
     perform public.investment_apply_stock_splits();
   end if;
   return new;
