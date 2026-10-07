@@ -4,27 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=30">
+  <link rel="stylesheet" href="style.css?v=31">
 </head>
 <body class="records-page">
   <main class="records-shell">
     <header class="records-site-header">
-      <a class="records-logo" href="playground.html">기록(?)</a>
-      <nav><a href="index.html">홈</a><a href="archive.html">상점</a><a href="projects.html">상기 키우기</a><a href="index.html">이용안내</a></nav>
+      <a class="records-logo" href="playground.html">byungsin</a>
+      <nav><a href="index.html">홈</a><a href="archive.html">상점</a><a href="projects.html">상기 키우기</a><a href="index.html">메인으로</a></nav>
     </header>
     <section class="records-gallery-head">
-      <div class="records-gallery-image" aria-hidden="true"><span>기록</span></div>
-      <div>
-        <h1>기록(?)</h1>
-        <p>자유롭게 글을 남기고 이야기를 나누는 게시판입니다.</p>
-        <dl><div><dt>게시판</dt><dd>기록(?)</dd></div><div><dt>전체 글</dt><dd id="records-count">불러오는 중</dd></div><div><dt>운영</dt><dd>자유 게시판</dd></div></dl>
+      <div class="records-gallery-label">GALLERY</div>
+      <div class="records-gallery-copy">
+        <span class="records-breadcrumb">byungsin &gt; community</span>
+        <strong>자유게시판</strong>
+        <p>자유롭게 글을 남기고 이야기를 나누는 공간입니다.</p>
       </div>
+      <div class="records-gallery-stats"><span>전체글</span><strong id="records-count">불러오는 중</strong></div>
     </section>
     <section class="records-tabs" aria-label="게시판 메뉴">
       <button class="is-active" type="button">전체글</button><button type="button">일반</button><button type="button">공지</button>
     </section>
     <section class="records-toolbar">
-      <span>기록(?) 게시판</span>
+      <span><strong>자유게시판</strong> · 최신 글부터 표시됩니다.</span>
       <div class="records-toolbar-actions">
         <button class="records-button" id="records-notice-button" type="button">공지</button>
         <button class="records-button records-button-dark" id="records-write-button" type="button">글쓰기</button>
@@ -79,6 +80,6 @@
     </form>
   </section>
 
-  <script src="records.js?v=3"></script>
+  <script src="records.js?v=4"></script>
 </body>
 </html>
