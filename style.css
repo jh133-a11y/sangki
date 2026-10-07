@@ -144,6 +144,7 @@ nav a:hover { opacity: .5; }
 .shop-potion-icon { display: block; width: 92px; height: 92px; margin-bottom: 20px; }
 .shop-card h2 { margin: 0; font-size: 25px; letter-spacing: -.07em; }
 .shop-card p { margin: 8px 0 20px; font: 11px/1.5 var(--mono); }
+.shop-card-status { min-height: 32px; margin: -8px 0 14px !important; color: var(--orange); font: 10px/1.45 var(--mono) !important; }
 .shop-price { font: 16px var(--mono); }
 .shop-buy { width: 100%; margin-top: 16px; border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: #fff; cursor: pointer; font: 11px var(--mono); }
 .shop-buy:hover { background: var(--orange); color: var(--ink); }

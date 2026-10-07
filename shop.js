@@ -184,14 +184,18 @@ const refreshShop = async () => {
 };
 document.querySelectorAll('.shop-buy').forEach((button) => {
   button.addEventListener('click', async () => {
-    const itemName = button.closest('.shop-card')?.querySelector('h2')?.textContent || '상품';
-    const itemPrice = button.closest('.shop-card')?.querySelector('.shop-price')?.textContent || '';
+    const card = button.closest('.shop-card');
+    const itemName = card?.querySelector('h2')?.textContent || '상품';
+    const itemPrice = card?.querySelector('.shop-price')?.textContent || '';
+    const cardStatus = card?.querySelector('.shop-card-status');
     const price = BigInt(itemPrice.replace(/[^\d]/g, '') || '0');
     const ownedQuantity = BigInt(String(
       currentItems.find((item) => item.item_type === button.dataset.item)?.quantity || 0
     ));
     if (ownedQuantity >= 100n) {
-      status.textContent = '이 아이템은 이미 최대 보유 수량인 100개입니다.';
+      const message = '이 아이템은 이미 최대 보유 수량인 100개입니다.';
+      if (cardStatus) cardStatus.textContent = message;
+      else status.textContent = message;
       return;
     }
     const quantityText = await chooseQuantity(
@@ -207,6 +211,7 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
     }
     if (!await siteConfirm(`${itemName} ${itemPrice}\n${quantityText}개를 정말 구매하시겠습니까?`)) return;
     button.disabled = true;
+    if (cardStatus) cardStatus.textContent = '';
     status.textContent = '구매 처리 중...';
     try {
       const clientId = await resolveShopClientId();
@@ -218,7 +223,12 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
       status.textContent = `${result.message} 홈 화면의 가방에서 확인하세요.`;
       await refreshShop();
     } catch (error) {
-      status.textContent = error.message;
+      if (cardStatus && button.dataset.item === 'gambling_box') {
+        cardStatus.textContent = error.message;
+        status.textContent = '';
+      } else {
+        status.textContent = error.message;
+      }
       window.alert(`구매 실패: ${error.message}`);
     } finally {
       button.disabled = false;
