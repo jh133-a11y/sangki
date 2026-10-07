@@ -2129,6 +2129,62 @@ create table if not exists public.investment_shop_messages (
 alter table public.investment_shop_messages enable row level security;
 revoke all on table public.investment_shop_messages from anon, authenticated;
 
+create table if not exists public.investment_daily_shop_rewards (
+  reward_date date not null,
+  client_id uuid not null references public.investment_users(client_id) on delete cascade,
+  primary key (reward_date, client_id)
+);
+
+alter table public.investment_daily_shop_rewards enable row level security;
+revoke all on table public.investment_daily_shop_rewards from anon, authenticated;
+
+create or replace function public.investment_daily_shop_reward_tick(
+  p_reward_date date default (now() at time zone 'Asia/Seoul')::date
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user record;
+  v_reward_count integer := 0;
+begin
+  for v_user in
+    select client_id
+    from public.investment_users
+  loop
+    insert into public.investment_daily_shop_rewards(reward_date, client_id)
+    values (p_reward_date, v_user.client_id)
+    on conflict (reward_date, client_id) do nothing;
+
+    if found then
+      insert into public.investment_shop_items(client_id, item_type, quantity)
+      values
+        (v_user.client_id, 'weird_cash_box', 3),
+        (v_user.client_id, 'cash_box', 3)
+      on conflict (client_id, item_type)
+      do update set
+        quantity = public.investment_shop_items.quantity + excluded.quantity;
+
+      insert into public.investment_shop_messages(client_id, message)
+      values (
+        v_user.client_id,
+        '일일 보상으로 이상한 랜덤 현금 박스 3개와 랜덤 현금 박스 3개가 지급되었습니다.'
+      );
+      v_reward_count := v_reward_count + 1;
+    end if;
+  end loop;
+
+  return jsonb_build_object(
+    'reward_date', p_reward_date,
+    'user_count', v_reward_count
+  );
+end;
+$$;
+
+revoke all on function public.investment_daily_shop_reward_tick(date) from public;
+
 create or replace function public.shop_get_unread_count(p_client_id uuid)
 returns jsonb
 language sql
@@ -3222,6 +3278,30 @@ grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to a
 grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- 한국 시간(Asia/Seoul) 매일 00:00에 일일 상점 보상을 지급합니다.
+create extension if not exists pg_cron with schema extensions;
+
+do $$
+declare
+  v_job_id bigint;
+begin
+  select jobid
+  into v_job_id
+  from cron.job
+  where jobname = 'investment-daily-shop-rewards';
+
+  if v_job_id is not null then
+    perform cron.unschedule(v_job_id);
+  end if;
+
+  perform cron.schedule(
+    'investment-daily-shop-rewards',
+    '0 15 * * *',
+    $job$select public.investment_daily_shop_reward_tick((now() at time zone 'Asia/Seoul')::date);$job$
+  );
+end;
+$$;
 
 -- Account-scoped site preferences and comment state.
 create table if not exists public.site_account_state (
