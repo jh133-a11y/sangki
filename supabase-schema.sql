@@ -9,6 +9,63 @@ create table if not exists public.comments (
 
 alter table public.comments add column if not exists edited_at timestamptz;
 alter table public.comments add column if not exists parent_id uuid;
+alter table public.comments add column if not exists author_account_id uuid;
+alter table public.comments add column if not exists investor_level integer;
+alter table public.comments add column if not exists upvotes bigint not null default 0;
+alter table public.comments add column if not exists downvotes bigint not null default 0;
+
+create or replace function public.create_investor_comment(
+  p_session_token uuid,
+  p_body text
+)
+returns public.comments
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_account_id uuid;
+  v_nickname text;
+  v_level integer;
+  v_comment public.comments;
+begin
+  select s.account_id
+  into v_account_id
+  from public.site_account_sessions s
+  where s.token = p_session_token
+    and s.expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  select nickname into v_nickname
+  from public.investment_users
+  where client_id = v_account_id;
+
+  if v_nickname is null then
+    raise exception '투자자 닉네임을 먼저 설정하세요.';
+  end if;
+
+  select player_level into v_level
+  from public.sanggi_game_states
+  where account_id = v_account_id;
+
+  insert into public.comments (
+    nickname, body, password_hash, author_account_id, investor_level
+  )
+  values (
+    v_nickname, trim(p_body), encode(digest(p_session_token::text, 'sha256'), 'hex'),
+    v_account_id, greatest(coalesce(v_level, 1), 1)
+  )
+  returning * into v_comment;
+
+  return v_comment;
+end;
+$$;
+
+revoke all on function public.create_investor_comment(uuid, text) from public;
+grant execute on function public.create_investor_comment(uuid, text) to anon, authenticated;
 
 do $$
 begin
@@ -35,6 +92,78 @@ create policy "Anyone can add comments"
 on public.comments for insert
 to anon
 with check (true);
+
+create table if not exists public.comment_votes (
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  voter_key text not null check (char_length(voter_key) between 16 and 128),
+  vote smallint not null check (vote in (-1, 1)),
+  created_at timestamptz not null default now(),
+  primary key (comment_id, voter_key)
+);
+
+alter table public.comment_votes enable row level security;
+revoke all on table public.comment_votes from anon, authenticated;
+
+create or replace function public.comment_vote(
+  p_comment_id uuid,
+  p_voter_key text,
+  p_vote smallint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_vote smallint;
+  v_upvotes bigint;
+  v_downvotes bigint;
+begin
+  if p_vote not in (-1, 1) then
+    raise exception '잘못된 투표입니다.';
+  end if;
+  if p_voter_key is null or char_length(trim(p_voter_key)) < 16 then
+    raise exception '투표 식별자가 필요합니다.';
+  end if;
+  if not exists (select 1 from public.comments where id = p_comment_id) then
+    raise exception '존재하지 않는 댓글입니다.';
+  end if;
+
+  select vote into v_vote
+  from public.comment_votes
+  where comment_id = p_comment_id and voter_key = p_voter_key;
+
+  if v_vote = p_vote then
+    delete from public.comment_votes
+    where comment_id = p_comment_id and voter_key = p_voter_key;
+    v_vote := null;
+  else
+    insert into public.comment_votes(comment_id, voter_key, vote)
+    values (p_comment_id, trim(p_voter_key), p_vote)
+    on conflict (comment_id, voter_key)
+    do update set vote = excluded.vote;
+    v_vote := p_vote;
+  end if;
+
+  select count(*) filter (where vote = 1), count(*) filter (where vote = -1)
+  into v_upvotes, v_downvotes
+  from public.comment_votes
+  where comment_id = p_comment_id;
+
+  update public.comments
+  set upvotes = v_upvotes, downvotes = v_downvotes
+  where id = p_comment_id;
+
+  return jsonb_build_object(
+    'vote', v_vote,
+    'upvotes', v_upvotes,
+    'downvotes', v_downvotes
+  );
+end;
+$$;
+
+revoke all on function public.comment_vote(uuid, text, smallint) from public;
+grant execute on function public.comment_vote(uuid, text, smallint) to anon, authenticated;
 
 create or replace function public.update_comment(
   p_id uuid,

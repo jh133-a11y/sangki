@@ -1700,6 +1700,10 @@ const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');
 const status = document.querySelector('#form-status');
 const refreshButton = document.querySelector('#comments-refresh');
+const investorCommentToggle = document.querySelector('#investor-comment');
+const commentNicknameField = document.querySelector('#comment-nickname-field');
+const commentPasswordField = document.querySelector('#comment-password-field');
+const investorCommentHint = document.querySelector('#investor-comment-hint');
 const notificationToggle = document.querySelector('#notification-toggle');
 const pagination = document.querySelector('#comments-pagination');
 const COMMENTS_PER_PAGE = 10;
@@ -1707,8 +1711,14 @@ let currentPage = 1;
 let allComments = [];
 let commentsInitialized = false;
 const WATCHED_COMMENTS_KEY = 'sangki-watched-comments';
+const COMMENT_VOTER_KEY = 'sangki-comment-voter-key';
 const NOTIFICATIONS_ENABLED_KEY = 'sangki-notifications-enabled';
 const notifiedEvents = new Set();
+let commentVoterKey = localStorage.getItem(COMMENT_VOTER_KEY);
+if (!commentVoterKey) {
+  commentVoterKey = crypto.randomUUID();
+  localStorage.setItem(COMMENT_VOTER_KEY, commentVoterKey);
+}
 
 const getWatchedComments = () => {
   try {
@@ -1789,6 +1799,10 @@ const renderComment = (item, isReply = false) => {
   article.innerHTML = `
     <strong class="comment-author"></strong>
     <p class="comment-body"></p>
+    <div class="comment-votes">
+      <button class="comment-vote" type="button" data-vote="1">추천 <span></span></button>
+      <button class="comment-vote" type="button" data-vote="-1">비추천 <span></span></button>
+    </div>
     <div class="comment-meta">
       <time class="comment-date"></time>
       <span class="edited"></span>
@@ -1799,18 +1813,45 @@ const renderComment = (item, isReply = false) => {
       </div>
     </div>
   `;
-  article.querySelector('.comment-author').textContent = item.nickname;
+  article.querySelector('.comment-author').textContent = item.author_account_id
+    ? `${item.nickname} · LV ${Number(item.investor_level) || 1}`
+    : item.nickname;
   article.querySelector('.comment-body').textContent = item.body;
+  article.querySelector('[data-vote="1"] span').textContent = Number(item.upvotes) || 0;
+  article.querySelector('[data-vote="-1"] span').textContent = Number(item.downvotes) || 0;
   article.querySelector('.comment-date').textContent = escapeDate(item.created_at);
   article.querySelector('.edited').textContent = item.edited_at ? '(edited)' : '';
   const replyButton = article.querySelector('[data-action="reply"]');
-  if (isReply) {
-    replyButton.remove();
-  } else {
-    replyButton.addEventListener('click', () => addReply(item.id));
+  replyButton.addEventListener('click', () => addReply(item.id));
+  if (item.author_account_id) {
+    article.querySelector('[data-action="edit"]').remove();
+    article.querySelector('[data-action="delete"]').remove();
   }
-  article.querySelector('[data-action="edit"]').addEventListener('click', () => editComment(item));
-  article.querySelector('[data-action="delete"]').addEventListener('click', () => deleteComment(item.id));
+  article.querySelectorAll('[data-vote]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const result = await callCommentRpc('comment_vote', {
+          p_comment_id: item.id,
+          p_voter_key: commentVoterKey,
+          p_vote: Number(button.dataset.vote)
+        });
+        item.upvotes = result.upvotes;
+        item.downvotes = result.downvotes;
+        article.querySelector('[data-vote="1"] span').textContent = result.upvotes;
+        article.querySelector('[data-vote="-1"] span').textContent = result.downvotes;
+        article.querySelectorAll('[data-vote]').forEach((voteButton) => {
+          voteButton.classList.toggle('is-selected', Number(voteButton.dataset.vote) === Number(result.vote));
+        });
+      } catch (error) {
+        window.alert(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+  article.querySelector('[data-action="edit"]')?.addEventListener('click', () => editComment(item));
+  article.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteComment(item.id));
   return article;
 };
 
@@ -1834,11 +1875,19 @@ const renderComments = (items) => {
     replies.get(item.parent_id).push(item);
   });
   const nodes = [];
+  const appendReplies = (parentId, depth = 0) => {
+    (replies.get(parentId) || [])
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .forEach((reply) => {
+        const node = renderComment(reply, true);
+        node.style.marginLeft = `${Math.min(depth + 1, 4) * 18}px`;
+        nodes.push(node);
+        appendReplies(reply.id, depth + 1);
+      });
+  };
   pageItems.forEach((item) => {
     nodes.push(renderComment(item));
-    (replies.get(item.id) || [])
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .forEach((reply) => nodes.push(renderComment(reply, true)));
+    appendReplies(item.id);
   });
   comments.replaceChildren(...nodes);
   renderPagination(totalPages);
@@ -1874,7 +1923,7 @@ const renderPagination = (totalPages) => {
 
 const loadComments = async () => {
   try {
-    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at,parent_id&order=created_at.asc`, {
+    const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at,parent_id,author_account_id,investor_level,upvotes,downvotes&order=created_at.asc`, {
       headers: apiHeaders
     });
     if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
@@ -2189,15 +2238,68 @@ const deleteGameScore = async (id) => {
 
 loadGameRanking();
 
+const updateInvestorCommentFields = () => {
+  const enabled = investorCommentToggle.checked;
+  commentNicknameField.hidden = enabled;
+  commentPasswordField.hidden = enabled;
+  document.querySelector('#nickname').required = !enabled;
+  document.querySelector('#password').required = !enabled;
+  if (enabled) {
+    if (accountSession?.account_id && investmentState?.nickname) {
+      investorCommentHint.textContent = `${investmentState.nickname} · LV ${Number(investmentState.player_level) || 1}로 작성합니다.`;
+      investorCommentHint.classList.remove('is-error');
+    } else {
+      investorCommentHint.textContent = '로그인하고 투자 닉네임을 설정해야 사용할 수 있습니다.';
+      investorCommentHint.classList.add('is-error');
+    }
+  } else {
+    investorCommentHint.textContent = '체크하면 로그인한 투자자의 고유 닉네임과 레벨로 댓글을 작성합니다.';
+    investorCommentHint.classList.remove('is-error');
+  }
+};
+investorCommentToggle.addEventListener('change', updateInvestorCommentFields);
+updateInvestorCommentFields();
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submit = form.querySelector('button');
   const formData = new FormData(form);
+  const useInvestorIdentity = investorCommentToggle.checked;
   const password = formData.get('password');
+  let nickname = formData.get('nickname').trim();
+  let passwordHash = '';
+  let authorAccountId = null;
+  let investorLevel = null;
+  if (useInvestorIdentity) {
+    if (!accountSession?.account_id || !investmentState?.nickname) {
+      status.textContent = '투자자 닉네임으로 작성하려면 로그인하고 투자 닉네임을 설정하세요.';
+      investorCommentHint.classList.add('is-error');
+      return;
+    }
+    nickname = investmentState.nickname;
+    authorAccountId = accountSession.account_id;
+    investorLevel = Number(investmentState.player_level) || 1;
+    passwordHash = await hashPassword(accountSession.session_token);
+  } else {
+    passwordHash = await hashPassword(password);
+  }
   submit.disabled = true;
   status.textContent = '저장하는 중...';
 
   try {
+    if (useInvestorIdentity) {
+      const created = await callCommentRpc('create_investor_comment', {
+        p_session_token: accountSession.session_token,
+        p_body: formData.get('comment').trim()
+      });
+      form.reset();
+      updateInvestorCommentFields();
+      if (created?.id) watchComment(created.id);
+      status.textContent = '댓글이 저장되었습니다.';
+      currentPage = 1;
+      await loadComments();
+      return;
+    }
     const response = await fetch(commentsEndpoint, {
       method: 'POST',
       headers: {
@@ -2206,14 +2308,18 @@ form.addEventListener('submit', async (event) => {
         Prefer: 'return=representation'
       },
       body: JSON.stringify({
-        nickname: formData.get('nickname').trim(),
+        nickname,
         body: formData.get('comment').trim(),
-        password_hash: await hashPassword(password)
+        password_hash: passwordHash,
+        author_account_id: authorAccountId,
+        investor_level: investorLevel
       })
     });
+
     if (!response.ok) throw new Error('댓글 저장에 실패했습니다.');
     const [createdComment] = await response.json();
     form.reset();
+    updateInvestorCommentFields();
     if (createdComment) watchComment(createdComment.id);
     status.textContent = '댓글이 저장되었습니다.';
     currentPage = 1;
