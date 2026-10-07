@@ -233,6 +233,9 @@ nav a:hover { opacity: .5; }
 .records-remove-option { width: 34px; padding: 0; }
 .records-add-option { justify-self: start; }
 .records-poll-help { margin: 0; font: 10px var(--sans); }
+.records-add-poll { justify-self: start; border: 1px dashed #9eabc0; padding: 9px 12px; background: #fff; color: #5578b5; cursor: pointer; font: 11px var(--sans); }
+.records-add-poll:hover { border-color: #5578b5; background: #f7f9fc; }
+.records-poll-fieldset[hidden], .records-add-poll[hidden] { display: none !important; }
 @media (max-width: 650px) {
   .records-page { padding: 28px 15px 60px; }
   .records-header, .records-toolbar, .record-card-head, .record-card-footer { align-items: flex-start; flex-direction: column; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=33">
+  <link rel="stylesheet" href="style.css?v=34">
 </head>
 <body class="records-page">
   <main class="records-shell">
@@ -51,7 +51,8 @@
       <label>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
       <label>제목<input id="records-post-subject" maxlength="100" required></label>
       <label>내용<textarea id="records-post-body" maxlength="5000" rows="9" required></textarea></label>
-      <fieldset class="records-poll-fieldset">
+      <button class="records-add-poll" id="records-add-poll" type="button">＋ 투표 추가</button>
+      <fieldset class="records-poll-fieldset" id="records-poll-fieldset" hidden>
         <legend>투표 <span>(선택)</span></legend>
         <label>질문<input id="records-poll-question" maxlength="150" placeholder="예: 오늘 저녁 메뉴는?"></label>
         <div id="records-poll-options"></div>
@@ -92,6 +93,6 @@
     </form>
   </section>
 
-  <script src="records.js?v=6"></script>
+  <script src="records.js?v=7"></script>
 </body>
 </html>

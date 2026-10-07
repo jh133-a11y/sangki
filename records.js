@@ -73,11 +73,19 @@ const addPollOptionInput = (value = '') => {
   container.appendChild(wrapper);
 };
 
+const setPollVisibility = (visible) => {
+  const fieldset = $('#records-poll-fieldset');
+  fieldset.hidden = !visible;
+  $('#records-add-poll').hidden = visible;
+  fieldset.querySelectorAll('input').forEach((input) => { input.disabled = !visible; });
+};
+
 const resetPollForm = () => {
   $('#records-poll-question').value = '';
   $('#records-poll-options').innerHTML = '';
   addPollOptionInput();
   addPollOptionInput();
+  setPollVisibility(false);
 };
 
 const renderPagination = () => {
@@ -201,6 +209,11 @@ $('#records-write-button').addEventListener('click', () => {
   resetPollForm();
   setStatus('records-post-form-status', '');
   openModal('records-post-modal');
+});
+
+$('#records-add-poll').addEventListener('click', () => {
+  setPollVisibility(true);
+  $('#records-poll-question').focus();
 });
 
 $('#records-post-form').addEventListener('submit', async (event) => {
