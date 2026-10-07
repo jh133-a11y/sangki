@@ -825,7 +825,11 @@ const loadBag = async () => {
         slot.title = `${item.name} ${item.quantity}개 · 인벤토리에서 사용할 수 없습니다.`;
       }
       slot.innerHTML = `<span class="bag-slot-icon">${shopItemIcons[item.item_type] || '◆'}</span><span class="bag-slot-count">${item.quantity}</span><span class="bag-slot-name">${item.name}</span>`;
-      if (!nonInteractiveBagItemTypes.has(item.item_type)) {
+      if (item.item_type === 'gambling_box') {
+        slot.addEventListener('click', () => {
+          useShopItem(item.item_type);
+        });
+      } else if (!nonInteractiveBagItemTypes.has(item.item_type)) {
         slot.addEventListener('click', () => {
           selectShopItem(item);
           slot.classList.add('is-selected');
@@ -862,28 +866,28 @@ const useShopItem = async (itemType) => {
     bagStatus.textContent = '미사일 방어막은 미사일에 피격되면 필요한 수량만큼 자동으로 소모됩니다.';
     return;
   }
+  if (itemType === 'gambling_box') {
+    if (!await siteConfirm('도박 중독자 상자를 개봉하시겠습니까?')) return;
+    bagStatus.textContent = '도박 중독자 상자를 개봉하는 중...';
+    try {
+      const result = await callInvestmentRpc('shop_use_gambling_box', {
+        p_client_id: await resolveShopClientId()
+      });
+      bagStatus.textContent = result.message;
+      window.alert(result.message);
+      await loadBag();
+      if (investmentState) await loadInvestmentState();
+    } catch (error) {
+      bagStatus.textContent = error.message;
+      window.alert(`도박 중독자 상자 사용 실패: ${error.message}`);
+    }
+    return;
+  }
   if (itemType === 'cash_box' || itemType === 'weird_cash_box') {
     const targetId = bagTarget.value || null;
     const quantityText = bagDiscardQuantity.value.trim();
     if (targetId && (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n)) {
       bagStatus.textContent = '선물할 수량은 1개 이상의 정수로 입력하세요.';
-      return;
-    }
-    if (itemType === 'gambling_box') {
-      if (!await siteConfirm('도박 중독자 상자를 개봉하시겠습니까?')) return;
-      bagStatus.textContent = '도박 중독자 상자를 개봉하는 중...';
-      try {
-        const result = await callInvestmentRpc('shop_use_gambling_box', {
-          p_client_id: await resolveShopClientId()
-        });
-        bagStatus.textContent = result.message;
-        window.alert(result.message);
-        await loadBag();
-        if (investmentState) await loadInvestmentState();
-      } catch (error) {
-        bagStatus.textContent = error.message;
-        window.alert(`도박 중독자 상자 사용 실패: ${error.message}`);
-      }
       return;
     }
     const giftQuantity = targetId ? quantityText : '1';
