@@ -404,8 +404,8 @@ begin
       'JUSEONG_SURGE_STOCK'
     ) then
       daily_direction := (direction_state_value->>asset.symbol)::integer;
-      if random() < 0.2 then
-        pct := floor(random() * 201) + 300;
+      if random() < 0.01 then
+        pct := floor(random() * 1801) + 200;
       else
         movement_direction := public.investment_next_direction(previous_pct, daily_direction);
         step := floor(random() * 100) + 1;
@@ -795,7 +795,7 @@ alter table public.investment_assets
 create table if not exists public.investment_surge_settings (
   id integer primary key check (id = 1),
   normal_max numeric not null default 30,
-  spike_chance numeric not null default 10,
+  spike_chance numeric not null default 1,
   spike_min numeric not null default 200,
   spike_max numeric not null default 2000,
   crash_chance numeric not null default 60,
@@ -806,6 +806,12 @@ create table if not exists public.investment_surge_settings (
 insert into public.investment_surge_settings (id)
 values (1)
 on conflict (id) do nothing;
+
+update public.investment_surge_settings
+set spike_chance = 1,
+    spike_min = 200,
+    spike_max = 2000
+where id = 1;
 
 create or replace function public.investment_admin_reset_asset(
   p_admin_password text,
@@ -1041,7 +1047,7 @@ begin
             'JEONGMIN_SURGE_STOCK',
             'JUSEONG_SURGE_STOCK'
           )
-          and current_price >= 2000000
+          and current_price >= 1000000
         )
         or (
           symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET', 'SANGI_BIO')
