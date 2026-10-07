@@ -1998,17 +1998,132 @@ begin
 end;
 $$;
 
+-- 계정 연결 시 투자정보와 상점 아이템·메시지를 함께 이전
+create or replace function public.investment_link_account(
+  p_session_token uuid,
+  p_old_client_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_account_id uuid;
+  old_user public.investment_users%rowtype;
+  target_user public.investment_users%rowtype;
+begin
+  select s.account_id
+  into v_account_id
+  from public.site_account_sessions s
+  where s.token = p_session_token
+    and s.expires_at > now()
+  for update;
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  if p_old_client_id is null
+     or p_old_client_id = v_account_id then
+    return true;
+  end if;
+
+  select *
+  into old_user
+  from public.investment_users
+  where client_id = p_old_client_id
+  for update;
+
+  if old_user.client_id is null then
+    return true;
+  end if;
+
+  select *
+  into target_user
+  from public.investment_users
+  where client_id = v_account_id
+  for update;
+
+  if target_user.client_id is null then
+    if exists (
+      select 1
+      from public.investment_users
+      where nickname = old_user.nickname
+        and client_id <> p_old_client_id
+    ) then
+      raise exception '기존 닉네임이 이미 사용 중이어서 투자 정보를 연동할 수 없습니다.';
+    end if;
+    insert into public.investment_users (client_id, nickname, cash)
+    values (v_account_id, old_user.nickname, old_user.cash);
+  else
+    if target_user.nickname <> old_user.nickname
+       and exists (
+         select 1
+         from public.investment_users
+         where nickname = old_user.nickname
+           and client_id <> p_old_client_id
+       ) then
+      raise exception '기존 닉네임이 이미 사용 중이어서 투자 정보를 연동할 수 없습니다.';
+    end if;
+    update public.investment_users
+    set nickname = old_user.nickname,
+        cash = target_user.cash + old_user.cash
+    where client_id = v_account_id;
+  end if;
+
+  insert into public.investment_holdings (
+    client_id, symbol, quantity, invested_amount
+  )
+  select v_account_id, symbol, quantity, invested_amount
+  from public.investment_holdings
+  where client_id = p_old_client_id
+  on conflict (client_id, symbol)
+  do update set
+    quantity = public.investment_holdings.quantity + excluded.quantity,
+    invested_amount =
+      public.investment_holdings.invested_amount + excluded.invested_amount;
+
+  insert into public.investment_shop_items (
+    client_id, item_type, quantity
+  )
+  select v_account_id, item_type, quantity
+  from public.investment_shop_items
+  where client_id = p_old_client_id
+  on conflict (client_id, item_type)
+  do update set
+    quantity = public.investment_shop_items.quantity + excluded.quantity;
+
+  update public.investment_shop_messages
+  set client_id = v_account_id
+  where client_id = p_old_client_id;
+
+  delete from public.investment_holdings
+  where client_id = p_old_client_id;
+
+  delete from public.investment_shop_items
+  where client_id = p_old_client_id;
+
+  delete from public.investment_users
+  where client_id = p_old_client_id;
+
+  return true;
+end;
+$$;
+
 revoke all on function public.shop_get_state(uuid) from public;
 revoke all on function public.shop_get_unread_count(uuid) from public;
 revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
+revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
 grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
 grant execute on function public.shop_get_unread_count(uuid) to anon, authenticated;
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
+grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
 
 drop function if exists public.site_account_delete(uuid, text);
 
