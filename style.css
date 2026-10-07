@@ -61,6 +61,7 @@ nav a:hover { opacity: .5; }
 .side-menu.is-open { transform: translateX(0); }
 .side-menu-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--ink); font: 11px var(--mono); text-transform: uppercase; }
 .side-menu-close { border: 0; padding: 0; background: transparent; color: var(--ink); cursor: pointer; font: 28px/1 var(--mono); }
+.side-menu-close:hover { color: var(--orange); transform: scale(1.12); }
 .side-menu-intro { margin: 28px 0 34px; font-size: 14px; line-height: 1.6; }
 .side-menu a { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid rgba(23,23,23,.3); font: 14px var(--mono); }
 .side-menu a:hover { color: var(--orange); }
