@@ -689,6 +689,15 @@ const shopItemNames = {
   weird_cash_box: '이상한 랜덤 현금 박스'
 };
 const validShopItemTypes = new Set(Object.keys(shopItemNames));
+const nonInteractiveBagItemTypes = new Set([
+  'normal_potion',
+  'advanced_potion',
+  'legendary_potion',
+  'sanggi_hanbok',
+  'sanggi_spacesuit',
+  'juseong_hanbok',
+  'juseong_spacesuit'
+]);
 const normalizeShopItem = (item) => ({
   ...item,
   name: shopItemNames[item.item_type] || item.name || '아이템'
@@ -793,11 +802,17 @@ const loadBag = async () => {
     if (item) {
       slot.disabled = item.quantity < 1;
       slot.title = `${item.name} ${item.quantity}개`;
+      if (nonInteractiveBagItemTypes.has(item.item_type)) {
+        slot.classList.add('is-passive');
+        slot.title = `${item.name} ${item.quantity}개 · 인벤토리에서 사용할 수 없습니다.`;
+      }
       slot.innerHTML = `<span class="bag-slot-icon">${shopItemIcons[item.item_type] || '◆'}</span><span class="bag-slot-count">${item.quantity}</span><span class="bag-slot-name">${item.name}</span>`;
-      slot.addEventListener('click', () => {
-        selectShopItem(item);
-        slot.classList.add('is-selected');
-      });
+      if (!nonInteractiveBagItemTypes.has(item.item_type)) {
+        slot.addEventListener('click', () => {
+          selectShopItem(item);
+          slot.classList.add('is-selected');
+        });
+      }
     }
     slots.push(slot);
   }
