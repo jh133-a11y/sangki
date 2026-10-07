@@ -75,9 +75,17 @@ const settingsStatus = document.querySelector('#settings-status');
 const onlineUsersList = document.querySelector('#online-users-list');
 
 const updateAccountButton = () => {
-  accountButton.textContent = accountSession?.username
-    ? `${accountSession.username} · 로그아웃`
-    : '로그인';
+  if (!accountSession?.username) {
+    accountButton.textContent = '로그인';
+    return;
+  }
+  const username = document.createElement('span');
+  username.className = 'account-name';
+  username.textContent = accountSession.username;
+  const logout = document.createElement('span');
+  logout.className = 'account-logout';
+  logout.textContent = '로그아웃';
+  accountButton.replaceChildren(username, logout);
 };
 const clearInvestmentView = () => {
   if (accountSession?.account_id && investorNickname.value.trim()) {

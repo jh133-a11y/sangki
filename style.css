@@ -56,7 +56,9 @@ nav a:hover { opacity: .5; }
 .notification-toggle.is-enabled { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-blocked { opacity: .55; }
 .side-menu-notification { width: 100%; margin: 16px 0 0; text-align: left; }
-.account-button { border: 1px solid var(--ink); padding: 5px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
+.account-button { display: inline-grid; min-width: 72px; border: 1px solid var(--ink); padding: 4px 7px; background: transparent; color: var(--ink); cursor: pointer; font: 10px/1.2 var(--mono); white-space: nowrap; }
+.account-name, .account-logout { display: block; overflow: hidden; text-overflow: ellipsis; }
+.account-logout { margin-top: 2px; color: var(--orange); font-size: 9px; }
 .account-button:hover { background: var(--ink); color: var(--acid); }
 .bag-button { border: 1px solid var(--ink); padding: 5px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); white-space: nowrap; }
 .bag-button:hover { background: var(--ink); color: var(--acid); }
@@ -398,7 +400,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .account-button,
   .bag-button,
   .message-button { position: absolute; top: 0; z-index: 1; }
-  .account-button { right: 0; }
+  .account-button { right: 0; min-width: 68px; max-width: 68px; }
   .bag-button { right: 72px; }
   .message-button { right: 144px; }
   .menu-toggle { top: 18px; left: 15px; width: 24px; height: 21px; }
