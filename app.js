@@ -731,7 +731,9 @@ const selectShopItem = (item) => {
   bagNicknameLabel.hidden = !isNicknameTicket;
   document.querySelector('#bag-letter-label').hidden = !isLetter;
   bagUseButton.disabled = isShield;
-  bagUseButton.textContent = isShield ? '자동 방어 아이템' : isCashBox ? '개봉/선물하기' : '사용하기';
+  bagUseButton.textContent = isShield
+    ? '자동 방어 아이템'
+    : isCashBox ? (bagTarget.value ? '선물하기' : '개봉') : '사용하기';
   bagStatus.textContent = isShield
     ? '다른 유저의 미사일이 명중하면 필요한 수량이 자동으로 소모되어 방어합니다.'
     : isCashBox
@@ -743,6 +745,12 @@ const selectShopItem = (item) => {
       : '공격 대상을 선택한 뒤 사용하기를 누르세요.';
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
 };
+
+bagTarget.addEventListener('change', () => {
+  if (!selectedShopItem
+    || !['cash_box', 'weird_cash_box'].includes(selectedShopItem.item_type)) return;
+  bagUseButton.textContent = bagTarget.value ? '선물하기' : '개봉';
+});
 
 const loadBag = async () => {
   const state = await callInvestmentRpc('shop_get_state', {
@@ -801,38 +809,40 @@ const useShopItem = async (itemType) => {
     bagStatus.textContent = '미사일 방어막은 미사일에 피격되면 필요한 수량만큼 자동으로 소모됩니다.';
     return;
   }
+  if (itemType === 'cash_box' || itemType === 'weird_cash_box') {
+    const targetId = bagTarget.value || null;
+    const targetName = targetId
+      ? bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저'
+      : null;
+    const itemName = selectedShopItem?.name || '현금 박스';
+    const actionText = targetName
+      ? `${targetName}에게 ${itemName}을(를) 선물하시겠습니까?`
+      : `${itemName}을(를) 지금 개봉하시겠습니까?`;
+    if (!await siteConfirm(actionText)) {
+      bagStatus.textContent = targetName ? '선물하기를 취소했습니다.' : '개봉을 취소했습니다.';
+      return;
+    }
+    bagStatus.textContent = targetName ? '상자를 선물하는 중...' : '상자를 개봉하는 중...';
+    try {
+      const result = await callInvestmentRpc('shop_use_cash_box', {
+        p_client_id: await resolveShopClientId(),
+        p_item_type: itemType,
+        p_target_client_id: targetId
+      });
+      bagStatus.textContent = result.message;
+      window.alert(result.message);
+      await loadMessageCount();
+      await loadBag();
+      if (investmentState) await loadInvestmentState();
+    } catch (error) {
+      bagStatus.textContent = error.message;
+      window.alert(`상자 처리 실패: ${error.message}`);
+    }
+    return;
+  }
   if (itemType === 'letter') {
     if (!bagTarget.value) {
       bagStatus.textContent = '편지를 받을 유저를 선택하세요.';
-      return;
-    }
-    if (itemType === 'cash_box' || itemType === 'weird_cash_box') {
-      const targetId = bagTarget.value || null;
-      const targetName = targetId
-        ? bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저'
-        : null;
-      const itemName = selectedShopItem?.name || '현금 박스';
-      const actionText = targetName ? `${targetName}에게 ${itemName}을(를) 선물하시겠습니까?` : `${itemName}을(를) 지금 개봉하시겠습니까?`;
-      if (!await siteConfirm(actionText)) {
-        bagStatus.textContent = targetName ? '선물하기를 취소했습니다.' : '개봉을 취소했습니다.';
-        return;
-      }
-      bagStatus.textContent = targetName ? '상자를 선물하는 중...' : '상자를 개봉하는 중...';
-      try {
-        const result = await callInvestmentRpc('shop_use_cash_box', {
-          p_client_id: await resolveShopClientId(),
-          p_item_type: itemType,
-          p_target_client_id: targetId
-        });
-        bagStatus.textContent = result.message;
-        window.alert(result.message);
-        await loadMessageCount();
-        await loadBag();
-        if (investmentState) await loadInvestmentState();
-      } catch (error) {
-        bagStatus.textContent = error.message;
-        window.alert(`상자 처리 실패: ${error.message}`);
-      }
       return;
     }
     const message = document.querySelector('#bag-letter-message').value.trim();
