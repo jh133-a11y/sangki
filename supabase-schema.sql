@@ -327,6 +327,18 @@ begin
     return today;
   end if;
 
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      delisted_at = null,
+      was_delisted = true
+  where listed = false
+    and (
+      delisted_at is null
+      or delisted_at <= now() - interval '5 minutes'
+    );
+
   for asset in select * from public.investment_assets order by symbol for update loop
     if not asset.listed and not new_direction_day then
       continue;
@@ -1220,8 +1232,10 @@ begin
       delisted_at = null,
       was_delisted = true
   where listed = false
-    and delisted_at is not null
-    and delisted_at <= now() - interval '5 minutes';
+    and (
+      delisted_at is null
+      or delisted_at <= now() - interval '5 minutes'
+    );
 
   perform public.investment_apply_stock_splits();
 end;
