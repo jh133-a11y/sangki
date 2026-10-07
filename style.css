@@ -404,6 +404,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   position: absolute;
   z-index: 6;
   pointer-events: none;
+  white-space: nowrap;
   color: #fff4bb;
   font: 700 20px var(--sans);
   text-shadow: 0 2px 0 rgba(66, 43, 28, .8), 0 0 8px rgba(255, 190, 64, .65);
