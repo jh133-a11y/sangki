@@ -39,6 +39,12 @@
   let companionLevel = 1;
   let dragState = null;
   let companionDragState = null;
+  let characterPress = null;
+  let companionPress = null;
+  const longPressDelay = 450;
+  const clearPress = (press) => {
+    if (press?.timer) window.clearTimeout(press.timer);
+  };
   try {
     const savedCompanion = JSON.parse(localStorage.getItem(companionStateKey) || '{}');
     companionUnlocked = savedCompanion.unlocked === true;
@@ -535,7 +541,10 @@
       event.stopPropagation();
       const characterBounds = character.getBoundingClientRect();
       const mainBounds = main.getBoundingClientRect();
-      dragState = {
+      const press = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
         offsetX: event.clientX - characterBounds.left,
         offsetY: event.clientY - characterBounds.top,
         mainLeft: mainBounds.left,
@@ -544,17 +553,27 @@
         maxTop: Math.max(0, mainBounds.height - character.offsetHeight),
         startLeft: characterBounds.left - mainBounds.left,
         startTop: characterBounds.top - mainBounds.top,
-        moved: false,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        frame: 0
+        moved: false
       };
-      character.classList.add('is-dragging');
-      character.setPointerCapture?.(event.pointerId);
+      press.timer = window.setTimeout(() => {
+        characterPress = null;
+        dragState = { ...press, frame: 0 };
+        character.classList.add('is-dragging');
+        character.setPointerCapture?.(event.pointerId);
+      }, longPressDelay);
+      characterPress = press;
     });
     character.addEventListener('pointermove', moveCharacter);
     character.addEventListener('pointerup', stopCharacterDrag);
+    character.addEventListener('pointerup', () => {
+      if (!characterPress) return;
+      clearPress(characterPress);
+      characterPress = null;
+      collectCoin(clickReward());
+    });
     character.addEventListener('pointercancel', (event) => {
+      clearPress(characterPress);
+      characterPress = null;
       if (event.pointerType !== 'touch') stopCharacterDrag(null, true);
     });
     character.addEventListener('touchmove', (event) => {
@@ -564,32 +583,59 @@
     }, { passive: false });
     character.addEventListener('touchend', (event) => {
       const touch = event.changedTouches[0];
+      if (characterPress) {
+        clearPress(characterPress);
+        characterPress = null;
+        collectCoin(clickReward());
+      }
       if (dragState && touch) stopCharacterDrag(touch);
     }, { passive: false });
     character.addEventListener('touchcancel', () => {
+      clearPress(characterPress);
+      characterPress = null;
       if (dragState) stopCharacterDrag(null, true);
     });
       window.addEventListener('pointermove', (event) => {
+        if (characterPress
+          && Math.hypot(event.clientX - characterPress.clientX, event.clientY - characterPress.clientY) > 8) {
+          clearPress(characterPress);
+          characterPress = null;
+        }
         if (!dragState) return;
         event.preventDefault();
         moveCharacter(event);
       }, { passive: false });
       window.addEventListener('pointerup', (event) => {
+        clearPress(characterPress);
+        characterPress = null;
         if (dragState) stopCharacterDrag(event);
       });
       window.addEventListener('pointercancel', (event) => {
         if (dragState && event.pointerType !== 'touch') stopCharacterDrag(null, true);
       });
       window.addEventListener('touchmove', (event) => {
+        if (characterPress
+          && event.touches[0]
+          && Math.hypot(event.touches[0].clientX - characterPress.clientX, event.touches[0].clientY - characterPress.clientY) > 8) {
+          clearPress(characterPress);
+          characterPress = null;
+        }
         if (!dragState || !event.touches[0]) return;
         event.preventDefault();
         moveCharacter(event.touches[0]);
       }, { passive: false });
       window.addEventListener('touchend', (event) => {
         const touch = event.changedTouches[0];
+        if (characterPress) {
+          clearPress(characterPress);
+          characterPress = null;
+          collectCoin(clickReward());
+        }
         if (dragState && touch) stopCharacterDrag(touch);
       }, { passive: false });
       window.addEventListener('touchcancel', () => {
+        clearPress(characterPress);
+        characterPress = null;
         if (dragState) stopCharacterDrag(null, true);
       });
     }
@@ -603,38 +649,74 @@
       event.stopPropagation();
       const bounds = companion.getBoundingClientRect();
       const mainBounds = main.getBoundingClientRect();
-      companionDragState = {
+      const press = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
         offsetX: event.clientX - bounds.left,
         offsetY: event.clientY - bounds.top,
         mainLeft: mainBounds.left,
         mainTop: mainBounds.top,
         maxLeft: Math.max(0, mainBounds.width - companion.offsetWidth),
-        maxTop: Math.max(0, mainBounds.height - companion.offsetHeight),
-        frame: 0
+        maxTop: Math.max(0, mainBounds.height - companion.offsetHeight)
       };
-      companion.classList.add('is-dragging');
-      companion.setPointerCapture?.(event.pointerId);
+      press.timer = window.setTimeout(() => {
+        companionPress = null;
+        companionDragState = { ...press, frame: 0 };
+        companion.classList.add('is-dragging');
+        companion.setPointerCapture?.(event.pointerId);
+      }, longPressDelay);
+      companionPress = press;
     });
     companion.addEventListener('pointermove', moveCompanion);
-    companion.addEventListener('pointerup', stopCompanionDrag);
-    companion.addEventListener('pointercancel', () => stopCompanionDrag(null, true));
+    companion.addEventListener('pointerup', (event) => {
+      if (companionPress) {
+        clearPress(companionPress);
+        companionPress = null;
+      }
+      stopCompanionDrag(event);
+    });
+    companion.addEventListener('pointercancel', () => {
+      clearPress(companionPress);
+      companionPress = null;
+      stopCompanionDrag(null, true);
+    });
     window.addEventListener('pointermove', (event) => {
+      if (companionPress
+        && Math.hypot(event.clientX - companionPress.clientX, event.clientY - companionPress.clientY) > 8) {
+        clearPress(companionPress);
+        companionPress = null;
+      }
       if (!companionDragState) return;
       event.preventDefault();
       moveCompanion(event);
     }, { passive: false });
     window.addEventListener('pointerup', (event) => {
+      clearPress(companionPress);
+      companionPress = null;
       if (companionDragState) stopCompanionDrag(event);
     });
     window.addEventListener('touchmove', (event) => {
+      if (companionPress
+        && event.touches[0]
+        && Math.hypot(event.touches[0].clientX - companionPress.clientX, event.touches[0].clientY - companionPress.clientY) > 8) {
+        clearPress(companionPress);
+        companionPress = null;
+      }
       if (!companionDragState || !event.touches[0]) return;
       event.preventDefault();
       moveCompanion(event.touches[0]);
     }, { passive: false });
     window.addEventListener('touchend', (event) => {
+      clearPress(companionPress);
+      companionPress = null;
       if (companionDragState && event.changedTouches[0]) stopCompanionDrag(event.changedTouches[0]);
     }, { passive: false });
-    window.addEventListener('touchcancel', () => stopCompanionDrag(null, true));
+    window.addEventListener('touchcancel', () => {
+      clearPress(companionPress);
+      companionPress = null;
+      stopCompanionDrag(null, true);
+    });
   }
 
   main.addEventListener('pointerdown', (event) => {
