@@ -126,6 +126,9 @@ nav a:hover { opacity: .5; }
 .shop-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .shop-card { display: flex; min-height: 300px; flex-direction: column; justify-content: space-between; border: 1px solid var(--ink); padding: 18px; background: #fff; box-shadow: 6px 6px 0 var(--ink); }
 .shop-icon { width: 92px; height: 92px; margin-bottom: 20px; }
+.shop-potion-icon { display: grid; width: 92px; height: 92px; place-items: center; margin-bottom: 20px; border: 4px solid var(--ink); border-radius: 50%; color: var(--ink); font: 700 28px var(--mono); }
+.shop-potion-normal { background: #c9c9c9; }
+.shop-potion-advanced { background: #d9ff36; }
 .shop-card h2 { margin: 0; font-size: 25px; letter-spacing: -.07em; }
 .shop-card p { margin: 8px 0 20px; font: 11px/1.5 var(--mono); }
 .shop-price { font: 16px var(--mono); }
@@ -477,6 +480,32 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   margin-left: auto;
   font: 700 10px var(--mono);
 }
+.sanggi-potion-bar {
+  position: absolute;
+  right: 24px;
+  bottom: 175px;
+  z-index: 6;
+  display: grid;
+  gap: 7px;
+  width: 150px;
+}
+.sanggi-potion-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 2px solid #302a35;
+  padding: 9px 10px;
+  color: #2a2730;
+  cursor: pointer;
+  font: 700 11px var(--sans);
+  box-shadow: 0 3px 0 rgba(20, 20, 30, .25);
+}
+.sanggi-potion-button strong { font: 10px var(--mono); }
+.sanggi-potion-normal { background: #c9c9c9; }
+.sanggi-potion-advanced { background: #d9ff36; }
+.sanggi-potion-button:hover { filter: brightness(.94); }
+.sanggi-potion-button:disabled { cursor: not-allowed; opacity: .45; }
 .sanggi-coin-popup {
   position: absolute;
   z-index: 20;
@@ -965,6 +994,11 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .sanggi-player-button {
     top: 76px;
     left: 18px;
+  }
+  .sanggi-potion-bar {
+    right: 15px;
+    bottom: 184px;
+    width: 142px;
   }
   .sanggi-ability-modal { padding: 22px 16px; }
   .sanggi-ability-card { grid-template-columns: 1fr; }

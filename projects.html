@@ -52,7 +52,7 @@
         <span class="sanggi-action-icon">⌂</span>
         <span>배경 구매</span>
       </button>
-      <button type="button" class="sanggi-action-button">
+      <button type="button" class="sanggi-action-button" id="sanggi-shop-button">
         <span class="sanggi-action-icon">▣</span>
         <span>상점</span>
       </button>
@@ -62,6 +62,14 @@
       <span>플레이어</span>
       <strong id="sanggi-player-level-label">LV 1</strong>
     </button>
+    <div class="sanggi-potion-bar" aria-label="물약">
+      <button class="sanggi-potion-button sanggi-potion-normal" id="sanggi-normal-potion" type="button">
+        <span>일반 물약</span><strong id="sanggi-normal-potion-count">0개</strong>
+      </button>
+      <button class="sanggi-potion-button sanggi-potion-advanced" id="sanggi-advanced-potion" type="button">
+        <span>고급 물약</span><strong id="sanggi-advanced-potion-count">0개</strong>
+      </button>
+    </div>
     <div class="sanggi-player-backdrop" id="sanggi-player-backdrop" hidden></div>
     <section class="sanggi-ability-modal sanggi-player-modal" id="sanggi-player-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-player-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-player-close" type="button" aria-label="닫기">×</button>
@@ -132,6 +140,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=39"></script>
+  <script src="sanggi.js?v=40"></script>
 </body>
 </html>

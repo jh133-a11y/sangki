@@ -4,6 +4,8 @@
   const storageKey = 'sanggi-coin-balance';
   const abilityStorageKey = 'sanggi-ability-levels';
   const playerLevelStorageKey = 'sanggi-player-level';
+  const normalPotionStorageKey = 'sanggi-normal-potions';
+  const advancedPotionStorageKey = 'sanggi-advanced-potions';
   const characterPositionKey = 'sanggi-character-position';
   const companionPositionKey = 'sanggi-companion-position';
   const companionStateKey = 'sanggi-companion-state';
@@ -29,6 +31,10 @@
   let breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(abilities.breathLevel) || 1));
   let autoLevel = Math.min(maxAutoLevel, Math.max(1, Number(abilities.autoLevel) || 1));
   let playerLevel = Math.max(1, Number(localStorage.getItem(playerLevelStorageKey)) || 1);
+  let normalPotions = Math.max(0, Number(localStorage.getItem(normalPotionStorageKey)) || 0);
+  let advancedPotions = Math.max(0, Number(localStorage.getItem(advancedPotionStorageKey)) || 0);
+  let potionMultiplier = 1n;
+  let potionTimer = null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   let audioContext = null;
   let autoTimer = null;
@@ -85,6 +91,8 @@
     localStorage.setItem(storageKey, coins.toString());
     localStorage.setItem(abilityStorageKey, JSON.stringify({ breathLevel, autoLevel }));
     localStorage.setItem(playerLevelStorageKey, String(playerLevel));
+    localStorage.setItem(normalPotionStorageKey, String(normalPotions));
+    localStorage.setItem(advancedPotionStorageKey, String(advancedPotions));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
       summoned: companionSummoned,
@@ -162,7 +170,9 @@
           p_companion_summoned: companionSummoned,
           p_companion_level: companionLevel,
           p_companion_x: companionPosition.x,
-          p_companion_y: companionPosition.y
+          p_companion_y: companionPosition.y,
+          p_normal_potions: normalPotions,
+          p_advanced_potions: advancedPotions
         });
       } catch (error) {
         console.warn('Sanggi state save failed:', error.message);
@@ -203,12 +213,54 @@
   };
 
   const collectCoin = (amount, showFeedback = true) => {
-    coins += amount;
+    const boostedAmount = amount * potionMultiplier;
+    coins += boostedAmount;
     saveState();
     renderBalance();
     if (showFeedback) {
       playCoinSound();
-      showCoinPopup(amount);
+      showCoinPopup(boostedAmount);
+    }
+  };
+
+  const normalPotionButton = document.querySelector('#sanggi-normal-potion');
+  const advancedPotionButton = document.querySelector('#sanggi-advanced-potion');
+  const normalPotionCount = document.querySelector('#sanggi-normal-potion-count');
+  const advancedPotionCount = document.querySelector('#sanggi-advanced-potion-count');
+  const renderPotions = () => {
+    normalPotionCount.textContent = `${normalPotions}개`;
+    advancedPotionCount.textContent = `${advancedPotions}개`;
+    normalPotionButton.disabled = normalPotions < 1 || accountSyncing;
+    advancedPotionButton.disabled = advancedPotions < 1 || accountSyncing;
+  };
+  const usePotion = async (type) => {
+    if (accountSyncing) return;
+    const isAdvanced = type === 'advanced';
+    const available = isAdvanced ? advancedPotions : normalPotions;
+    if (available < 1) return;
+    const session = getSession();
+    try {
+      if (session?.session_token) {
+        const state = await remoteRpc('sanggi_use_potion', {
+          p_session_token: session.session_token,
+          p_potion_type: type
+        });
+        normalPotions = Math.max(0, Number(state.normal_potions) || 0);
+        advancedPotions = Math.max(0, Number(state.advanced_potions) || 0);
+      } else if (isAdvanced) {
+        advancedPotions -= 1;
+      } else {
+        normalPotions -= 1;
+      }
+      potionMultiplier = isAdvanced ? 10n : 2n;
+      window.clearTimeout(potionTimer);
+      potionTimer = window.setTimeout(() => {
+        potionMultiplier = 1n;
+      }, 10000);
+      saveState();
+      renderPotions();
+    } catch (error) {
+      window.alert(error.message || '물약 사용에 실패했습니다.');
     }
   };
 
@@ -375,7 +427,9 @@
       p_guest_companion_summoned: companionSummoned,
       p_guest_companion_level: companionLevel,
       p_guest_companion_x: getLocalCompanionPosition().x,
-      p_guest_companion_y: getLocalCompanionPosition().y
+      p_guest_companion_y: getLocalCompanionPosition().y,
+      p_guest_normal_potions: normalPotions,
+      p_guest_advanced_potions: advancedPotions
     });
     coins = BigInt(String(state.coins || '0'));
     breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(state.breath_level) || 1));
@@ -391,6 +445,10 @@
     companionUnlocked = state.companion_unlocked === true;
     companionSummoned = state.companion_summoned === true;
     companionLevel = Math.min(maxCompanionLevel, Math.max(1, Number(state.companion_level) || 1));
+    normalPotions = Math.max(0, Number(state.normal_potions) || 0);
+    advancedPotions = Math.max(0, Number(state.advanced_potions) || 0);
+    localStorage.setItem(normalPotionStorageKey, String(normalPotions));
+    localStorage.setItem(advancedPotionStorageKey, String(advancedPotions));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
       summoned: companionSummoned,
@@ -610,6 +668,11 @@
       renderPlayer();
     }
   });
+  normalPotionButton.addEventListener('click', () => usePotion('normal'));
+  advancedPotionButton.addEventListener('click', () => usePotion('advanced'));
+  document.querySelector('#sanggi-shop-button')?.addEventListener('click', () => {
+    window.location.href = 'archive.html';
+  });
 
   if (character) {
     disableNativeImageGestures(character);
@@ -802,6 +865,7 @@
     renderBalance();
     renderPlayer();
     renderAbilities();
+    renderPotions();
     scheduleAutoCoin();
   };
   companion?.addEventListener('load', loadCompanionPosition);
