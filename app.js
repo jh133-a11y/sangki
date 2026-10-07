@@ -254,8 +254,9 @@ if (accountSession?.account_id) {
   const currentClientId = localStorage.getItem(investmentClientKey);
   if (currentClientId && currentClientId !== accountSession.account_id) {
     localStorage.setItem(legacyInvestmentClientKey, currentClientId);
+  } else if (!currentClientId) {
+    localStorage.setItem(investmentClientKey, accountSession.account_id);
   }
-  localStorage.setItem(investmentClientKey, accountSession.account_id);
 }
 updateAccountButton();
 
@@ -996,6 +997,28 @@ const loadInvestmentState = async (nickname = investorNickname.value.trim()) => 
   renderInvestmentState(state);
 };
 
+const retryAccountInvestmentLink = async () => {
+  if (!accountSession?.session_token) return false;
+  const oldClientId = localStorage.getItem(legacyInvestmentClientKey);
+  if (!oldClientId || oldClientId === accountSession.account_id) return false;
+
+  const response = await fetch(`${rpcEndpoint}/investment_link_account`, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      p_session_token: accountSession.session_token,
+      p_old_client_id: oldClientId
+    })
+  });
+  if (!response.ok) {
+    throw new Error('기존 투자 정보를 계정에 연결하지 못했습니다.');
+  }
+
+  localStorage.setItem(investmentClientKey, accountSession.account_id);
+  localStorage.removeItem(legacyInvestmentClientKey);
+  return true;
+};
+
 investmentRefresh.addEventListener('click', async () => {
   if (!investmentState) {
     investorStatus.textContent = '먼저 고유 닉네임을 설정하세요.';
@@ -1064,6 +1087,29 @@ try {
   }
 } catch {
   // Private browsing can block localStorage; the form remains usable.
+}
+
+if (accountSession?.session_token && localStorage.getItem(legacyInvestmentClientKey)) {
+  retryAccountInvestmentLink()
+    .then((linked) => {
+      if (!linked) return;
+      const nickname = localStorage.getItem('sangki-investor-nickname');
+      if (nickname) {
+        investorNickname.value = nickname;
+        return loadInvestmentState(nickname);
+      }
+      return callInvestmentRpc('investment_build_state', {
+        p_client_id: accountSession.account_id
+      }).then((state) => {
+        if (!state?.nickname) return;
+        localStorage.setItem('sangki-investor-nickname', state.nickname);
+        investorNickname.value = state.nickname;
+        renderInvestmentState(state);
+      });
+    })
+    .catch((error) => {
+      investorStatus.textContent = error.message;
+    });
 }
 
 window.setInterval(() => {
