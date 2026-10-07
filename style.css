@@ -86,6 +86,8 @@ nav a:hover { opacity: .5; }
 .online-users p { margin: 7px 0 9px; color: #777; font: 9px/1.5 var(--mono); }
 .online-users ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; font: 11px var(--mono); }
 .online-users li::before { content: '●'; margin-right: 6px; color: #62a744; font-size: 8px; }
+.online-users li.is-offline { color: #999; }
+.online-users li.is-offline::before { color: #aaa; }
 .side-menu-settings { width: 100%; display: flex; justify-content: flex-start; margin-top: 16px; padding: 16px 0; border: 0; border-top: 1px solid rgba(23,23,23,.3); background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
 .settings-gear { width: 25px; height: 25px; fill: currentColor; transition: transform .2s ease, color .2s ease; }
 .side-menu-settings:hover { color: var(--orange); }

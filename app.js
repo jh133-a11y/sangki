@@ -27,18 +27,15 @@ const updateOnlinePresence = async () => {
 };
 
 const loadOnlineUsers = async () => {
-  if (!accountSession?.session_token) {
-    onlineUsersList.replaceChildren(Object.assign(document.createElement('li'), {
-      textContent: '로그인 후 표시됩니다.'
-    }));
-    return;
-  }
   try {
     const users = await callInvestmentRpc('site_account_online_users', {});
     onlineUsersList.replaceChildren(...(users.length
-      ? users.map((user) => Object.assign(document.createElement('li'), {
-        textContent: user.nickname || user.username || '닉네임 없음'
-      }))
+      ? users.map((user) => {
+        const item = document.createElement('li');
+        item.classList.toggle('is-offline', !user.is_online);
+        item.textContent = user.nickname || user.username || '닉네임 없음';
+        return item;
+      })
       : [Object.assign(document.createElement('li'), {
         textContent: '현재 접속 중인 로그인 유저가 없습니다.'
       })]));

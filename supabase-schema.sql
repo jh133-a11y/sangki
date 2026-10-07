@@ -1571,15 +1571,20 @@ as $$
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
-        'nickname', p.username,
-        'username', p.username
+        'nickname', iu.nickname,
+        'username', iu.nickname,
+        'is_online', exists (
+          select 1
+          from public.site_account_presence p
+          where p.account_id = iu.client_id
+            and p.last_seen_at > now() - interval '2 minutes'
+        )
       )
-      order by p.username
+      order by iu.nickname
     ),
     '[]'::jsonb
   )
-  from public.site_account_presence p
-  where p.last_seen_at > now() - interval '2 minutes';
+  from public.investment_users iu;
 $$;
 
 revoke all on function public.site_account_presence_heartbeat(uuid)
