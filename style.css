@@ -550,7 +550,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-shop-list[hidden] { display: none !important; }
 .sanggi-shop-card {
   display: grid;
-  grid-template-columns: 58px 1fr auto;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   padding: 14px;
@@ -567,7 +567,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   border: 1px solid #2a2730;
   background: #fff;
 }
-.sanggi-shop-card h3 { margin: 0 0 4px; font-size: 18px; }
+.sanggi-shop-card > div:not(.sanggi-shop-item-icon) { min-width: 0; }
+.sanggi-shop-card h3 { margin: 0 0 4px; font-size: 18px; overflow-wrap: anywhere; }
 .sanggi-shop-card p { margin: 0 0 6px; font: 10px/1.4 var(--mono); }
 .sanggi-shop-card strong { font: 11px var(--mono); }
 .sanggi-shop-buy {
@@ -1088,7 +1089,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .sanggi-potion-button strong {
     font-size: 9px;
   }
-  .sanggi-shop-card { grid-template-columns: 48px 1fr; }
+  .sanggi-shop-card { grid-template-columns: 78px minmax(0, 1fr); }
   .sanggi-shop-buy { grid-column: 1 / -1; width: 100%; }
   .sanggi-ability-modal { padding: 22px 16px; }
   .sanggi-ability-card { grid-template-columns: 1fr; }
