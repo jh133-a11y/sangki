@@ -29,13 +29,17 @@ const portfolioCash = document.querySelector('#portfolio-cash');
 const portfolioTotal = document.querySelector('#portfolio-total');
 const marketUpdated = document.querySelector('#market-updated');
 const investmentProducts = document.querySelector('#investment-products');
+const investmentRefresh = document.querySelector('#investment-refresh');
 const investmentHoldings = document.querySelector('#investment-holdings');
 const holdingsList = document.querySelector('#holdings-list');
 const investmentRankingList = document.querySelector('#investment-ranking-list');
+const investmentRankingPagination = document.querySelector('#investment-ranking-pagination');
 const investmentAdminButton = document.querySelector('#investment-admin-button');
 const investmentAdminPanel = document.querySelector('#investment-admin-panel');
 let investmentState = null;
 let investmentAdminMode = false;
+let investmentRankingPage = 1;
+const INVESTMENT_RANKING_PER_PAGE = 5;
 
 const getInvestmentClientId = () => {
   let id = localStorage.getItem(investmentClientKey);
@@ -205,7 +209,11 @@ const renderInvestmentState = (state) => {
     textContent: '아직 보유한 종목이 없습니다.'
   })]));
 
-  investmentRankingList.replaceChildren(...(state.ranking.length ? state.ranking.map((entry) => {
+  const rankingTotalPages = Math.max(1, Math.ceil(state.ranking.length / INVESTMENT_RANKING_PER_PAGE));
+  investmentRankingPage = Math.min(investmentRankingPage, rankingTotalPages);
+  const rankingStart = (investmentRankingPage - 1) * INVESTMENT_RANKING_PER_PAGE;
+  const rankingPage = state.ranking.slice(rankingStart, rankingStart + INVESTMENT_RANKING_PER_PAGE);
+  investmentRankingList.replaceChildren(...(rankingPage.length ? rankingPage.map((entry) => {
     const item = document.createElement('li');
     const name = document.createElement('span');
     name.textContent = entry.nickname;
@@ -237,6 +245,28 @@ const renderInvestmentState = (state) => {
     className: 'ranking-empty',
     textContent: '아직 투자자가 없습니다.'
   })]));
+  const previous = document.createElement('button');
+  previous.type = 'button';
+  previous.className = 'investment-page-button';
+  previous.textContent = '← 이전';
+  previous.disabled = investmentRankingPage === 1;
+  previous.addEventListener('click', () => {
+    investmentRankingPage -= 1;
+    renderInvestmentState(investmentState);
+  });
+  const pageNumber = document.createElement('span');
+  pageNumber.className = 'investment-page-number';
+  pageNumber.textContent = `${investmentRankingPage} / ${rankingTotalPages}`;
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'investment-page-button';
+  next.textContent = '다음 →';
+  next.disabled = investmentRankingPage === rankingTotalPages;
+  next.addEventListener('click', () => {
+    investmentRankingPage += 1;
+    renderInvestmentState(investmentState);
+  });
+  investmentRankingPagination.replaceChildren(previous, pageNumber, next);
 };
 
 const grantInvestmentCash = async (clientId, amountInput) => {
@@ -314,6 +344,24 @@ const loadInvestmentState = async (nickname = investorNickname.value.trim()) => 
   });
   renderInvestmentState(state);
 };
+
+investmentRefresh.addEventListener('click', async () => {
+  if (!investmentState) {
+    investorStatus.textContent = '먼저 고유 닉네임을 설정하세요.';
+    return;
+  }
+  investmentRefresh.disabled = true;
+  investmentRefresh.textContent = '불러오는 중...';
+  try {
+    await loadInvestmentState();
+    investorStatus.textContent = '투자장 가격과 랭킹을 새로고침했습니다.';
+  } catch (error) {
+    investorStatus.textContent = error.message;
+  } finally {
+    investmentRefresh.disabled = false;
+    investmentRefresh.textContent = '새로고침 ↻';
+  }
+});
 
 const tradeInvestment = async (symbol, side, quantityInput) => {
   const quantity = Number(quantityInput.value);
