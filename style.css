@@ -487,6 +487,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   padding: 16px;
   background: #fff;
 }
+.sanggi-ability-card[hidden] {
+  display: none !important;
+}
 .sanggi-ability-card-head {
   display: flex;
   flex-wrap: wrap;
