@@ -277,7 +277,10 @@ section { padding: 120px 0; }
 .investment-admin-active { color: var(--orange); }
 .investment-admin-market { display: grid; gap: 7px; margin: 12px 0; padding-top: 10px; border-top: 1px solid rgba(23,23,23,.2); }
 .investment-admin-market label { display: grid; gap: 4px; }
-.investment-admin-market input, .investment-admin-market select { min-width: 0; border: 1px solid var(--ink); padding: 5px; background: transparent; color: var(--ink); font: 10px var(--mono); }
+.investment-admin-market input, .investment-admin-market select, .investment-admin-market textarea { min-width: 0; border: 1px solid var(--ink); padding: 5px; background: transparent; color: var(--ink); font: 10px var(--mono); }
+.investment-admin-broadcast { display: grid; gap: 7px; padding-bottom: 9px; border-bottom: 1px solid rgba(23,23,23,.2); }
+.investment-admin-broadcast h3 { margin: 0; font: 11px var(--mono); }
+.investment-admin-broadcast textarea { resize: vertical; }
 .investment-admin-market span { display: flex; align-items: center; gap: 4px; }
 .investment-admin-market span input { width: 70px; }
 .investment-admin-market button { border: 1px solid var(--ink); padding: 7px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }

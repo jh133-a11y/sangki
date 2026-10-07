@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=58">
+  <link rel="stylesheet" href="style.css?v=59">
 </head>
 <body>
   <div class="noise"></div>
@@ -180,6 +180,16 @@
             <div class="investment-admin-panel" id="investment-admin-panel" hidden>
               <p>랭킹 유저에게 지급할 금액을 입력하세요.</p>
               <div class="investment-admin-market">
+                <div class="investment-admin-broadcast">
+                  <h3>전체 유저 현금 지급</h3>
+                  <label>지급액
+                    <input id="admin-broadcast-amount" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="예: 10000">
+                  </label>
+                  <label>전달할 메시지
+                    <textarea id="admin-broadcast-message" maxlength="500" rows="3" placeholder="모든 유저에게 전달할 메시지" required></textarea>
+                  </label>
+                  <button id="admin-broadcast-cash" type="button">모든 유저에게 지급 및 메시지 전달</button>
+                </div>
                 <label>종목 초기화
                   <select id="admin-asset-select"></select>
                 </label>
@@ -299,6 +309,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=84"></script>
+  <script src="app.js?v=85"></script>
 </body>
 </html>

@@ -404,6 +404,9 @@ const adminSplitAsset = document.querySelector('#admin-split-asset');
 const adminResetAllAssets = document.querySelector('#admin-reset-all-assets');
 const adminSaveVolatility = document.querySelector('#admin-save-volatility');
 const adminMarketStatus = document.querySelector('#admin-market-status');
+const adminBroadcastAmount = document.querySelector('#admin-broadcast-amount');
+const adminBroadcastMessage = document.querySelector('#admin-broadcast-message');
+const adminBroadcastCash = document.querySelector('#admin-broadcast-cash');
 let investmentState = null;
 let investmentAdminMode = false;
 let investmentRankingPage = 1;
@@ -1194,6 +1197,40 @@ const adjustInvestmentCash = async (clientId, amountInput, action) => {
     amountInput.disabled = false;
   }
 };
+
+adminBroadcastCash.addEventListener('click', async () => {
+  if (!requireInvestmentAdmin()) return;
+  const amountText = adminBroadcastAmount.value.trim().replace(/,/g, '');
+  const message = adminBroadcastMessage.value.trim();
+  if (!/^[0-9]+$/.test(amountText) || BigInt(amountText) < 1n) {
+    adminMarketStatus.textContent = '전체 지급액은 1원 이상의 정수로 입력하세요.';
+    return;
+  }
+  if (!message) {
+    adminMarketStatus.textContent = '전달할 메시지를 입력하세요.';
+    return;
+  }
+  const displayAmount = `₩${BigInt(amountText).toLocaleString('ko-KR')}`;
+  if (!await siteConfirm(`${displayAmount}을 모든 유저에게 지급하고 메시지를 전달할까요?`)) return;
+  adminBroadcastCash.disabled = true;
+  adminMarketStatus.textContent = '전체 지급 처리 중...';
+  try {
+    const result = await callInvestmentRpc('investment_admin_grant_cash_to_all', {
+      p_admin_password: '8170',
+      p_amount: amountText,
+      p_message: message
+    });
+    adminBroadcastAmount.value = '';
+    adminBroadcastMessage.value = '';
+    await loadInvestmentState();
+    await loadMessageCount();
+    adminMarketStatus.textContent = `${result.user_count}명에게 현금 지급과 메시지 전달을 완료했습니다.`;
+  } catch (error) {
+    adminMarketStatus.textContent = error.message;
+  } finally {
+    adminBroadcastCash.disabled = false;
+  }
+});
 
 investmentAdminButton.addEventListener('click', () => {
   if (investmentAdminMode) {

@@ -654,6 +654,56 @@ begin
 end;
 $$;
 
+create or replace function public.investment_admin_grant_cash_to_all(
+  p_admin_password text,
+  p_amount bigint,
+  p_message text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_count integer;
+  v_message text;
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_amount is null or p_amount < 1 then
+    raise exception '지급액은 1원 이상이어야 합니다.';
+  end if;
+
+  if p_message is null or char_length(trim(p_message)) < 1 then
+    raise exception '전달할 메시지를 입력하세요.';
+  end if;
+
+  if char_length(trim(p_message)) > 500 then
+    raise exception '메시지는 500자 이하로 입력하세요.';
+  end if;
+
+  v_message := '관리자가 모든 유저에게 '
+    || to_char(p_amount, 'FM999,999,999,999,999,999,999')
+    || '원을 지급했습니다.' || E'\n' || trim(p_message);
+
+  update public.investment_users
+  set cash = cash + p_amount;
+
+  get diagnostics v_user_count = row_count;
+
+  insert into public.investment_shop_messages(client_id, message)
+  select client_id, v_message
+  from public.investment_users;
+
+  return jsonb_build_object(
+    'user_count', v_user_count,
+    'message', v_message
+  );
+end;
+$$;
+
 create or replace function public.investment_transfer_cash(
   p_sender_client_id uuid,
   p_recipient_client_id uuid,
@@ -854,10 +904,12 @@ $$;
 revoke all on function public.investment_get_state(uuid, text) from public;
 revoke all on function public.investment_trade(uuid, text, text, bigint) from public;
 revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
+revoke all on function public.investment_admin_grant_cash_to_all(text, bigint, text) from public;
 revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, bigint) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
+grant execute on function public.investment_admin_grant_cash_to_all(text, bigint, text) to anon;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_transfer_cash(uuid, uuid, bigint) to anon, authenticated;
 
