@@ -565,7 +565,6 @@
   const playerClose = document.querySelector('#sanggi-player-close');
   const playerLevelLabel = document.querySelector('#sanggi-player-level-label');
   const playerLevelElement = document.querySelector('#sanggi-player-level');
-  const playerCostElement = document.querySelector('#sanggi-player-cost');
   const playerUpgrade = document.querySelector('#sanggi-player-upgrade');
   const playerStatus = document.querySelector('#sanggi-player-status');
   const playerLevelCost = () => 10000n * BigInt(playerLevel);
@@ -573,7 +572,6 @@
     const cost = playerLevelCost();
     playerLevelLabel.textContent = `LV ${playerLevel}`;
     playerLevelElement.textContent = `LV ${playerLevel}`;
-    playerCostElement.textContent = `다음 레벨 ${formatCoins(cost)}원`;
     playerUpgrade.textContent = `레벨업 · ${formatCoins(cost)}원`;
     playerUpgrade.disabled = accountSyncing || coins < cost;
   };
