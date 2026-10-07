@@ -9,6 +9,8 @@ const page = document.body;
 let posts = [];
 let notices = [];
 let activeTab = 'all';
+let currentPage = 1;
+const pageSize = 10;
 let adminPassword = '';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -57,6 +59,35 @@ const closeModals = () => {
 const setStatus = (id, message) => { $(`#${id}`).textContent = message || ''; };
 
 const filteredPosts = () => activeTab === 'notice' ? [] : posts;
+const visiblePosts = () => {
+  const start = (currentPage - 1) * pageSize;
+  return filteredPosts().slice(start, start + pageSize);
+};
+
+const addPollOptionInput = (value = '') => {
+  const container = $('#records-poll-options');
+  if (container.children.length >= 6) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'records-poll-option-input';
+  wrapper.innerHTML = `<input class="records-poll-option" maxlength="80" placeholder="선택지 ${container.children.length + 1}" value="${escapeHtml(value)}" required><button class="records-remove-option" type="button" aria-label="선택지 삭제">×</button>`;
+  container.appendChild(wrapper);
+};
+
+const resetPollForm = () => {
+  $('#records-poll-question').value = '';
+  $('#records-poll-options').innerHTML = '';
+  addPollOptionInput();
+  addPollOptionInput();
+};
+
+const renderPagination = () => {
+  const totalPages = Math.max(1, Math.ceil(filteredPosts().length / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  $('#records-pagination').innerHTML = totalPages <= 1 ? '' : Array.from({ length: totalPages }, (_, index) => {
+    const pageNumber = index + 1;
+    return `<button class="${pageNumber === currentPage ? 'is-active' : ''}" data-page="${pageNumber}" type="button">${pageNumber}</button>`;
+  }).join('');
+};
 
 const renderNotices = () => {
   $('#records-notices').innerHTML = activeTab === 'general' ? '' : notices.map((notice, index) => `
@@ -79,12 +110,23 @@ const renderNotices = () => {
 };
 
 const renderPosts = () => {
-  const visiblePosts = filteredPosts();
+  const pagePosts = visiblePosts();
   $('#records-count').textContent = `${posts.length + notices.length}개`;
-  $('#records-list').innerHTML = visiblePosts.length ? visiblePosts.map((post, index) => `
+  $('#records-list').innerHTML = pagePosts.length ? pagePosts.map((post, index) => {
+    const postNumber = posts.length - ((currentPage - 1) * pageSize + index);
+    const poll = post.poll;
+    const pollMarkup = poll ? `
+      <div class="records-poll" data-poll-id="${poll.id}">
+        <strong>${escapeHtml(poll.question)}</strong>
+        <div class="records-poll-options">${(poll.options || []).map((option) => `
+          <button data-poll-vote="${option.id}" type="button">
+            <span>${escapeHtml(option.text)}</span><em>${option.votes || 0}</em>
+          </button>`).join('')}</div>
+      </div>` : '';
+    return `
     <article class="records-post-group" data-post-id="${post.id}">
       <div class="records-row">
-        <span>${posts.length - index}</span>
+        <span>${postNumber}</span>
         <span>일반</span>
         <div class="records-title-cell">
           <strong>${escapeHtml(post.title)} <em>${post.comment_count ? `[${post.comment_count}]` : ''}</em></strong>
@@ -102,9 +144,12 @@ const renderPosts = () => {
         <button data-edit="${post.id}" type="button">수정</button>
         <button data-delete="${post.id}" type="button">삭제</button>
       </div>
+      ${pollMarkup}
       <div class="record-comments" id="comments-${post.id}"></div>
-    </article>`).join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
-  visiblePosts.forEach((post) => loadComments(post.id));
+    </article>`;
+  }).join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
+  pagePosts.forEach((post) => loadComments(post.id));
+  renderPagination();
 };
 
 const loadComments = async (postId) => {
@@ -142,6 +187,7 @@ const loadBoard = async () => {
 document.querySelectorAll('.records-tabs button').forEach((button, index) => {
   button.addEventListener('click', () => {
     activeTab = ['all', 'general', 'notice'][index];
+    currentPage = 1;
     document.querySelectorAll('.records-tabs button').forEach((item) => item.classList.toggle('is-active', item === button));
     renderNotices();
     renderPosts();
@@ -152,6 +198,7 @@ $('#records-write-button').addEventListener('click', () => {
   $('#records-post-form').reset();
   $('#records-post-id').value = '';
   $('#records-post-title').textContent = '글쓰기';
+  resetPollForm();
   setStatus('records-post-form-status', '');
   openModal('records-post-modal');
 });
@@ -162,8 +209,15 @@ $('#records-post-form').addEventListener('submit', async (event) => {
     p_nickname: $('#records-post-nickname').value.trim(),
     p_password_hash: await hashPassword($('#records-post-password').value),
     p_title: $('#records-post-subject').value.trim(),
-    p_body: $('#records-post-body').value.trim()
+    p_body: $('#records-post-body').value.trim(),
+    p_poll_question: $('#records-poll-question').value.trim(),
+    p_poll_options: Array.from(document.querySelectorAll('.records-poll-option')).map((input) => input.value.trim()).filter(Boolean)
   };
+  if (payload.p_poll_question && payload.p_poll_options.length < 2) {
+    setStatus('records-post-form-status', '투표 선택지는 2개 이상 입력하세요.');
+    return;
+  }
+  if (!payload.p_poll_question) payload.p_poll_options = [];
   try {
     await rpc('record_create_post', payload);
     closeModals();
@@ -226,12 +280,30 @@ document.addEventListener('click', async (event) => {
     closeModals();
     return;
   }
+  if (button.id === 'records-add-option') {
+    addPollOptionInput();
+    return;
+  }
+  if (button.classList.contains('records-remove-option')) {
+    if ($('#records-poll-options').children.length > 2) button.parentElement.remove();
+    return;
+  }
+  if (button.dataset.page) {
+    currentPage = Number(button.dataset.page);
+    renderPosts();
+    return;
+  }
   const post = posts.find((item) => item.id === button.closest('[data-post-id]')?.dataset.postId);
   try {
     if (button.dataset.vote && post) {
       const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
       localStorage.setItem('records-voter-key', key);
       await rpc('record_vote_post', { p_post_id: post.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
+      await loadBoard();
+    } else if (button.dataset.pollVote && post) {
+      const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
+      localStorage.setItem('records-voter-key', key);
+      await rpc('record_vote_poll', { p_poll_id: button.closest('[data-poll-id]').dataset.pollId, p_option_id: button.dataset.pollVote, p_voter_key: key });
       await loadBoard();
     } else if (button.dataset.comment) {
       $('#records-comment-form').reset();

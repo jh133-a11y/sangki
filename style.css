@@ -224,6 +224,15 @@ nav a:hover { opacity: .5; }
 .records-compose-actions button { min-width: 84px; }
 .records-cancel { border: 1px solid #c5cbd5; padding: 11px; background: #fff; color: #666; cursor: pointer; font: 10px var(--sans); }
 .records-cancel:hover { border-color: #5578b5; color: #3b5f9e; }
+.records-poll-fieldset { display: grid; gap: 8px; margin: 4px 0 0; border: 1px solid #d8dce4; padding: 14px; }
+.records-poll-fieldset legend { padding: 0 5px; color: #3b5f9e; font: 700 11px var(--sans); }
+.records-poll-fieldset legend span, .records-poll-help { color: #999; font-weight: 400; }
+.records-poll-option-input { display: flex; gap: 6px; }
+.records-poll-option-input input { flex: 1; }
+.records-remove-option, .records-add-option { border: 1px solid #c5cbd5; padding: 8px 10px; background: #fff; color: #666; cursor: pointer; font: 10px var(--sans); }
+.records-remove-option { width: 34px; padding: 0; }
+.records-add-option { justify-self: start; }
+.records-poll-help { margin: 0; font: 10px var(--sans); }
 @media (max-width: 650px) {
   .records-page { padding: 28px 15px 60px; }
   .records-header, .records-toolbar, .record-card-head, .record-card-footer { align-items: flex-start; flex-direction: column; }
@@ -240,7 +249,7 @@ nav a:hover { opacity: .5; }
 .records-site-header nav { display: flex; gap: 0; color: #777; font: 11px var(--sans); }
 .records-site-header nav a { padding: 0 12px; border-right: 1px solid #e5e5e5; }
 .records-site-header nav a:last-child { padding-right: 0; border-right: 0; }
-.records-gallery-head { display: grid; grid-template-columns: 106px minmax(0, 1fr) 110px; gap: 18px; align-items: center; min-height: 92px; border-bottom: 1px solid #cfcfcf; background: #fff; }
+.records-gallery-head { display: grid; grid-template-columns: 106px minmax(0, 1fr) 110px; gap: 18px; align-items: center; min-height: 76px; border-bottom: 1px solid #cfcfcf; background: #fff; }
 .records-gallery-label { display: grid; place-items: center; width: 86px; height: 56px; background: #5578b5; color: #fff; font: 700 13px var(--sans); letter-spacing: .08em; }
 .records-gallery-copy { min-width: 0; }
 .records-breadcrumb { display: block; margin-bottom: 4px; color: #999; font: 10px var(--sans); }
@@ -248,7 +257,7 @@ nav a:hover { opacity: .5; }
 .records-gallery-copy p { margin: 4px 0 0; color: #777; font: 11px var(--sans); }
 .records-gallery-stats { padding-left: 16px; border-left: 1px solid #e5e5e5; color: #999; font: 10px var(--sans); }
 .records-gallery-stats strong { display: block; margin-top: 5px; color: #333; font-size: 15px; }
-.records-tabs { display: flex; margin-top: 20px; border-bottom: 2px solid #5578b5; background: #fff; }
+.records-tabs { display: flex; margin-top: 10px; border-bottom: 2px solid #5578b5; background: #fff; }
 .records-tabs button { min-width: 76px; border: 0; border-right: 1px solid #e5e5e5; padding: 10px 18px; background: #fff; color: #777; cursor: pointer; font: 12px var(--sans); }
 .records-tabs button.is-active { background: #5578b5; color: #fff; }
 .records-toolbar { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 8px; color: #888; font: 11px var(--sans); }
@@ -278,6 +287,15 @@ nav a:hover { opacity: .5; }
 .records-notice-row .records-row-actions { position: absolute; right: 4px; }
 .records-notices, .records-list { display: block; }
 .records-empty { padding: 35px; border-bottom: 1px solid #e5e5e5; color: #999; text-align: center; font: 11px var(--sans); }
+.records-pagination { display: flex; justify-content: center; gap: 4px; margin: 12px 0 0; }
+.records-pagination button { min-width: 28px; border: 1px solid #c9d0dc; padding: 6px 8px; background: #fff; color: #666; cursor: pointer; font: 11px var(--sans); }
+.records-pagination button:hover, .records-pagination button.is-active { border-color: #5578b5; background: #5578b5; color: #fff; }
+.records-poll { margin: 8px 8px 0 126px; padding: 12px; border: 1px solid #d8deea; background: #f7f9fc; }
+.records-poll > strong { display: block; margin-bottom: 9px; color: #3b5f9e; font: 700 11px var(--sans); }
+.records-poll-options { display: grid; gap: 5px; }
+.records-poll-options button { display: flex; justify-content: space-between; gap: 12px; width: 100%; border: 1px solid #cbd3e0; padding: 7px 9px; background: #fff; color: #555; cursor: pointer; text-align: left; font: 10px var(--sans); }
+.records-poll-options button:hover { border-color: #5578b5; color: #3b5f9e; }
+.records-poll-options em { color: #5578b5; font-style: normal; }
 .record-comments { margin: 0 8px 8px 126px; }
 .record-comment { padding: 9px 12px; border-left: 2px solid #5578b5; background: #f7f8fa; }
 .record-comment.is-reply { margin-left: 20px; border-left-color: #9aaaca; }
@@ -288,6 +306,7 @@ nav a:hover { opacity: .5; }
 .record-comment-actions { display: flex; justify-content: flex-end; gap: 4px; }
 .records-status { min-height: 18px; color: #d34c4c; font: 10px var(--sans); }
 @media (max-width: 700px) {
+  .records-page { padding: 0 0 48px; }
   .records-shell { width: calc(100% - 18px); }
   .records-site-header nav a:nth-child(n+3) { display: none; }
   .records-gallery-head { grid-template-columns: 78px minmax(0, 1fr) 65px; gap: 10px; }
@@ -298,6 +317,7 @@ nav a:hover { opacity: .5; }
   .records-table-head, .records-row { grid-template-columns: 38px 52px minmax(0, 1fr) 68px 50px 42px 42px; font-size: 9px; }
   .records-row > * { padding: 7px 3px; }
   .record-comments { margin-left: 65px; }
+  .records-poll { margin-left: 65px; }
 }
 .account-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
 .account-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(380px, calc(100% - 30px)); transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 7px 7px 0 var(--ink); }

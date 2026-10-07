@@ -3797,12 +3797,39 @@ create table if not exists public.record_notices (
   edited_at timestamptz
 );
 
+create table if not exists public.record_polls (
+ id uuid primary key default gen_random_uuid(),
+ post_id uuid not null unique references public.record_posts(id) on delete cascade,
+ question text not null check (char_length(trim(question)) between 1 and 150),
+ created_at timestamptz not null default now()
+);
+
+create table if not exists public.record_poll_options (
+ id uuid primary key default gen_random_uuid(),
+ poll_id uuid not null references public.record_polls(id) on delete cascade,
+ option_text text not null check (char_length(trim(option_text)) between 1 and 80),
+ vote_count bigint not null default 0 check (vote_count >= 0),
+ option_order integer not null default 0
+);
+
+create table if not exists public.record_poll_votes (
+ poll_id uuid not null references public.record_polls(id) on delete cascade,
+ option_id uuid not null references public.record_poll_options(id) on delete cascade,
+ voter_key text not null check (char_length(voter_key) between 16 and 128),
+ created_at timestamptz not null default now(),
+ primary key (poll_id, voter_key)
+);
+
 alter table public.record_posts enable row level security;
 alter table public.record_comments enable row level security;
 alter table public.record_votes enable row level security;
 alter table public.record_notices enable row level security;
+alter table public.record_polls enable row level security;
+alter table public.record_poll_options enable row level security;
+alter table public.record_poll_votes enable row level security;
 revoke all on table public.record_posts, public.record_comments,
-  public.record_votes, public.record_notices from anon, authenticated;
+  public.record_votes, public.record_notices, public.record_polls,
+  public.record_poll_options, public.record_poll_votes from anon, authenticated;
 
 create or replace function public.record_get_board()
 returns jsonb
@@ -3816,7 +3843,24 @@ as $$
       from (
         select rp.id, rp.nickname, rp.title, rp.body, rp.upvotes, rp.downvotes,
                rp.created_at, rp.edited_at,
-               (select count(*) from public.record_comments rc where rc.post_id = rp.id) as comment_count
+               (select count(*) from public.record_comments rc where rc.post_id = rp.id) as comment_count,
+               (
+                 select jsonb_build_object(
+                   'id', poll.id,
+                   'question', poll.question,
+                   'options', coalesce((
+                     select jsonb_agg(jsonb_build_object(
+                       'id', option.id,
+                       'text', option.option_text,
+                       'votes', option.vote_count
+                     ) order by option.option_order, option.id)
+                     from public.record_poll_options option
+                     where option.poll_id = poll.id
+                   ), '[]'::jsonb)
+                 )
+                 from public.record_polls poll
+                 where poll.post_id = rp.id
+               ) as poll
         from public.record_posts rp
       ) p
     ), '[]'::jsonb),
@@ -3858,6 +3902,54 @@ begin
   insert into public.record_posts(nickname, password_hash, title, body)
   values (trim(p_nickname), p_password_hash, trim(p_title), trim(p_body))
   returning id into v_id;
+  return v_id;
+end;
+$$;
+
+create or replace function public.record_create_post(
+  p_nickname text,
+  p_password_hash text,
+  p_title text,
+  p_body text,
+  p_poll_question text,
+  p_poll_options jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_poll_id uuid;
+  v_option jsonb;
+  v_index integer := 0;
+begin
+  if p_password_hash !~ '^[0-9a-f]{64}$' then
+    raise exception '비밀번호 형식이 올바르지 않습니다.';
+  end if;
+  if nullif(trim(p_poll_question), '') is not null
+     and (jsonb_typeof(p_poll_options) <> 'array'
+       or jsonb_array_length(p_poll_options) < 2
+       or jsonb_array_length(p_poll_options) > 6) then
+    raise exception '투표 선택지는 2개에서 6개까지 입력해야 합니다.';
+  end if;
+  insert into public.record_posts(nickname, password_hash, title, body)
+  values (trim(p_nickname), p_password_hash, trim(p_title), trim(p_body))
+  returning id into v_id;
+  if nullif(trim(p_poll_question), '') is not null then
+    insert into public.record_polls(post_id, question)
+    values (v_id, trim(p_poll_question))
+    returning id into v_poll_id;
+    for v_option in select value from jsonb_array_elements(p_poll_options) loop
+      if char_length(trim(v_option #>> '{}')) = 0 then
+        raise exception '투표 선택지는 비워둘 수 없습니다.';
+      end if;
+      insert into public.record_poll_options(poll_id, option_text, option_order)
+      values (v_poll_id, trim(v_option #>> '{}'), v_index);
+      v_index := v_index + 1;
+    end loop;
+  end if;
   return v_id;
 end;
 $$;
@@ -3922,6 +4014,41 @@ begin
   from public.record_votes where post_id = p_post_id;
   update public.record_posts set upvotes = v_upvotes, downvotes = v_downvotes where id = p_post_id;
   return jsonb_build_object('upvotes', v_upvotes, 'downvotes', v_downvotes);
+end;
+$$;
+
+create or replace function public.record_vote_poll(
+  p_poll_id uuid,
+  p_option_id uuid,
+  p_voter_key text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_previous_option uuid;
+begin
+  if not exists (
+    select 1 from public.record_poll_options
+    where id = p_option_id and poll_id = p_poll_id
+  ) then
+    raise exception '올바르지 않은 투표 선택지입니다.';
+  end if;
+  select option_id into v_previous_option
+  from public.record_poll_votes
+  where poll_id = p_poll_id and voter_key = p_voter_key;
+  if v_previous_option is not null and v_previous_option <> p_option_id then
+    update public.record_poll_options set vote_count = greatest(vote_count - 1, 0)
+    where id = v_previous_option;
+  end if;
+  insert into public.record_poll_votes(poll_id, option_id, voter_key)
+  values (p_poll_id, p_option_id, p_voter_key)
+  on conflict (poll_id, voter_key) do update set option_id = excluded.option_id;
+  update public.record_poll_options set vote_count = vote_count + 1
+  where id = p_option_id and (v_previous_option is null or v_previous_option <> p_option_id);
+  return jsonb_build_object('success', true);
 end;
 $$;
 
@@ -4049,9 +4176,11 @@ $$;
 revoke all on function public.record_get_board() from public;
 revoke all on function public.record_get_comments(uuid) from public;
 revoke all on function public.record_create_post(text, text, text, text) from public;
+revoke all on function public.record_create_post(text, text, text, text, text, jsonb) from public;
 revoke all on function public.record_update_post(uuid, text, text, text) from public;
 revoke all on function public.record_delete_post(uuid, text, text) from public;
 revoke all on function public.record_vote_post(uuid, text, smallint) from public;
+revoke all on function public.record_vote_poll(uuid, uuid, text) from public;
 revoke all on function public.record_create_comment(uuid, uuid, text, text, text) from public;
 revoke all on function public.record_update_comment(uuid, text, text) from public;
 revoke all on function public.record_delete_comment(uuid, text, text) from public;
@@ -4061,9 +4190,11 @@ revoke all on function public.record_delete_notice(uuid, text) from public;
 grant execute on function public.record_get_board() to anon, authenticated;
 grant execute on function public.record_get_comments(uuid) to anon, authenticated;
 grant execute on function public.record_create_post(text, text, text, text) to anon, authenticated;
+grant execute on function public.record_create_post(text, text, text, text, text, jsonb) to anon, authenticated;
 grant execute on function public.record_update_post(uuid, text, text, text) to anon, authenticated;
 grant execute on function public.record_delete_post(uuid, text, text) to anon, authenticated;
 grant execute on function public.record_vote_post(uuid, text, smallint) to anon, authenticated;
+grant execute on function public.record_vote_poll(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.record_create_comment(uuid, uuid, text, text, text) to anon, authenticated;
 grant execute on function public.record_update_comment(uuid, text, text) to anon, authenticated;
 grant execute on function public.record_delete_comment(uuid, text, text) to anon, authenticated;
