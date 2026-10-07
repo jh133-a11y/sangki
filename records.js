@@ -264,7 +264,15 @@ $('#records-post-form').addEventListener('submit', async (event) => {
   }
   if (!payload.p_poll_question) payload.p_poll_options = [];
   try {
-    await rpc('record_create_post', payload);
+    const createPayload = payload.p_poll_question
+      ? payload
+      : {
+        p_nickname: payload.p_nickname,
+        p_password_hash: payload.p_password_hash,
+        p_title: payload.p_title,
+        p_body: payload.p_body
+      };
+    await rpc('record_create_post', createPayload);
     closeModals();
     await loadBoard();
   } catch (error) {
