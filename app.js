@@ -588,7 +588,9 @@ const useShopItem = async (itemType) => {
         localStorage.setItem(`sangki-account-nickname-${accountSession.account_id}`, nickname);
       }
       await loadBag();
-      await loadInvestmentState(nickname);
+      if (bagTarget.value === (await resolveShopClientId())) {
+        await loadInvestmentState(nickname);
+      }
     } catch (error) {
       bagStatus.textContent = error.message;
       window.alert(`닉네임 변경 실패: ${error.message}`);
