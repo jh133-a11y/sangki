@@ -198,6 +198,10 @@ values
   ('SEOK_HYNIX', 'Seok하이닉스', 1500000, 1500000),
   ('KOREA_SANGI_INDEX', '한국상기지수', 20000, 20000),
   ('SURGE_STOCK', '급등주', 500, 500),
+  ('CURRENT_SURGE_STOCK', '현재급등주', 3000, 3000),
+  ('DONGHWA_SURGE_STOCK', '동화급등주', 2000, 2000),
+  ('JEONGMIN_SURGE_STOCK', '정민급등주', 900, 900),
+  ('JUSEONG_SURGE_STOCK', '주성급등주', 120000, 120000),
   ('SANGI_AI', '상기AI', 1000, 1000),
   ('QUANTUM_YOON', '양자윤석열', 50000, 50000)
 on conflict (symbol) do nothing;
@@ -251,6 +255,10 @@ begin
       'SEOK_HYNIX', 0,
       'KOREA_SANGI_INDEX', case when random() < 0.5 then -1 else 1 end,
       'SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'CURRENT_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'DONGHWA_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JEONGMIN_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JUSEONG_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
       'SANGI_AI', case when random() < 0.5 then -1 else 1 end,
       'QUANTUM_YOON', case when random() < 0.5 then -1 else 1 end,
       'rocket_event', random() < 0.10,
@@ -372,8 +380,14 @@ begin
         if pct = 0 then pct := movement_direction; end if;
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
-    elsif asset.symbol = 'SURGE_STOCK' then
-      daily_direction := (direction_state_value->>'SURGE_STOCK')::integer;
+    elsif asset.symbol in (
+      'SURGE_STOCK',
+      'CURRENT_SURGE_STOCK',
+      'DONGHWA_SURGE_STOCK',
+      'JEONGMIN_SURGE_STOCK',
+      'JUSEONG_SURGE_STOCK'
+    ) then
+      daily_direction := (direction_state_value->>asset.symbol)::integer;
       if random() < 0.2 then
         pct := floor(random() * 201) + 300;
       else
