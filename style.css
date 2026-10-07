@@ -268,6 +268,7 @@ section { padding: 120px 0; }
 .investment-admin-market span input { width: 70px; }
 .investment-admin-market button { border: 1px solid var(--ink); padding: 7px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
 .investment-admin-market button:hover { background: var(--orange); color: var(--ink); }
+.investment-admin-market #admin-split-asset { background: var(--orange); color: var(--ink); }
 .investment-admin-market [role="status"] { min-height: 16px; color: var(--orange); }
 .investment-ranking li:has(.ranking-grant) { grid-template-columns: 28px 1fr auto; }
 .ranking-grant { grid-column: 2 / -1; display: flex; gap: 5px; }

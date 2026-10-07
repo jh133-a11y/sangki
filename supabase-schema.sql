@@ -847,6 +847,49 @@ begin
 end;
 $$;
 
+create or replace function public.investment_admin_split_asset(
+  p_admin_password text,
+  p_symbol text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_current_price bigint;
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  select current_price
+  into v_current_price
+  from public.investment_assets
+  where symbol = p_symbol
+  for update;
+
+  if not found then
+    raise exception '액면분할할 종목을 찾을 수 없습니다.';
+  end if;
+
+  perform set_config('app.investment_admin_reset', 'on', true);
+
+  update public.investment_holdings
+  set quantity = quantity * 1000
+  where symbol = p_symbol;
+
+  update public.investment_assets
+  set current_price = greatest(1, round(current_price::numeric / 1000)::bigint),
+      change_pct = 0,
+      split_notice = true
+  where symbol = p_symbol;
+
+  perform set_config('app.investment_admin_reset', 'off', true);
+  return true;
+end;
+$$;
+
 create or replace function public.investment_admin_reset_all_assets(
   p_admin_password text
 )
@@ -1007,9 +1050,11 @@ for each row
 execute function public.apply_surge_stock_volatility();
 
 revoke all on function public.investment_admin_reset_asset(text, text) from public;
+revoke all on function public.investment_admin_split_asset(text, text) from public;
 revoke all on function public.investment_admin_reset_all_assets(text) from public;
 revoke all on function public.investment_admin_set_surge_volatility(text, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
 grant execute on function public.investment_admin_reset_asset(text, text) to anon, authenticated;
+grant execute on function public.investment_admin_split_asset(text, text) to anon, authenticated;
 grant execute on function public.investment_admin_reset_all_assets(text) to anon, authenticated;
 grant execute on function public.investment_admin_set_surge_volatility(text, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to anon, authenticated;
 

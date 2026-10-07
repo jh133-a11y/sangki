@@ -400,6 +400,7 @@ const investmentAdminButton = document.querySelector('#investment-admin-button')
 const investmentAdminPanel = document.querySelector('#investment-admin-panel');
 const adminAssetSelect = document.querySelector('#admin-asset-select');
 const adminResetAsset = document.querySelector('#admin-reset-asset');
+const adminSplitAsset = document.querySelector('#admin-split-asset');
 const adminResetAllAssets = document.querySelector('#admin-reset-all-assets');
 const adminSaveVolatility = document.querySelector('#admin-save-volatility');
 const adminMarketStatus = document.querySelector('#admin-market-status');
@@ -1198,6 +1199,16 @@ adminResetAsset.addEventListener('click', () => {
     'investment_admin_reset_asset',
     { p_symbol: adminAssetSelect.value },
     '선택한 종목의 가격과 변동률을 초기화했습니다.'
+  );
+});
+
+adminSplitAsset.addEventListener('click', () => {
+  const selectedName = adminAssetSelect.options[adminAssetSelect.selectedIndex]?.textContent || '선택한 종목';
+  if (!window.confirm(`${selectedName}을(를) 1000분의 1 액면분할할까요?\n가격은 1/1000, 보유 수량은 1000배가 됩니다.`)) return;
+  runAdminMarketAction(
+    'investment_admin_split_asset',
+    { p_symbol: adminAssetSelect.value },
+    `${selectedName}을(를) 1000분의 1 액면분할했습니다.`
   );
 });
 
