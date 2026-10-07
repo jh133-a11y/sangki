@@ -512,16 +512,73 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-lamp-right { right: 14%; transform: rotate(-5deg); }
 .sanggi-character {
   position: absolute;
-  left: 46%;
-  bottom: 3%;
+  left: 17%;
+  top: 8%;
   z-index: 2;
   display: block;
   width: auto;
-  height: min(76vh, 620px);
-  max-width: 82vw;
-  transform: translateX(-50%);
+  height: min(62vh, 500px);
+  max-width: 48vw;
   object-fit: contain;
-  object-position: bottom center;
+  object-position: top center;
+}
+.sanggi-action-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+  width: min(760px, calc(100% - 40px));
+  transform: translateX(-50%);
+}
+.sanggi-action-button {
+  display: grid;
+  min-height: 70px;
+  place-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 2px solid #302a35;
+  border-radius: 14px;
+  background: rgba(255, 247, 220, .94);
+  box-shadow: 0 5px 0 rgba(20, 20, 30, .35);
+  color: #2a2730;
+  cursor: pointer;
+  font: 700 14px var(--sans);
+  transition: transform .18s, background .18s;
+}
+.sanggi-action-button:hover {
+  background: #ffd45c;
+  transform: translateY(-3px);
+}
+.sanggi-action-icon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffb45e;
+  color: #302a35;
+  font: 700 17px var(--sans);
+}
+@media (max-width: 640px) {
+  .sanggi-character {
+    left: 8%;
+    top: 13%;
+    height: min(48vh, 360px);
+    max-width: 55vw;
+  }
+  .sanggi-action-bar {
+    bottom: 16px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: calc(100% - 24px);
+  }
+  .sanggi-action-button {
+    min-height: 58px;
+    font-size: 12px;
+  }
 }
 
 .speed-game { background: var(--orange); }
