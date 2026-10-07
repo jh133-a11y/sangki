@@ -111,9 +111,13 @@ const renderInvestmentState = (state) => {
     const row = document.createElement('article');
     row.className = 'investment-product';
     const name = document.createElement('div');
-    name.innerHTML = `<strong class="investment-product-name"></strong><span class="investment-product-symbol"></span>`;
+    name.innerHTML = `<strong class="investment-product-name"></strong><span class="investment-product-symbol"></span><small class="investment-product-notices"></small>`;
     name.querySelector('strong').textContent = asset.name;
-    name.querySelector('span').textContent = asset.listed ? asset.symbol : '상장폐지 · 다음 12시에 재출시';
+    name.querySelector('span').textContent = asset.listed ? asset.symbol : '상장폐지 · 다음 갱신 시 재상장';
+    const notices = [];
+    if (asset.split_notice) notices.push('주식 분할 된 상품입니다');
+    if (asset.was_delisted && asset.listed) notices.push('이전에 상장폐지 되었던 상품입니다');
+    name.querySelector('.investment-product-notices').textContent = notices.join(' · ');
     const price = document.createElement('strong');
     price.className = 'investment-price';
     price.textContent = asset.listed ? formatWon(asset.current_price) : '—';

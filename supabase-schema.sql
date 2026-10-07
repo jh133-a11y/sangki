@@ -682,3 +682,140 @@ grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, integer) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
+
+-- Stock split and relisting metadata.
+alter table public.investment_assets
+  add column if not exists split_notice boolean not null default false;
+alter table public.investment_assets
+  add column if not exists was_delisted boolean not null default false;
+alter table public.investment_assets
+  add column if not exists delisted_at timestamptz;
+
+alter table public.investment_holdings
+  alter column quantity type bigint using quantity::bigint;
+
+create or replace function public.investment_apply_stock_splits()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  asset_row record;
+  digit_gap integer;
+  divisor bigint;
+begin
+  for asset_row in
+    select symbol, base_price, current_price
+    from public.investment_assets
+    where listed
+      and current_price >= 5000000
+      and length(current_price::text) > length(base_price::text)
+    for update
+  loop
+    digit_gap := length(asset_row.current_price::text)
+      - length(asset_row.base_price::text);
+    divisor := power(10, digit_gap)::bigint;
+
+    update public.investment_holdings
+    set quantity = quantity * divisor
+    where symbol = asset_row.symbol;
+
+    update public.investment_assets
+    set current_price = greatest(1, round(current_price::numeric / divisor)::bigint),
+        split_notice = true
+    where symbol = asset_row.symbol;
+  end loop;
+end;
+$$;
+
+create or replace function public.track_investment_listing_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.listed = false and old.listed = true then
+    new.delisted_at := coalesce(new.delisted_at, now());
+    new.was_delisted := true;
+  elsif new.listed = true and old.listed = false then
+    new.delisted_at := null;
+    new.was_delisted := true;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists investment_listing_status_trigger
+on public.investment_assets;
+
+create trigger investment_listing_status_trigger
+before update of listed on public.investment_assets
+for each row
+execute function public.track_investment_listing_status();
+
+drop trigger if exists investment_stock_split_trigger
+on public.investment_assets;
+
+create or replace function public.investment_stock_split_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if pg_trigger_depth() = 1
+     and new.listed
+     and new.current_price >= 5000000 then
+    perform public.investment_apply_stock_splits();
+  end if;
+  return new;
+end;
+$$;
+
+create trigger investment_stock_split_trigger
+after update of current_price on public.investment_assets
+for each row
+execute function public.investment_stock_split_trigger();
+
+create or replace function public.investment_relist_delisted_assets()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      delisted_at = null,
+      was_delisted = true
+  where listed = false
+    and delisted_at is not null
+    and delisted_at <= now() - interval '5 minutes';
+
+  perform public.investment_apply_stock_splits();
+end;
+$$;
+
+create or replace function public.investment_market_cron_tick()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.investment_relist_delisted_assets();
+  perform public.investment_update_market();
+  perform public.investment_apply_stock_splits();
+end;
+$$;
+
+revoke all on function public.investment_apply_stock_splits() from public;
+revoke all on function public.investment_relist_delisted_assets() from public;
+revoke all on function public.investment_market_cron_tick() from public;
+grant execute on function public.investment_apply_stock_splits() to anon, authenticated;
+grant execute on function public.investment_relist_delisted_assets() to anon, authenticated;
+grant execute on function public.investment_market_cron_tick() to anon, authenticated;

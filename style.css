@@ -124,6 +124,7 @@ section { padding: 120px 0; }
 .investment-product { display: grid; grid-template-columns: minmax(130px, 1fr) 145px 120px 170px; gap: 16px; align-items: center; padding: 15px 0; border-bottom: 1px solid rgba(241,238,231,.18); }
 .investment-product-name { font-weight: 600; }
 .investment-product-symbol { display: block; margin-top: 4px; color: #aaa69d; font: 10px var(--mono); }
+.investment-product-notices { display: block; margin-top: 5px; color: var(--orange); font: 10px/1.4 var(--mono); }
 .investment-price { font: 14px var(--mono); }
 .investment-change { font: 12px var(--mono); }
 .investment-change.positive { color: #ff4e4e; }
