@@ -80,18 +80,11 @@ const authenticateAccount = async (username, password) => {
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || result.hint || '계정 요청에 실패했습니다.');
   const previousClientId = localStorage.getItem(investmentClientKey);
-  if (accountMode === 'signup') {
-    clearInvestmentView();
-    localStorage.removeItem(legacyInvestmentClientKey);
-    localStorage.removeItem('sangki-investor-nickname');
-    localStorage.removeItem(`sangki-account-nickname-${result.account_id}`);
-  } else if (previousClientId && previousClientId !== result.account_id) {
+  if (previousClientId && previousClientId !== result.account_id) {
     localStorage.setItem(legacyInvestmentClientKey, previousClientId);
   }
   accountSession = result;
-  const oldClientId = accountMode === 'signup'
-    ? null
-    : localStorage.getItem(legacyInvestmentClientKey) || previousClientId;
+  const oldClientId = localStorage.getItem(legacyInvestmentClientKey) || previousClientId;
   if (rememberUsername.checked) {
     localStorage.setItem(rememberedUsernameKey, normalizedUsername);
   } else {
@@ -106,26 +99,24 @@ const authenticateAccount = async (username, password) => {
     localStorage.removeItem(accountStorageKey);
     sessionStorage.setItem(accountSessionStorageKey, JSON.stringify(result));
   }
-  if (accountMode !== 'signup') {
-    const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
-      method: 'POST',
-      headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        p_session_token: accountSession.session_token,
-        p_old_client_id: oldClientId
-      })
-    });
-    if (!linkResponse.ok) {
-      let detail = '';
-      try {
-        const linkError = await linkResponse.json();
-        detail = linkError.message || linkError.details || linkError.hint || '';
-      } catch {
-        detail = '';
-      }
-      console.error('investment_link_account failed:', detail || linkResponse.status);
-      accountSession.linkError = detail || `연결 요청 실패 (${linkResponse.status})`;
+  const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
+    method: 'POST',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      p_session_token: accountSession.session_token,
+      p_old_client_id: oldClientId
+    })
+  });
+  if (!linkResponse.ok) {
+    let detail = '';
+    try {
+      const linkError = await linkResponse.json();
+      detail = linkError.message || linkError.details || linkError.hint || '';
+    } catch {
+      detail = '';
     }
+    console.error('investment_link_account failed:', detail || linkResponse.status);
+    accountSession.linkError = detail || `연결 요청 실패 (${linkResponse.status})`;
   }
   localStorage.setItem(investmentClientKey, accountSession.account_id);
   updateAccountButton();
