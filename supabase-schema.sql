@@ -2587,8 +2587,8 @@ begin
     );
   end if;
 
-  v_factor := 0.70 + random() * 0.60;
-  v_percent := round((v_factor - 1) * 100);
+  v_percent := floor(random() * 61)::integer - 30;
+  v_factor := 1 + v_percent / 100.0;
   update public.investment_users
   set cash = greatest(0, round(cash * v_factor))
   where client_id = p_client_id
