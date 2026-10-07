@@ -14,6 +14,27 @@
     balance.textContent = `${coins.toLocaleString('ko-KR')}원`;
   };
 
+  const showCoinPopup = () => {
+    const popup = document.createElement('span');
+    const bounds = main.getBoundingClientRect();
+    const coinBalance = document.querySelector('.sanggi-coin-balance');
+    const balanceBounds = coinBalance.getBoundingClientRect();
+    popup.className = 'sanggi-coin-popup';
+    popup.textContent = '+1원';
+    popup.style.left = `${balanceBounds.right - bounds.left + 18}px`;
+    popup.style.top = `${balanceBounds.top - bounds.top + balanceBounds.height / 2}px`;
+    main.appendChild(popup);
+    window.setTimeout(() => popup.remove(), 750);
+  };
+
+  const collectCoin = () => {
+    coins += 1;
+    localStorage.setItem(storageKey, String(coins));
+    renderBalance();
+    playCoinSound();
+    showCoinPopup();
+  };
+
   const playCoinSound = () => {
     if (!AudioContextClass) return;
 
@@ -41,22 +62,9 @@
   main.addEventListener('pointerdown', (event) => {
     if (isInteractiveControl(event.target)) return;
 
-    coins += 1;
-    localStorage.setItem(storageKey, String(coins));
-    renderBalance();
-    playCoinSound();
-
-    const popup = document.createElement('span');
-    const bounds = main.getBoundingClientRect();
-    const coinBalance = document.querySelector('.sanggi-coin-balance');
-    const balanceBounds = coinBalance.getBoundingClientRect();
-    popup.className = 'sanggi-coin-popup';
-    popup.textContent = '+1원';
-    popup.style.left = `${balanceBounds.right - bounds.left + 18}px`;
-    popup.style.top = `${balanceBounds.top - bounds.top + balanceBounds.height / 2}px`;
-    main.appendChild(popup);
-    window.setTimeout(() => popup.remove(), 750);
+    collectCoin();
   });
 
   renderBalance();
+  window.setInterval(collectCoin, 10000);
 })();
