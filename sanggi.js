@@ -52,7 +52,7 @@
     const balanceBounds = coinBalance.getBoundingClientRect();
     popup.className = 'sanggi-coin-popup';
     popup.textContent = '+1원';
-    popup.style.left = `${balanceBounds.right - bounds.left + 12}px`;
+    popup.style.left = `${balanceBounds.right - bounds.left + 18}px`;
     popup.style.top = `${balanceBounds.top - bounds.top + balanceBounds.height / 2}px`;
     main.appendChild(popup);
     window.setTimeout(() => popup.remove(), 750);

@@ -417,12 +417,19 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 }
 .sanggi-coin-popup {
   position: absolute;
-  z-index: 6;
+  z-index: 20;
   pointer-events: none;
+  min-width: 56px;
+  padding: 5px 9px;
+  border: 2px solid #6e4b28;
+  border-radius: 999px;
+  background: rgba(255, 247, 220, .96);
+  color: #5b351b;
+  font: 800 23px/1 var(--sans);
+  text-align: center;
   white-space: nowrap;
-  color: #fff4bb;
-  font: 700 20px var(--sans);
-  text-shadow: 0 2px 0 rgba(66, 43, 28, .8), 0 0 8px rgba(255, 190, 64, .65);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
+  box-shadow: 0 3px 0 rgba(66, 43, 28, .3), 0 0 10px rgba(255, 190, 64, .7);
   transform: translate(-50%, -50%);
   animation: sanggi-coin-popup 700ms ease-out forwards;
 }
