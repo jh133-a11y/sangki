@@ -212,6 +212,8 @@ section { padding: 120px 0; }
 .portfolio-summary div:last-child { border: 0; }
 .portfolio-summary span, .investment-list-head { font: 10px var(--mono); text-transform: uppercase; }
 .portfolio-summary strong { font-size: 20px; letter-spacing: -.04em; }
+.investment-transfer-toggle { margin: 0 0 18px; border: 1px solid var(--ink); padding: 11px 16px; background: var(--acid); color: var(--ink); cursor: pointer; font: 11px var(--mono); }
+.investment-transfer-toggle:hover { background: var(--orange); }
 .investment-transfer { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; margin: 18px 0; padding: 14px; border: 1px solid var(--ink); background: #fff; }
 .investment-transfer label { display: grid; gap: 6px; font: 10px var(--mono); }
 .investment-transfer select, .investment-transfer input { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px var(--mono); }

@@ -386,6 +386,7 @@ const portfolioCash = document.querySelector('#portfolio-cash');
 const portfolioTotal = document.querySelector('#portfolio-total');
 const marketUpdated = document.querySelector('#market-updated');
 const investmentProducts = document.querySelector('#investment-products');
+const investmentTransferToggle = document.querySelector('#investment-transfer-toggle');
 const investmentTransfer = document.querySelector('#investment-transfer');
 const transferTarget = document.querySelector('#transfer-target');
 const transferAmount = document.querySelector('#transfer-amount');
@@ -721,7 +722,8 @@ const renderInvestmentState = (state) => {
   investorNickname.disabled = true;
   investorForm.querySelector('button').disabled = true;
   portfolioSummary.hidden = false;
-  investmentTransfer.hidden = false;
+  investmentTransferToggle.hidden = false;
+  investmentTransfer.hidden = true;
   transferTarget.replaceChildren(new Option('유저를 선택하세요', ''));
   transferTarget.append(...state.ranking
     .filter((entry) => entry.client_id !== getInvestmentClientId())
@@ -959,6 +961,11 @@ const renderInvestmentState = (state) => {
   });
   investmentRankingPagination.replaceChildren(previous, pageNumber, next);
 };
+
+investmentTransferToggle.addEventListener('click', () => {
+  investmentTransfer.hidden = !investmentTransfer.hidden;
+  if (!investmentTransfer.hidden) transferTarget.focus();
+});
 
 investmentTransfer.addEventListener('submit', async (event) => {
   event.preventDefault();
