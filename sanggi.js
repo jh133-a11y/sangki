@@ -101,7 +101,7 @@
   const scheduleAutoCoin = () => {
     window.clearTimeout(autoTimer);
     autoTimer = window.setTimeout(() => {
-      collectCoin(autoReward(), false);
+      collectCoin(autoReward());
       scheduleAutoCoin();
     }, autoIntervalMs());
   };
