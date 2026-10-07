@@ -1019,12 +1019,12 @@ begin
     raise exception '관리자 비밀번호가 틀렸습니다.';
   end if;
 
-  if p_target_client_id is null
-     or not exists (
+  if p_target_client_id is not null
+     and not exists (
        select 1 from public.investment_users
        where client_id = p_target_client_id
      ) then
-    raise exception '차감할 유저를 선택하세요.';
+    raise exception '차감할 유저를 찾을 수 없습니다.';
   end if;
 
   if p_item_type not in (
@@ -1049,6 +1049,13 @@ begin
     raise exception '메시지는 500자 이하로 입력하세요.';
   end if;
 
+  if p_item_type in (
+    'sanggi_hanbok', 'sanggi_spacesuit',
+    'juseong_hanbok', 'juseong_spacesuit'
+  ) then
+    raise exception '의상 아이템은 차감할 수 없습니다.';
+  end if;
+
   v_item_name := case p_item_type
     when 'low_missile' then '하급 미사일'
     when 'mid_missile' then '중급 미사일'
@@ -1068,34 +1075,48 @@ begin
     when 'weird_cash_box' then '이상한 랜덤 현금 박스'
   end;
 
-  select quantity
-  into v_owned_quantity
-  from public.investment_shop_items
-  where client_id = p_target_client_id
-    and item_type = p_item_type
-  for update;
+  if p_target_client_id is not null then
+    select quantity into v_owned_quantity
+    from public.investment_shop_items
+    where client_id = p_target_client_id and item_type = p_item_type
+    for update;
 
-  if coalesce(v_owned_quantity, 0) < p_quantity then
-    raise exception '해당 유저의 보유 수량이 부족합니다.';
+    if coalesce(v_owned_quantity, 0) < p_quantity then
+      raise exception '해당 유저의 보유 수량이 부족합니다.';
+    end if;
+  else
+    if exists (
+      select 1
+      from public.investment_users u
+      left join public.investment_shop_items i
+        on i.client_id = u.client_id and i.item_type = p_item_type
+      where coalesce(i.quantity, 0) < p_quantity
+    ) then
+      raise exception '모든 유저가 해당 수량을 보유하고 있지 않습니다.';
+    end if;
   end if;
 
   update public.investment_shop_items
   set quantity = quantity - p_quantity
-  where client_id = p_target_client_id
-    and item_type = p_item_type;
+  where item_type = p_item_type
+    and (p_target_client_id is null or client_id = p_target_client_id);
 
   delete from public.investment_shop_items
-  where client_id = p_target_client_id
-    and item_type = p_item_type
-    and quantity <= 0;
+  where item_type = p_item_type
+    and quantity <= 0
+    and (p_target_client_id is null or client_id = p_target_client_id);
 
   v_message := '관리자가 ' || v_item_name || ' ' || p_quantity
     || '개를 차감했습니다.' || E'\n' || trim(p_message);
 
   insert into public.investment_shop_messages(client_id, message)
-  values (p_target_client_id, v_message);
+  select client_id, v_message
+  from public.investment_users
+  where p_target_client_id is null or client_id = p_target_client_id;
 
   return jsonb_build_object(
+    'user_count', (select count(*) from public.investment_users
+      where p_target_client_id is null or client_id = p_target_client_id),
     'item_type', p_item_type,
     'quantity', p_quantity,
     'message', v_message
@@ -3347,6 +3368,13 @@ begin
 
   if v_name is null then
     raise exception '버릴 수 없는 아이템입니다.';
+  end if;
+
+  if p_item_type in (
+    'sanggi_hanbok', 'sanggi_spacesuit',
+    'juseong_hanbok', 'juseong_spacesuit'
+  ) then
+    raise exception '의상 아이템은 버릴 수 없습니다.';
   end if;
 
   select quantity

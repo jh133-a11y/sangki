@@ -704,6 +704,8 @@ const resetBagSelection = () => {
   bagNewNickname.value = '';
   document.querySelector('#bag-letter-message').value = '';
   bagDiscardQuantity.value = '1';
+  bagDiscardButton.hidden = false;
+  bagDiscardQuantity.closest('.bag-discard-label').hidden = false;
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => {
     selected.classList.remove('is-selected');
   });
@@ -724,11 +726,17 @@ const selectShopItem = (item) => {
   const isLetter = item.item_type === 'letter';
   const isShield = item.item_type === 'missile_shield';
   const isCashBox = item.item_type === 'cash_box' || item.item_type === 'weird_cash_box';
+  const isOutfit = [
+    'sanggi_hanbok', 'sanggi_spacesuit',
+    'juseong_hanbok', 'juseong_spacesuit'
+  ].includes(item.item_type);
   const targetLabel = document.querySelector('.bag-target-label');
   targetLabel.hidden = isShield || (!isCashBox && !isNicknameTicket && !isLetter
     && !['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type));
   bagTarget.disabled = isShield;
   if (isShield) bagTarget.value = '';
+  bagDiscardButton.hidden = isOutfit;
+  bagDiscardQuantity.closest('.bag-discard-label').hidden = isOutfit;
   targetLabel.firstChild.textContent = isCashBox
     ? '선물할 유저 선택 (선택하지 않으면 개봉)'
     : isNicknameTicket

@@ -85,6 +85,12 @@ const renderItems = () => {
   }));
 };
 
+const updateRemoveButtonLabel = () => {
+  removeTargetButton.textContent = targetUser.value
+    ? '선택 유저에게서 차감'
+    : '모든 유저에게서 차감';
+};
+
 const loadUsers = async () => {
   if (!adminPassword) adminPassword = window.prompt('관리자 비밀번호를 입력하세요.') || '';
   if (!adminPassword) throw new Error('관리자 비밀번호가 필요합니다.');
@@ -98,6 +104,7 @@ const loadUsers = async () => {
       user.client_id
     ));
   });
+  updateRemoveButtonLabel();
 };
 
 const grantItems = async (targetClientId) => {
@@ -120,7 +127,6 @@ const grantItems = async (targetClientId) => {
 };
 
 const removeItems = async (targetClientId) => {
-  if (!targetClientId) throw new Error('차감할 유저를 선택하세요.');
   if (!selectedItemType) throw new Error('차감할 아이템을 선택하세요.');
   const quantity = Number(quantityInput.value);
   if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 1000000) {
@@ -135,7 +141,9 @@ const removeItems = async (targetClientId) => {
     p_quantity: quantity,
     p_message: message
   });
-  status.textContent = '선택한 유저의 아이템을 차감했습니다.';
+  status.textContent = targetClientId
+    ? '선택한 유저의 아이템을 차감했습니다.'
+    : '모든 유저의 아이템을 차감했습니다.';
   messageInput.value = '';
 };
 
@@ -165,6 +173,8 @@ removeTargetButton.addEventListener('click', async () => {
     grantForm.querySelectorAll('button').forEach((button) => { button.disabled = false; });
   }
 });
+
+targetUser.addEventListener('change', updateRemoveButtonLabel);
 
 grantAllButton.addEventListener('click', async () => {
   targetUser.value = '';
