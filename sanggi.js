@@ -46,6 +46,7 @@
   let remoteReady = false;
   let accountSyncing = false;
   let remoteSaveTimer = null;
+  let lastSyncedSessionToken = null;
   const character = document.querySelector('.sanggi-character');
   const companion = document.querySelector('#sanggi-companion');
   let companionUnlocked = false;
@@ -576,7 +577,11 @@
 
   const syncAccountState = async () => {
     const session = getSession();
-    if (!session?.session_token) return;
+    if (!session?.session_token) {
+      remoteReady = false;
+      lastSyncedSessionToken = null;
+      return false;
+    }
     const position = getLocalPosition();
     const state = await remoteRpc('sanggi_sync_state', {
       p_session_token: session.session_token,
@@ -624,6 +629,37 @@
       x: Number.isFinite(Number(state.companion_x)) ? Number(state.companion_x) : 0.78,
       y: Number.isFinite(Number(state.companion_y)) ? Number(state.companion_y) : 0.48
     }));
+    lastSyncedSessionToken = session.session_token;
+    return true;
+  };
+
+  const refreshAccountState = async (force = false) => {
+    const session = getSession();
+    if (!session?.session_token) {
+      remoteReady = false;
+      lastSyncedSessionToken = null;
+      return;
+    }
+    if (!force && remoteReady && lastSyncedSessionToken === session.session_token) return;
+    if (accountSyncing) return;
+    accountSyncing = true;
+    try {
+      await syncAccountState();
+      remoteReady = true;
+      loadCharacterPosition();
+      renderCompanion();
+      loadCompanionPosition();
+      renderBalance();
+      renderPlayer();
+      renderAbilities();
+      renderPotions();
+      scheduleAutoCoin();
+    } catch (error) {
+      remoteReady = false;
+      console.warn('Sanggi account sync failed:', error.message);
+    } finally {
+      accountSyncing = false;
+    }
   };
 
   const moveCharacter = (event) => {
@@ -1051,6 +1087,15 @@
     renderPotions();
     scheduleAutoCoin();
   };
+  window.addEventListener('sanggi-account-changed', () => {
+    refreshAccountState(true);
+  });
+  window.addEventListener('pageshow', () => {
+    refreshAccountState();
+  });
+  window.setInterval(() => {
+    refreshAccountState();
+  }, 2000);
   companion?.addEventListener('load', loadCompanionPosition);
   initialize();
 })();

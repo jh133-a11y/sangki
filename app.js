@@ -152,6 +152,7 @@ const authenticateAccount = async (username, password) => {
     ? previousClientId
     : null;
   accountSession = result;
+  window.dispatchEvent(new CustomEvent('sanggi-account-changed'));
   if (rememberUsername.checked) {
     localStorage.setItem(rememberedUsernameKey, normalizedUsername);
   } else {
@@ -233,6 +234,7 @@ accountButton.addEventListener('click', async () => {
   if (accountSession) {
     if (!await siteConfirm('정말로 로그아웃하시겠습니까?')) return;
     accountSession = null;
+    window.dispatchEvent(new CustomEvent('sanggi-account-changed'));
     localStorage.removeItem(accountStorageKey);
     sessionStorage.removeItem(accountSessionStorageKey);
     clearSanggiLocalState();
@@ -294,6 +296,7 @@ const closeSettings = () => {
 };
 const logoutAccount = () => {
   accountSession = null;
+  window.dispatchEvent(new CustomEvent('sanggi-account-changed'));
   localStorage.removeItem(accountStorageKey);
   sessionStorage.removeItem(accountSessionStorageKey);
   clearSanggiLocalState();
