@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=73">
+  <link rel="stylesheet" href="style.css?v=75">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -64,10 +64,20 @@
     </button>
     <div class="sanggi-potion-bar" aria-label="물약">
       <button class="sanggi-potion-button sanggi-potion-normal" id="sanggi-normal-potion" type="button">
-        <span>일반 물약</span><strong id="sanggi-normal-potion-count">0개</strong>
+        <svg class="sanggi-potion-icon" viewBox="0 0 48 64" aria-label="일반 물약" role="img">
+          <path d="M17 5h14M20 5v10L10 29v25a5 5 0 0 0 5 5h18a5 5 0 0 0 5-5V29L28 15V5" fill="#e8f7ff" stroke="#2a2730" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M10 35h28v19a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5Z" fill="#398fe5"/>
+          <path d="M15 29h18" stroke="#2a2730" stroke-width="3"/>
+        </svg>
+        <strong id="sanggi-normal-potion-count">0개</strong>
       </button>
       <button class="sanggi-potion-button sanggi-potion-advanced" id="sanggi-advanced-potion" type="button">
-        <span>고급 물약</span><strong id="sanggi-advanced-potion-count">0개</strong>
+        <svg class="sanggi-potion-icon" viewBox="0 0 48 64" aria-label="고급 물약" role="img">
+          <path d="M17 5h14M20 5v10L10 29v25a5 5 0 0 0 5 5h18a5 5 0 0 0 5-5V29L28 15V5" fill="#fff8d0" stroke="#2a2730" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M10 35h28v19a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5Z" fill="#e6a62f"/>
+          <path d="M15 29h18" stroke="#2a2730" stroke-width="3"/>
+        </svg>
+        <strong id="sanggi-advanced-potion-count">0개</strong>
       </button>
     </div>
     <div class="sanggi-player-backdrop" id="sanggi-player-backdrop" hidden></div>
@@ -140,6 +150,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=40"></script>
+  <script src="sanggi.js?v=41"></script>
 </body>
 </html>
