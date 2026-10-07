@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=31">
+  <link rel="stylesheet" href="style.css?v=32">
 </head>
 <body class="records-page">
   <main class="records-shell">
@@ -40,16 +40,20 @@
   </main>
 
   <div class="records-backdrop" id="records-backdrop" hidden></div>
-  <section class="records-modal" id="records-post-modal" role="dialog" aria-modal="true" aria-labelledby="records-post-title" hidden>
-    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
+  <section class="records-modal records-compose-page" id="records-post-modal" role="dialog" aria-modal="true" aria-labelledby="records-post-title" hidden>
+    <button class="records-compose-back" data-close-modal type="button">목록으로</button>
     <h2 id="records-post-title">글쓰기</h2>
+    <p class="records-compose-help">게시판에 표시될 글을 작성합니다. 닉네임과 비밀번호를 입력해 주세요.</p>
     <form id="records-post-form">
       <input type="hidden" id="records-post-id">
       <label>닉네임<input id="records-post-nickname" maxlength="24" required></label>
       <label>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
       <label>제목<input id="records-post-subject" maxlength="100" required></label>
       <label>내용<textarea id="records-post-body" maxlength="5000" rows="9" required></textarea></label>
-      <button class="records-submit" type="submit">저장하기</button>
+      <div class="records-compose-actions">
+        <button class="records-cancel" data-close-modal type="button">취소</button>
+        <button class="records-submit" type="submit">등록하기</button>
+      </div>
       <p class="records-form-status" id="records-post-form-status"></p>
     </form>
   </section>
@@ -80,6 +84,6 @@
     </form>
   </section>
 
-  <script src="records.js?v=4"></script>
+  <script src="records.js?v=5"></script>
 </body>
 </html>

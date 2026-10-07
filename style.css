@@ -207,6 +207,23 @@ nav a:hover { opacity: .5; }
 .records-modal input, .records-modal textarea { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px/1.5 var(--mono); }
 .records-submit { border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
 .records-submit:hover { background: var(--orange); color: var(--ink); }
+.records-page.records-writing .records-shell > :not(.records-site-header) { display: none; }
+.records-page.records-writing .records-site-header { margin-bottom: 0; }
+.records-page.records-writing .records-compose-page { display: block; }
+.records-compose-page { position: static; width: min(760px, calc(100% - 32px)); max-height: none; margin: 0 auto; transform: none; padding: 54px 0 80px; background: transparent; box-shadow: none; }
+.records-compose-page[hidden] { display: none !important; }
+.records-compose-page h2 { margin: 0 0 8px; color: #3b5f9e; font: 700 28px var(--sans); }
+.records-compose-help { margin: 0 0 28px; color: #888; font: 11px var(--sans); }
+.records-compose-back { border: 0; margin-bottom: 28px; padding: 0; background: transparent; color: #5578b5; cursor: pointer; font: 11px var(--sans); }
+.records-compose-back:hover { color: #3b5f9e; text-decoration: underline; }
+.records-compose-page form { padding: 24px; border: 1px solid #d8dce4; background: #fff; box-shadow: 0 4px 14px rgba(55, 74, 107, .08); }
+.records-compose-page label { color: #555; font: 11px var(--sans); }
+.records-compose-page input, .records-compose-page textarea { border-color: #cfd5df; border-radius: 2px; color: #333; font: 12px/1.6 var(--sans); }
+.records-compose-page textarea { min-height: 280px; resize: vertical; }
+.records-compose-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 8px; }
+.records-compose-actions button { min-width: 84px; }
+.records-cancel { border: 1px solid #c5cbd5; padding: 11px; background: #fff; color: #666; cursor: pointer; font: 10px var(--sans); }
+.records-cancel:hover { border-color: #5578b5; color: #3b5f9e; }
 @media (max-width: 650px) {
   .records-page { padding: 28px 15px 60px; }
   .records-header, .records-toolbar, .record-card-head, .record-card-footer { align-items: flex-start; flex-direction: column; }
@@ -255,8 +272,7 @@ nav a:hover { opacity: .5; }
 .records-post-group { position: relative; }
 .records-post-group:hover { background: #fbfcff; }
 .records-row-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px; padding: 5px 7px; }
-.records-post-group > .records-row-actions { display: none; }
-.records-post-group:hover > .records-row-actions { display: flex; }
+.records-post-group > .records-row-actions { display: flex; }
 .records-row-actions button, .record-comment-actions button { border: 1px solid #c9c9c9; padding: 4px 7px; background: #fff; color: #666; cursor: pointer; font: 9px var(--sans); }
 .records-row-actions button:hover, .record-comment-actions button:hover { border-color: #5578b5; background: #5578b5; color: #fff; }
 .records-notice-row .records-row-actions { position: absolute; right: 4px; }

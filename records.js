@@ -5,6 +5,7 @@ const apiHeaders = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_K
 const $ = (selector) => document.querySelector(selector);
 const backdrop = $('#records-backdrop');
 const modalIds = ['records-post-modal', 'records-comment-modal', 'records-notice-modal'];
+const page = document.body;
 let posts = [];
 let notices = [];
 let activeTab = 'all';
@@ -42,12 +43,15 @@ const formatDate = (value) => {
 
 const openModal = (id) => {
   modalIds.forEach((modalId) => { $(`#${modalId}`).hidden = modalId !== id; });
-  backdrop.hidden = false;
+  const isComposer = id === 'records-post-modal';
+  page.classList.toggle('records-writing', isComposer);
+  backdrop.hidden = isComposer;
 };
 
 const closeModals = () => {
   modalIds.forEach((id) => { $(`#${id}`).hidden = true; });
   backdrop.hidden = true;
+  page.classList.remove('records-writing');
 };
 
 const setStatus = (id, message) => { $(`#${id}`).textContent = message || ''; };
