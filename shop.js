@@ -66,7 +66,7 @@ const siteConfirm = (message) => new Promise((resolve) => {
   confirmModal.hidden = false;
   confirmBackdrop.hidden = false;
 });
-const chooseQuantity = (itemName, itemPrice, price, cash, ownedQuantity = 0n) => new Promise((resolve) => {
+const chooseQuantity = (itemName, itemPrice, price, cash, ownedQuantity = 0n, itemType = '') => new Promise((resolve) => {
   confirmResolve = resolve;
   confirmTitle.textContent = `${itemName} 구매`;
   confirmMessage.textContent = `${itemPrice}\n구매할 수량을 선택하세요.`;
@@ -75,9 +75,12 @@ const chooseQuantity = (itemName, itemPrice, price, cash, ownedQuantity = 0n) =>
   quantityInput.value = '1';
   maxQuantityButton.onclick = () => {
     const affordable = price > 0n ? BigInt(cash) / price : 0n;
-    quantityInput.value = String(affordable < 100n - ownedQuantity
+    const ownershipLimit = 100n - ownedQuantity;
+    const dailyLimit = itemType === 'gambling_box' ? 3n : ownershipLimit;
+    const maximum = dailyLimit < ownershipLimit ? dailyLimit : ownershipLimit;
+    quantityInput.value = String(affordable < maximum
       ? affordable
-      : 100n - ownedQuantity);
+      : maximum);
   };
   confirmOk.textContent = '다음';
   confirmCancel.hidden = false;
@@ -203,7 +206,8 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
       itemPrice,
       price,
       currentCashExact,
-      ownedQuantity
+      ownedQuantity,
+      button.dataset.item
     );
     if (!quantityText) {
       status.textContent = '구매를 취소했습니다.';
