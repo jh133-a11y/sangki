@@ -863,9 +863,9 @@ const renderInvestmentState = (state) => {
     const trade = document.createElement('div');
     trade.className = 'investment-trade';
     const quantity = document.createElement('input');
-    quantity.type = 'number';
-    quantity.min = '1';
-    quantity.step = '1';
+    quantity.type = 'text';
+    quantity.inputMode = 'numeric';
+    quantity.pattern = '[0-9]+';
     quantity.value = '1';
     quantity.disabled = !asset.listed;
     const buy = document.createElement('button');
@@ -883,7 +883,9 @@ const renderInvestmentState = (state) => {
     maxBuy.textContent = '최대 매수';
     maxBuy.disabled = !asset.listed;
     maxBuy.addEventListener('click', () => {
-      quantity.value = String(Math.floor(state.cash / asset.current_price));
+      const cash = BigInt(String(state.cash));
+      const price = BigInt(String(asset.current_price));
+      quantity.value = String(price > 0n ? cash / price : 0n);
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
@@ -931,9 +933,9 @@ const renderInvestmentState = (state) => {
     const trade = document.createElement('div');
     trade.className = 'holding-trade';
     const quantity = document.createElement('input');
-    quantity.type = 'number';
-    quantity.min = '1';
-    quantity.step = '1';
+    quantity.type = 'text';
+    quantity.inputMode = 'numeric';
+    quantity.pattern = '[0-9]+';
     quantity.value = '1';
     quantity.disabled = !asset || !asset.listed;
     const buy = document.createElement('button');
@@ -951,7 +953,9 @@ const renderInvestmentState = (state) => {
     maxBuy.textContent = '최대 매수';
     maxBuy.disabled = !asset || !asset.listed;
     maxBuy.addEventListener('click', () => {
-      quantity.value = String(Math.floor(state.cash / asset.current_price));
+      const cash = BigInt(String(state.cash));
+      const price = BigInt(String(asset.current_price));
+      quantity.value = String(price > 0n ? cash / price : 0n);
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
@@ -1292,8 +1296,8 @@ investmentRefresh.addEventListener('click', async () => {
 });
 
 const tradeInvestment = async (symbol, side, quantityInput) => {
-  const quantity = Number(quantityInput.value);
-  if (!Number.isInteger(quantity) || quantity < 1) {
+  const quantityText = quantityInput.value.trim();
+  if (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n) {
     window.alert('수량은 1주 이상 정수로 입력하세요.');
     return;
   }
@@ -1303,9 +1307,9 @@ const tradeInvestment = async (symbol, side, quantityInput) => {
       p_client_id: getInvestmentClientId(),
       p_symbol: symbol,
       p_side: side,
-      p_quantity: quantity
+      p_quantity: quantityText
     });
-    investorStatus.textContent = side === 'buy' ? `${quantity}주 매수했습니다.` : `${quantity}주 매도했습니다.`;
+    investorStatus.textContent = side === 'buy' ? `${quantityText}주 매수했습니다.` : `${quantityText}주 매도했습니다.`;
     renderInvestmentState(state);
   } catch (error) {
     window.alert(error.message);

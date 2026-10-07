@@ -718,11 +718,13 @@ begin
 end;
 $$;
 
+drop function if exists public.investment_trade(uuid, text, text, integer);
+
 create or replace function public.investment_trade(
   p_client_id uuid,
   p_symbol text,
   p_side text,
-  p_quantity integer
+  p_quantity bigint
 )
 returns jsonb
 language plpgsql
@@ -732,7 +734,7 @@ as $$
 declare
   user_row public.investment_users%rowtype;
   asset_row public.investment_assets%rowtype;
-  current_quantity integer;
+  current_quantity bigint;
   current_invested bigint;
   total_price bigint;
 begin
@@ -774,11 +776,11 @@ end;
 $$;
 
 revoke all on function public.investment_get_state(uuid, text) from public;
-revoke all on function public.investment_trade(uuid, text, text, integer) from public;
+revoke all on function public.investment_trade(uuid, text, text, bigint) from public;
 revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
 revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
-grant execute on function public.investment_trade(uuid, text, text, integer) to anon;
+grant execute on function public.investment_trade(uuid, text, text, bigint) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_transfer_cash(uuid, uuid, bigint) to anon, authenticated;
