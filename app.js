@@ -23,7 +23,7 @@ const accountSubmit = document.querySelector('#account-submit');
 const accountSwitch = document.querySelector('#account-switch');
 const accountStatus = document.querySelector('#account-status');
 
-const accountEmail = (username) => `${username.trim().toLowerCase()}@account.sangki.local`;
+const accountEmail = (username) => `${username.trim().toLowerCase()}@users.sangki.com`;
 const accountHeaders = () => ({
   ...apiHeaders,
   ...(accountSession?.access_token ? { Authorization: `Bearer ${accountSession.access_token}` } : {})
@@ -39,6 +39,10 @@ const closeAccountModal = () => {
   accountBackdrop.hidden = true;
 };
 const authenticateAccount = async (username, password) => {
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)) {
+    throw new Error('아이디는 영문 소문자, 숫자, 밑줄(_)만 사용해 3~24자로 입력하세요.');
+  }
   const endpoint = accountMode === 'signup'
     ? `${SUPABASE_URL}/auth/v1/signup`
     : `${SUPABASE_URL}/auth/v1/token?grant_type=password`;
@@ -46,8 +50,8 @@ const authenticateAccount = async (username, password) => {
     method: 'POST',
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(accountMode === 'signup'
-      ? { email: accountEmail(username), password, data: { username: username.trim() } }
-      : { email: accountEmail(username), password })
+      ? { email: accountEmail(normalizedUsername), password, data: { username: normalizedUsername } }
+      : { email: accountEmail(normalizedUsername), password })
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.msg || result.error_description || result.message || '계정 요청에 실패했습니다.');
