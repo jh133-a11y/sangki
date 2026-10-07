@@ -1608,8 +1608,16 @@ const renderPlayerLevelRanking = () => {
       const nickname = document.createElement('span');
       nickname.textContent = entry.nickname;
       const level = document.createElement('span');
-      level.className = 'ranking-value';
-      level.textContent = `LV ${entry.player_level}`;
+      const playerLevel = Math.max(0, Number(entry.player_level) || 0);
+      level.className = `ranking-value investment-level ${
+        playerLevel <= 10 ? 'investment-level-gray'
+          : playerLevel <= 50 ? 'investment-level-lime'
+            : playerLevel <= 100 ? 'investment-level-blue'
+              : playerLevel <= 500 ? 'investment-level-red'
+                : playerLevel <= 1000 ? 'investment-level-orange'
+                  : 'investment-level-purple'
+      }`;
+      level.textContent = `LV ${playerLevel}`;
       item.append(nickname, level);
       return item;
     })
@@ -1623,6 +1631,7 @@ const renderPlayerLevelRanking = () => {
   }
   const previous = document.createElement('button');
   previous.type = 'button';
+  previous.className = 'investment-page-button';
   previous.textContent = '← 이전';
   previous.disabled = playerLevelRankingPage === 1;
   previous.addEventListener('click', () => {
@@ -1630,10 +1639,11 @@ const renderPlayerLevelRanking = () => {
     renderPlayerLevelRanking();
   });
   const pageNumber = document.createElement('span');
-  pageNumber.className = 'hero-player-level-ranking-page';
+  pageNumber.className = 'investment-page-number';
   pageNumber.textContent = `${playerLevelRankingPage} / ${totalPages}`;
   const next = document.createElement('button');
   next.type = 'button';
+  next.className = 'investment-page-button';
   next.textContent = '다음 →';
   next.disabled = playerLevelRankingPage === totalPages;
   next.addEventListener('click', () => {

@@ -353,58 +353,6 @@ section { padding: 120px 0; }
   align-self: center;
   width: min(360px, 100%);
   margin-left: auto;
-  padding: 21px;
-  background: var(--acid);
-  color: var(--ink);
-}
-.hero-player-level-ranking ol {
-  min-height: 285px;
-  margin: 22px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: ranking;
-}
-.hero-player-level-ranking li {
-  counter-increment: ranking;
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 10px;
-  padding: 13px 0;
-  border-top: 1px solid rgba(23, 23, 23, .25);
-  font-size: 13px;
-}
-.hero-player-level-ranking li:before {
-  content: counter(ranking, decimal-leading-zero);
-  font: 10px var(--mono);
-}
-.hero-player-level-ranking .ranking-empty { display: block; }
-.hero-player-level-ranking-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 15px;
-}
-.hero-player-level-ranking-pagination button {
-  border: 1px solid var(--ink);
-  padding: 6px 8px;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  font: 9px var(--mono);
-}
-.hero-player-level-ranking-pagination button:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--acid);
-}
-.hero-player-level-ranking-pagination button:disabled {
-  cursor: not-allowed;
-  opacity: .35;
-}
-.hero-player-level-ranking-page {
-  min-width: 32px;
-  text-align: center;
-  font: 10px var(--mono);
 }
 .work { position: relative; min-height: 390px; padding: 21px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
 .work:nth-child(1) { grid-column: span 7; background: var(--orange); }
