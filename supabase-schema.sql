@@ -3757,6 +3757,322 @@ grant execute on function public.shop_use_megaphone(uuid, text) to anon, authent
 
 notify pgrst, 'reload schema';
 
+-- 기록(?) 게시판
+create table if not exists public.record_posts (
+  id uuid primary key default gen_random_uuid(),
+  nickname text not null check (char_length(trim(nickname)) between 1 and 24),
+  password_hash text not null check (password_hash ~ '^[0-9a-f]{64}$'),
+  title text not null check (char_length(trim(title)) between 1 and 100),
+  body text not null check (char_length(trim(body)) between 1 and 5000),
+  upvotes bigint not null default 0 check (upvotes >= 0),
+  downvotes bigint not null default 0 check (downvotes >= 0),
+  created_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+
+create table if not exists public.record_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.record_posts(id) on delete cascade,
+  parent_id uuid references public.record_comments(id) on delete cascade,
+  nickname text not null check (char_length(trim(nickname)) between 1 and 24),
+  password_hash text not null check (password_hash ~ '^[0-9a-f]{64}$'),
+  body text not null check (char_length(trim(body)) between 1 and 1000),
+  created_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+
+create table if not exists public.record_votes (
+  post_id uuid not null references public.record_posts(id) on delete cascade,
+  voter_key text not null check (char_length(voter_key) between 16 and 128),
+  vote smallint not null check (vote in (-1, 1)),
+  created_at timestamptz not null default now(),
+  primary key (post_id, voter_key)
+);
+
+create table if not exists public.record_notices (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 100),
+  body text not null check (char_length(trim(body)) between 1 and 5000),
+  created_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+
+alter table public.record_posts enable row level security;
+alter table public.record_comments enable row level security;
+alter table public.record_votes enable row level security;
+alter table public.record_notices enable row level security;
+revoke all on table public.record_posts, public.record_comments,
+  public.record_votes, public.record_notices from anon, authenticated;
+
+create or replace function public.record_get_board()
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'posts', coalesce((
+      select jsonb_agg(to_jsonb(p) order by p.created_at desc)
+      from (
+        select rp.id, rp.nickname, rp.title, rp.body, rp.upvotes, rp.downvotes,
+               rp.created_at, rp.edited_at,
+               (select count(*) from public.record_comments rc where rc.post_id = rp.id) as comment_count
+        from public.record_posts rp
+      ) p
+    ), '[]'::jsonb),
+    'notices', coalesce((
+      select jsonb_agg(to_jsonb(rn) order by rn.created_at desc)
+      from public.record_notices rn
+    ), '[]'::jsonb)
+  );
+$$;
+
+create or replace function public.record_get_comments(p_post_id uuid)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(to_jsonb(c) order by c.created_at asc), '[]'::jsonb)
+  from (
+    select id, post_id, parent_id, nickname, body, created_at, edited_at
+    from public.record_comments
+    where post_id = p_post_id
+  ) c;
+$$;
+
+create or replace function public.record_create_post(
+  p_nickname text,
+  p_password_hash text,
+  p_title text,
+  p_body text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_id uuid;
+begin
+  if p_password_hash !~ '^[0-9a-f]{64}$' then raise exception '비밀번호 형식이 올바르지 않습니다.'; end if;
+  insert into public.record_posts(nickname, password_hash, title, body)
+  values (trim(p_nickname), p_password_hash, trim(p_title), trim(p_body))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+create or replace function public.record_update_post(
+  p_id uuid,
+  p_password_hash text,
+  p_title text,
+  p_body text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.record_posts
+  set title = trim(p_title), body = trim(p_body), edited_at = now()
+  where id = p_id and password_hash = p_password_hash;
+  if not found then raise exception '게시물 비밀번호가 올바르지 않습니다.'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.record_delete_post(
+  p_id uuid,
+  p_password_hash text,
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.record_posts
+  where id = p_id
+    and (password_hash = p_password_hash or p_admin_password = '8170');
+  if not found then raise exception '게시물 비밀번호 또는 관리자 비밀번호가 올바르지 않습니다.'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.record_vote_post(
+  p_post_id uuid,
+  p_voter_key text,
+  p_vote smallint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_upvotes bigint; v_downvotes bigint;
+begin
+  if p_vote not in (-1, 1) then raise exception '올바르지 않은 추천 값입니다.'; end if;
+  insert into public.record_votes(post_id, voter_key, vote)
+  values (p_post_id, p_voter_key, p_vote)
+  on conflict (post_id, voter_key) do update set vote = excluded.vote;
+  select count(*) filter (where vote = 1), count(*) filter (where vote = -1)
+  into v_upvotes, v_downvotes
+  from public.record_votes where post_id = p_post_id;
+  update public.record_posts set upvotes = v_upvotes, downvotes = v_downvotes where id = p_post_id;
+  return jsonb_build_object('upvotes', v_upvotes, 'downvotes', v_downvotes);
+end;
+$$;
+
+create or replace function public.record_create_comment(
+  p_post_id uuid,
+  p_parent_id uuid,
+  p_nickname text,
+  p_password_hash text,
+  p_body text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_id uuid;
+begin
+  if not exists (select 1 from public.record_posts where id = p_post_id) then raise exception '게시물을 찾을 수 없습니다.'; end if;
+  if p_parent_id is not null and not exists (
+    select 1 from public.record_comments where id = p_parent_id and post_id = p_post_id
+  ) then raise exception '답글 대상을 찾을 수 없습니다.'; end if;
+  insert into public.record_comments(post_id, parent_id, nickname, password_hash, body)
+  values (p_post_id, p_parent_id, trim(p_nickname), p_password_hash, trim(p_body))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+create or replace function public.record_update_comment(
+  p_id uuid,
+  p_password_hash text,
+  p_body text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.record_comments
+  set body = trim(p_body), edited_at = now()
+  where id = p_id and password_hash = p_password_hash;
+  if not found then raise exception '댓글 비밀번호가 올바르지 않습니다.'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.record_delete_comment(
+  p_id uuid,
+  p_password_hash text,
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.record_comments
+  where id = p_id
+    and (password_hash = p_password_hash or p_admin_password = '8170');
+  if not found then raise exception '댓글 비밀번호 또는 관리자 비밀번호가 올바르지 않습니다.'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.record_create_notice(
+  p_admin_password text,
+  p_title text,
+  p_body text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_id uuid;
+begin
+  if p_admin_password <> '8170' then raise exception '관리자 비밀번호가 올바르지 않습니다.'; end if;
+  insert into public.record_notices(title, body)
+  values (trim(p_title), trim(p_body))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+create or replace function public.record_update_notice(
+  p_id uuid,
+  p_admin_password text,
+  p_title text,
+  p_body text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then raise exception '관리자 비밀번호가 올바르지 않습니다.'; end if;
+  update public.record_notices
+  set title = trim(p_title), body = trim(p_body), edited_at = now()
+  where id = p_id;
+  if not found then raise exception '공지를 찾을 수 없습니다.'; end if;
+  return true;
+end;
+$$;
+
+create or replace function public.record_delete_notice(
+  p_id uuid,
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then raise exception '관리자 비밀번호가 올바르지 않습니다.'; end if;
+  delete from public.record_notices where id = p_id;
+  if not found then raise exception '공지를 찾을 수 없습니다.'; end if;
+  return true;
+end;
+$$;
+
+revoke all on function public.record_get_board() from public;
+revoke all on function public.record_get_comments(uuid) from public;
+revoke all on function public.record_create_post(text, text, text, text) from public;
+revoke all on function public.record_update_post(uuid, text, text, text) from public;
+revoke all on function public.record_delete_post(uuid, text, text) from public;
+revoke all on function public.record_vote_post(uuid, text, smallint) from public;
+revoke all on function public.record_create_comment(uuid, uuid, text, text, text) from public;
+revoke all on function public.record_update_comment(uuid, text, text) from public;
+revoke all on function public.record_delete_comment(uuid, text, text) from public;
+revoke all on function public.record_create_notice(text, text, text) from public;
+revoke all on function public.record_update_notice(uuid, text, text, text) from public;
+revoke all on function public.record_delete_notice(uuid, text) from public;
+grant execute on function public.record_get_board() to anon, authenticated;
+grant execute on function public.record_get_comments(uuid) to anon, authenticated;
+grant execute on function public.record_create_post(text, text, text, text) to anon, authenticated;
+grant execute on function public.record_update_post(uuid, text, text, text) to anon, authenticated;
+grant execute on function public.record_delete_post(uuid, text, text) to anon, authenticated;
+grant execute on function public.record_vote_post(uuid, text, smallint) to anon, authenticated;
+grant execute on function public.record_create_comment(uuid, uuid, text, text, text) to anon, authenticated;
+grant execute on function public.record_update_comment(uuid, text, text) to anon, authenticated;
+grant execute on function public.record_delete_comment(uuid, text, text) to anon, authenticated;
+grant execute on function public.record_create_notice(text, text, text) to anon, authenticated;
+grant execute on function public.record_update_notice(uuid, text, text, text) to anon, authenticated;
+grant execute on function public.record_delete_notice(uuid, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';
+
 -- 한국 시간(Asia/Seoul) 매일 00:00에 일일 상점 보상을 지급합니다.
 create extension if not exists pg_cron with schema extensions;
 

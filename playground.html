@@ -1,5 +1,92 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Playground — byungsin</title><link rel="stylesheet" href="style.css?v=27"></head>
-<body class="placeholder-page"><main><p class="eyebrow">new room / 02</p><h1>기록(?)</h1><p>새로운 기록을 준비 중입니다.</p><a href="index.html">← back to byungsin</a></main></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>기록(?) — byungsin</title>
+  <link rel="stylesheet" href="style.css?v=28">
+</head>
+<body class="records-page">
+  <main class="records-shell">
+    <header class="records-header">
+      <div>
+        <p class="eyebrow">new room / 02</p>
+        <h1>기록(?)</h1>
+        <p>누구나 남기고, 함께 읽는 이상한 기록 보관소.</p>
+      </div>
+      <a class="records-back" href="index.html">← byungsin</a>
+    </header>
+
+    <section class="records-toolbar">
+      <div>
+        <strong>RECORDS</strong>
+        <span id="records-count">게시물을 불러오는 중...</span>
+      </div>
+      <div class="records-toolbar-actions">
+        <button class="records-button records-button-dark" id="records-write-button" type="button">글쓰기</button>
+        <button class="records-button" id="records-admin-button" type="button">관리자 모드</button>
+      </div>
+    </section>
+
+    <section class="records-notices" id="records-notices" aria-label="공지사항"></section>
+    <section class="records-list" id="records-list" aria-live="polite"><p class="records-empty">기록을 불러오는 중...</p></section>
+    <p class="records-status" id="records-status" role="status"></p>
+  </main>
+
+  <div class="records-backdrop" id="records-backdrop" hidden></div>
+  <section class="records-modal" id="records-post-modal" role="dialog" aria-modal="true" aria-labelledby="records-post-title" hidden>
+    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
+    <h2 id="records-post-title">글쓰기</h2>
+    <form id="records-post-form">
+      <input type="hidden" id="records-post-id">
+      <label>닉네임<input id="records-post-nickname" maxlength="24" required></label>
+      <label>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
+      <label>제목<input id="records-post-subject" maxlength="100" required></label>
+      <label>내용<textarea id="records-post-body" maxlength="5000" rows="9" required></textarea></label>
+      <button class="records-submit" type="submit">저장하기</button>
+      <p class="records-form-status" id="records-post-form-status"></p>
+    </form>
+  </section>
+
+  <section class="records-modal" id="records-comment-modal" role="dialog" aria-modal="true" aria-labelledby="records-comment-title" hidden>
+    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
+    <h2 id="records-comment-title">댓글 쓰기</h2>
+    <form id="records-comment-form">
+      <input type="hidden" id="records-comment-post-id">
+      <input type="hidden" id="records-comment-parent-id">
+      <label>닉네임<input id="records-comment-nickname" maxlength="24" required></label>
+      <label>비밀번호<input id="records-comment-password" type="password" minlength="4" maxlength="72" required></label>
+      <label>내용<textarea id="records-comment-body" maxlength="1000" rows="5" required></textarea></label>
+      <button class="records-submit" type="submit">댓글 등록</button>
+      <p class="records-form-status" id="records-comment-form-status"></p>
+    </form>
+  </section>
+
+  <section class="records-modal" id="records-admin-modal" role="dialog" aria-modal="true" aria-labelledby="records-admin-title" hidden>
+    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
+    <h2 id="records-admin-title">관리자 모드</h2>
+    <form id="records-admin-form">
+      <label>관리자 비밀번호<input id="records-admin-password" type="password" required></label>
+      <div class="records-admin-actions">
+        <button class="records-submit" type="submit">공지 작성</button>
+        <button class="records-button" id="records-admin-exit" type="button">닫기</button>
+      </div>
+      <p class="records-form-status" id="records-admin-form-status"></p>
+    </form>
+  </section>
+
+  <section class="records-modal" id="records-notice-modal" role="dialog" aria-modal="true" aria-labelledby="records-notice-title" hidden>
+    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
+    <h2 id="records-notice-title">공지 작성</h2>
+    <form id="records-notice-form">
+      <input type="hidden" id="records-notice-id">
+      <label>제목<input id="records-notice-subject" maxlength="100" required></label>
+      <label>내용<textarea id="records-notice-body" maxlength="5000" rows="8" required></textarea></label>
+      <button class="records-submit" type="submit">공지 저장</button>
+      <p class="records-form-status" id="records-notice-form-status"></p>
+    </form>
+  </section>
+
+  <script src="records.js?v=1"></script>
+</body>
 </html>

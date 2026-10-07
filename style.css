@@ -157,6 +157,63 @@ nav a:hover { opacity: .5; }
 .shop-modal-quantity-label input { border: 1px solid var(--ink); padding: 11px; background: #fff; color: var(--ink); font: 15px var(--mono); }
 .shop-modal-max { width: 100%; margin-bottom: 18px; border: 1px solid var(--ink); padding: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
 .shop-status { min-height: 18px; margin-top: 28px; color: var(--orange); font: 11px var(--mono); }
+
+.records-page { min-height: 100vh; padding: 42px 24px 80px; background: var(--paper); }
+.records-shell { width: min(980px, 100%); margin: 0 auto; }
+.records-header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+.records-header h1 { margin: 28px 0 12px; font-size: clamp(58px, 12vw, 130px); line-height: .8; letter-spacing: -.12em; }
+.records-header p:not(.eyebrow) { margin: 0; font: 11px/1.6 var(--mono); }
+.records-back { font: 11px var(--mono); text-decoration: underline; white-space: nowrap; }
+.records-toolbar { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin: 34px 0 18px; }
+.records-toolbar strong { display: block; font: 700 16px var(--mono); }
+.records-toolbar span { display: block; margin-top: 5px; color: #777; font: 10px var(--mono); }
+.records-toolbar-actions, .records-admin-actions { display: flex; gap: 8px; }
+.records-button { border: 1px solid var(--ink); padding: 10px 13px; background: transparent; cursor: pointer; font: 10px var(--mono); }
+.records-button:hover, .records-actions button:hover, .record-comment-actions button:hover { background: var(--ink); color: var(--acid); }
+.records-button-dark { background: var(--ink); color: var(--paper); }
+.records-notices, .records-list { display: grid; gap: 14px; }
+.record-notice { display: flex; justify-content: space-between; gap: 18px; padding: 18px; border: 2px solid var(--orange); background: #fff; box-shadow: 5px 5px 0 var(--orange); }
+.record-notice strong { color: var(--orange); font: 10px var(--mono); }
+.record-notice h2 { margin: 7px 0; font-size: 22px; }
+.record-notice p, .record-body { margin: 0; white-space: pre-wrap; font: 11px/1.65 var(--mono); }
+.record-notice time, .record-card-head time, .record-comment time { color: #777; font: 9px var(--mono); }
+.record-notice time { display: block; margin-top: 12px; }
+.record-card { padding: 20px; border: 1px solid var(--ink); background: #fff; box-shadow: 6px 6px 0 var(--ink); }
+.record-card-head { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+.record-number { color: var(--orange); font: 10px var(--mono); }
+.record-card h2 { margin: 7px 0 0; font-size: 28px; letter-spacing: -.06em; }
+.record-author { margin: 13px 0; color: #666; font: 10px var(--mono); }
+.record-author em { color: var(--orange); font-style: normal; }
+.record-body { min-height: 30px; }
+.record-card-footer { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--line); color: #666; font: 9px var(--mono); }
+.record-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.record-actions button, .record-comment-actions button { border: 1px solid var(--ink); padding: 5px 7px; background: transparent; cursor: pointer; font: 9px var(--mono); }
+.record-comments { display: grid; gap: 8px; margin-top: 14px; }
+.record-comment { margin-left: 0; padding: 10px 12px; border-left: 3px solid var(--ink); background: #f5f5f2; }
+.record-comment.is-reply { margin-left: 24px; border-left-color: var(--orange); }
+.record-comment > div:first-child { display: flex; gap: 9px; align-items: baseline; }
+.record-comment strong { font: 10px var(--mono); }
+.record-comment p { margin: 7px 0; white-space: pre-wrap; font: 10px/1.5 var(--mono); }
+.record-comment-actions { justify-content: flex-end; }
+.record-no-comments, .records-empty { padding: 26px; color: #777; text-align: center; font: 10px var(--mono); }
+.records-status, .records-form-status { min-height: 18px; color: var(--orange); font: 10px/1.5 var(--mono); }
+.records-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(23,23,23,.4); }
+.records-modal { position: fixed; top: 50%; left: 50%; z-index: 91; width: min(520px, calc(100% - 30px)); max-height: 88vh; overflow: auto; transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 8px 8px 0 var(--ink); }
+.records-modal[hidden], .records-backdrop[hidden] { display: none !important; }
+.records-modal h2 { margin: 0 0 18px; font-size: 32px; }
+.records-modal-close { position: absolute; top: 12px; right: 15px; border: 0; background: transparent; cursor: pointer; font: 27px/1 var(--mono); }
+.records-modal form { display: grid; gap: 12px; }
+.records-modal label { display: grid; gap: 6px; font: 10px var(--mono); }
+.records-modal input, .records-modal textarea { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px/1.5 var(--mono); }
+.records-submit { border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
+.records-submit:hover { background: var(--orange); color: var(--ink); }
+@media (max-width: 650px) {
+  .records-page { padding: 28px 15px 60px; }
+  .records-header, .records-toolbar, .record-card-head, .record-card-footer { align-items: flex-start; flex-direction: column; }
+  .records-toolbar-actions { width: 100%; }
+  .records-toolbar-actions button { flex: 1; }
+  .record-card h2 { font-size: 23px; }
+}
 .account-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
 .account-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(380px, calc(100% - 30px)); transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 7px 7px 0 var(--ink); }
 .account-close { position: absolute; top: 12px; right: 15px; border: 0; background: transparent; cursor: pointer; font: 25px/1 var(--mono); }
