@@ -1034,7 +1034,43 @@ execute function public.track_investment_listing_status();
 drop trigger if exists investment_stock_split_trigger
 on public.investment_assets;
 
-drop function if exists public.investment_stock_split_trigger();
+create or replace function public.investment_stock_split_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if pg_trigger_depth() = 1
+     and new.listed = true
+     and new.symbol in (
+       'SURGE_STOCK',
+       'CURRENT_SURGE_STOCK',
+       'DONGHWA_SURGE_STOCK',
+       'JEONGMIN_SURGE_STOCK',
+       'JUSEONG_SURGE_STOCK'
+     )
+     and new.current_price >= 2000000 then
+    update public.investment_holdings
+    set quantity = quantity * 1000
+    where symbol = new.symbol;
+
+    update public.investment_assets
+    set
+      current_price = greatest(1, floor(current_price::numeric / 1000)::bigint),
+      split_notice = true
+    where symbol = new.symbol
+      and current_price >= 2000000;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger investment_stock_split_trigger
+after update of current_price on public.investment_assets
+for each row
+execute function public.investment_stock_split_trigger();
 
 create or replace function public.investment_relist_delisted_assets()
 returns void
