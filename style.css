@@ -292,6 +292,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 @media (max-width: 720px) {
   .wrap { width: min(100% - 30px, 1240px); }
   header { padding: 18px 0; }
+  .brand, #site-nav { display: none; }
   .menu-toggle { top: 18px; left: 15px; width: 24px; height: 21px; }
   nav { gap: 12px; font-size: 9px; }
   nav a[href="#guestbook"] { margin-left: -5px; }
