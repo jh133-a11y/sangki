@@ -1529,12 +1529,11 @@ set search_path = public
 as $$
 declare
   v_account_id uuid;
-  v_username text;
+  v_nickname text;
 begin
-  select s.account_id, a.username
-  into v_account_id, v_username
+  select s.account_id
+  into v_account_id
   from public.site_account_sessions s
-  join public.site_accounts a on a.id = s.account_id
   where s.token = p_session_token
     and s.expires_at > now();
 
@@ -1542,8 +1541,19 @@ begin
     return false;
   end if;
 
+  select nickname
+  into v_nickname
+  from public.investment_users
+  where client_id = v_account_id;
+
+  if v_nickname is null then
+    delete from public.site_account_presence
+    where account_id = v_account_id;
+    return false;
+  end if;
+
   insert into public.site_account_presence(account_id, username, last_seen_at)
-  values (v_account_id, v_username, now())
+  values (v_account_id, v_nickname, now())
   on conflict (account_id) do update
   set username = excluded.username,
       last_seen_at = now();
@@ -1560,13 +1570,15 @@ set search_path = public
 as $$
   select coalesce(
     jsonb_agg(
-      jsonb_build_object('username', username)
-      order by username
+      jsonb_build_object('nickname', iu.nickname)
+      order by iu.nickname
     ),
     '[]'::jsonb
   )
-  from public.site_account_presence
-  where last_seen_at > now() - interval '2 minutes';
+  from public.site_account_presence p
+  join public.investment_users iu
+    on iu.client_id = p.account_id
+  where p.last_seen_at > now() - interval '2 minutes';
 $$;
 
 revoke all on function public.site_account_presence_heartbeat(uuid)
