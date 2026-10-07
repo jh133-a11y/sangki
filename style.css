@@ -558,15 +558,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 }
 .sanggi-shop-potion-icon { width: 48px; height: 64px; }
 .sanggi-shop-item-icon {
-  display: grid;
-  place-items: center;
   width: 58px;
-  min-height: 58px;
+  height: 78px;
+  object-fit: cover;
+  object-position: center top;
   border: 1px solid #2a2730;
-  background: #ffb02e;
-  color: #2a2730;
-  text-align: center;
-  font: 10px/1.2 var(--mono);
+  background: #f2f2f2;
 }
 .sanggi-shop-card h3 { margin: 0 0 4px; font-size: 18px; }
 .sanggi-shop-card p { margin: 0 0 6px; font: 10px/1.4 var(--mono); }
