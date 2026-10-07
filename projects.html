@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=70">
+  <link rel="stylesheet" href="style.css?v=71">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -39,7 +39,7 @@
     <div class="sanggi-lamp sanggi-lamp-right"></div>
     <img class="sanggi-character" src="sanggi-character.png" alt="Sanggi character">
     <nav class="sanggi-action-bar" aria-label="상기 키우기 메뉴">
-      <button type="button" class="sanggi-action-button">
+      <button type="button" class="sanggi-action-button" id="sanggi-ability-button">
         <span class="sanggi-action-icon">★</span>
         <span>상기 능력</span>
       </button>
@@ -56,7 +56,30 @@
         <span>상점</span>
       </button>
     </nav>
+    <div class="sanggi-ability-backdrop" id="sanggi-ability-backdrop" hidden></div>
+    <section class="sanggi-ability-modal" id="sanggi-ability-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-ability-title" hidden>
+      <button class="sanggi-ability-close" id="sanggi-ability-close" type="button" aria-label="닫기">×</button>
+      <p class="sanggi-ability-eyebrow">UPGRADE MENU</p>
+      <h2 id="sanggi-ability-title">상기 능력 강화</h2>
+      <div class="sanggi-ability-list">
+        <article class="sanggi-ability-card">
+          <div>
+            <div class="sanggi-ability-card-head"><h3>입냄새 <span id="sanggi-breath-level">LV 1</span></h3><strong id="sanggi-breath-effect">클릭당 1원</strong></div>
+            <p>입냄새가 강해질수록 클릭하거나 터치할 때 얻는 코인이 10원씩 늘어납니다.</p>
+          </div>
+          <button class="sanggi-upgrade-button" id="sanggi-breath-upgrade" type="button">강화</button>
+        </article>
+        <article class="sanggi-ability-card">
+          <div>
+            <div class="sanggi-ability-card-head"><h3>폐급 레벨 <span id="sanggi-auto-level">LV 1</span></h3><strong id="sanggi-auto-effect">10.0초마다 1원</strong></div>
+            <p>폐급 레벨이 높아질수록 자동으로 코인을 얻는 시간이 0.1초씩 줄어듭니다. 최소 주기는 0.1초입니다.</p>
+          </div>
+          <button class="sanggi-upgrade-button" id="sanggi-auto-upgrade" type="button">강화</button>
+        </article>
+      </div>
+      <p class="sanggi-ability-status" id="sanggi-ability-status" role="status"></p>
+    </section>
   </main>
-  <script src="sanggi.js?v=7"></script>
+  <script src="sanggi.js?v=8"></script>
 </body>
 </html>
