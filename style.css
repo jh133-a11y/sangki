@@ -1118,10 +1118,18 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .comments-refresh:hover { background: var(--ink); color: var(--paper); }
 .comment-form { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; border-top: 1px solid var(--ink); padding-top: 18px; }
 .comment-form label { display: flex; flex-direction: column; gap: 9px; font: 11px var(--mono); text-transform: uppercase; }
-.comment-investor-toggle { display: flex !important; flex-direction: row !important; grid-column: 1 / -1; align-items: center; gap: 7px; cursor: pointer; }
-.comment-investor-toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--ink); }
-.comment-investor-hint { grid-column: 1 / -1; margin: -7px 0 0; color: #777; font: 10px/1.5 var(--mono); }
-.comment-investor-hint.is-error { color: var(--orange); }
+.comment-investor-toggle { display: flex !important; flex-direction: row !important; grid-column: 1 / -1; align-items: center; gap: 14px; margin: 2px 0 0; padding: 16px 18px; border: 2px solid var(--ink); background: var(--acid); color: var(--ink); cursor: pointer; box-shadow: 5px 5px 0 var(--ink); }
+.comment-investor-toggle:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--ink); }
+.comment-investor-toggle:has(input:checked) { background: var(--orange); }
+.comment-investor-check { position: relative; display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border: 2px solid var(--ink); background: var(--paper); }
+.comment-investor-check input { position: absolute; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.comment-investor-check span { width: 14px; height: 14px; border: 3px solid var(--ink); transform: rotate(45deg) scale(0); transition: transform .16s ease; }
+.comment-investor-check input:checked + span { transform: rotate(45deg) scale(1); }
+.comment-investor-copy { display: flex; flex-direction: column; gap: 5px; }
+.comment-investor-copy strong { font: 700 16px/1.1 var(--sans); letter-spacing: -.04em; }
+.comment-investor-copy small { font: 10px/1.4 var(--mono); }
+.comment-investor-hint { grid-column: 1 / -1; margin: -5px 0 0; padding: 9px 12px; border-left: 4px solid var(--orange); background: rgba(255, 91, 54, .08); color: #555; font: 11px/1.55 var(--mono); }
+.comment-investor-hint.is-error { border-color: var(--orange); background: rgba(255, 91, 54, .16); color: var(--orange); }
 .comment-form label[hidden] { display: none !important; }
 .comment-form input, .comment-form textarea { border: 1px solid var(--ink); border-radius: 0; padding: 14px; background: rgba(241, 238, 231, .35); color: var(--ink); font: 14px var(--sans); outline: none; }
 .comment-form input:focus, .comment-form textarea:focus { box-shadow: 4px 4px 0 var(--orange); }

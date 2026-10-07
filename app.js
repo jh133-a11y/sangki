@@ -2258,13 +2258,16 @@ loadGameRanking();
 
 const updateInvestorCommentFields = () => {
   const enabled = investorCommentToggle.checked;
+  const storedPlayerLevel = Math.max(0, Number(localStorage.getItem('sanggi-player-level')) || 0);
   commentNicknameField.hidden = enabled;
   commentPasswordField.hidden = enabled;
   document.querySelector('#nickname').required = !enabled;
   document.querySelector('#password').required = !enabled;
   if (enabled) {
     if (accountSession?.account_id && investmentState?.nickname) {
-      investorCommentHint.textContent = `${investmentState.nickname} · LV ${Number(investmentState.player_level) || 1}로 작성합니다.`;
+      investorCommentHint.textContent = storedPlayerLevel
+        ? `현재 표시: 레벨 ${storedPlayerLevel} · ${investmentState.nickname} — 댓글에도 작은 색상 레벨 숫자와 닉네임으로 표시됩니다.`
+        : `${investmentState.nickname} — 댓글에 상기 키우기 레벨 숫자와 닉네임으로 표시됩니다.`;
       investorCommentHint.classList.remove('is-error');
     } else {
       investorCommentHint.textContent = '로그인하고 투자 닉네임을 설정해야 사용할 수 있습니다.';

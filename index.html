@@ -301,8 +301,11 @@
           <p>닉네임과 짧은 이야기를 남겨주세요.<br>비밀번호를 사용해 댓글을 수정하거나 삭제할 수 있습니다.<br>부적절한 댓글은 관리자에 의해 삭제될 수도 있습니다.</p>
         </div>
         <form class="comment-form" id="comment-form">
-          <label class="comment-investor-toggle"><input id="investor-comment" name="investor_comment" type="checkbox"> 투자자 닉네임으로 작성</label>
-          <p class="comment-investor-hint" id="investor-comment-hint">체크하면 로그인한 투자자의 고유 닉네임과 레벨로 댓글을 작성합니다.</p>
+          <label class="comment-investor-toggle">
+            <span class="comment-investor-check"><input id="investor-comment" name="investor_comment" type="checkbox"><span aria-hidden="true"></span></span>
+            <span class="comment-investor-copy"><strong>투자자 정보로 댓글 작성</strong><small>상기 키우기 레벨 숫자 + 투자자 닉네임으로 표시됩니다.</small></span>
+          </label>
+          <p class="comment-investor-hint" id="investor-comment-hint">체크하면 로그인한 투자자의 상기 키우기 레벨과 고유 닉네임으로 댓글을 작성합니다.</p>
           <label id="comment-nickname-field">닉네임<input id="nickname" name="nickname" type="text" maxlength="24" placeholder="이름을 입력하세요" required></label>
           <label id="comment-password-field">비밀번호 4자리<input id="password" name="password" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required></label>
           <label class="comment-field">댓글<textarea id="comment" name="comment" maxlength="500" rows="4" placeholder="하고 싶은 말을 남겨주세요" required></textarea></label>
@@ -321,6 +324,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=102"></script>
+  <script src="app.js?v=103"></script>
 </body>
 </html>
