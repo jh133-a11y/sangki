@@ -22,6 +22,42 @@ const hashPassword = async (password) => {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
+const renderPoll = (poll) => poll ? `
+  <div class="records-poll" data-poll-id="${poll.id}">
+    <strong>${escapeHtml(poll.question)}</strong>
+    <div class="records-poll-options">${(poll.options || []).map((option) => `
+      <button data-poll-vote="${option.id}" type="button">
+        <span>${escapeHtml(option.text)}</span><em>${option.votes || 0}</em>
+      </button>`).join('')}</div>
+  </div>` : '';
+
+const openPostDetail = (post) => {
+  if (!post) return;
+  const detail = $('#records-detail-page');
+  detail.innerHTML = `
+    <div class="records-detail-head">
+      <button class="records-compose-back" data-close-detail type="button">목록으로</button>
+      <span>일반 게시물</span>
+    </div>
+    <article class="records-detail-card" data-post-id="${post.id}">
+      <div class="records-detail-meta"><strong>${escapeHtml(post.nickname)}</strong><time>${formatDate(post.created_at)}</time></div>
+      <h1>${escapeHtml(post.title)}</h1>
+      <div class="records-detail-body">${escapeHtml(post.body)}</div>
+      ${renderPoll(post.poll)}
+      <div class="records-row-actions">
+        <button data-vote="1" type="button">추천 ${post.upvotes}</button>
+        <button data-vote="-1" type="button">비추천 ${post.downvotes}</button>
+        <button data-comment="${post.id}" type="button">댓글 ${post.comment_count}</button>
+        <button data-edit="${post.id}" type="button">수정</button>
+        <button data-delete="${post.id}" type="button">삭제</button>
+      </div>
+      <div class="record-comments" id="comments-detail-${post.id}"></div>
+    </article>`;
+  page.classList.add('records-detailing');
+  detail.hidden = false;
+  loadComments(post.id, `comments-detail-${post.id}`);
+};
+
 const rpc = async (name, payload = {}) => {
   const response = await fetch(`${rpcEndpoint}/${name}`, {
     method: 'POST',
@@ -45,7 +81,11 @@ const formatDate = (value) => {
 
 const openModal = (id) => {
   modalIds.forEach((modalId) => { $(`#${modalId}`).hidden = modalId !== id; });
-  const isComposer = id === 'records-post-modal';
+  const isComposer = id === 'records-post-modal' || id === 'records-notice-modal';
+  if (isComposer) {
+    page.classList.remove('records-detailing');
+    $('#records-detail-page').hidden = true;
+  }
   page.classList.toggle('records-writing', isComposer);
   backdrop.hidden = isComposer;
 };
@@ -122,15 +162,7 @@ const renderPosts = () => {
   $('#records-count').textContent = `${posts.length + notices.length}개`;
   $('#records-list').innerHTML = pagePosts.length ? pagePosts.map((post, index) => {
     const postNumber = posts.length - ((currentPage - 1) * pageSize + index);
-    const poll = post.poll;
-    const pollMarkup = poll ? `
-      <div class="records-poll" data-poll-id="${poll.id}">
-        <strong>${escapeHtml(poll.question)}</strong>
-        <div class="records-poll-options">${(poll.options || []).map((option) => `
-          <button data-poll-vote="${option.id}" type="button">
-            <span>${escapeHtml(option.text)}</span><em>${option.votes || 0}</em>
-          </button>`).join('')}</div>
-      </div>` : '';
+    const pollMarkup = renderPoll(post.poll);
     return `
     <article class="records-post-group" data-post-id="${post.id}">
       <div class="records-row">
@@ -160,10 +192,10 @@ const renderPosts = () => {
   renderPagination();
 };
 
-const loadComments = async (postId) => {
+const loadComments = async (postId, containerId = `comments-${postId}`) => {
   try {
     const comments = await rpc('record_get_comments', { p_post_id: postId });
-    const container = $(`#comments-${postId}`);
+    const container = $(`#${containerId}`);
     if (!container) return;
     const render = (parentId, depth = 0) => comments
       .filter((comment) => comment.parent_id === parentId)
@@ -293,6 +325,11 @@ document.addEventListener('click', async (event) => {
     closeModals();
     return;
   }
+  if (button.hasAttribute('data-close-detail')) {
+    page.classList.remove('records-detailing');
+    $('#records-detail-page').hidden = true;
+    return;
+  }
   if (button.id === 'records-add-option') {
     addPollOptionInput();
     return;
@@ -378,6 +415,11 @@ document.addEventListener('click', async (event) => {
 });
 
 backdrop.addEventListener('click', closeModals);
+document.addEventListener('click', (event) => {
+  const postGroup = event.target.closest('.records-post-group');
+  if (!postGroup || event.target.closest('button')) return;
+  openPostDetail(posts.find((post) => post.id === postGroup.dataset.postId));
+});
 loadBoard().catch((error) => {
   $('#records-status').textContent = error.message;
   $('#records-list').innerHTML = '<p class="records-empty">게시판을 불러오지 못했습니다. Supabase SQL 적용 여부를 확인하세요.</p>';
