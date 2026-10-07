@@ -322,6 +322,9 @@
       ));
       companion.style.left = `${left}px`;
       companion.style.top = `${top}px`;
+      companionDragState.moved = companionDragState.moved
+        || Math.abs(left - companionDragState.startLeft) > 5
+        || Math.abs(top - companionDragState.startTop) > 5;
     });
   };
 
@@ -330,19 +333,26 @@
     if (companionDragState.frame) window.cancelAnimationFrame(companionDragState.frame);
     companionDragState.frame = 0;
     if (!cancelled && event) {
-      companion.style.left = `${Math.max(0, Math.min(
+      const finalLeft = Math.max(0, Math.min(
         companionDragState.maxLeft,
         event.clientX - companionDragState.mainLeft - companionDragState.offsetX
-      ))}px`;
-      companion.style.top = `${Math.max(0, Math.min(
+      ));
+      const finalTop = Math.max(0, Math.min(
         companionDragState.maxTop,
         event.clientY - companionDragState.mainTop - companionDragState.offsetY
-      ))}px`;
+      ));
+      companion.style.left = `${finalLeft}px`;
+      companion.style.top = `${finalTop}px`;
+      companionDragState.moved = companionDragState.moved
+        || Math.abs(finalLeft - companionDragState.startLeft) > 5
+        || Math.abs(finalTop - companionDragState.startTop) > 5;
     }
     if (event?.pointerId !== undefined) companion.releasePointerCapture?.(event.pointerId);
+    const wasMoved = companionDragState.moved;
     companionDragState = null;
     companion.classList.remove('is-dragging');
     saveCompanionPosition();
+    if (!wasMoved) collectCoin(clickReward());
   };
 
   const syncAccountState = async () => {
@@ -667,6 +677,8 @@
         mainTop: mainBounds.top,
         maxLeft: Math.max(0, mainBounds.width - companion.offsetWidth),
         maxTop: Math.max(0, mainBounds.height - companion.offsetHeight),
+        startLeft: bounds.left - mainBounds.left,
+        startTop: bounds.top - mainBounds.top,
         moved: false
       };
       press.timer = window.setTimeout(() => {
@@ -691,11 +703,16 @@
       moveCompanion(event);
     });
     companion.addEventListener('pointerup', (event) => {
+      const wasPressed = Boolean(companionPress);
       if (companionPress) {
         clearPress(companionPress);
         companionPress = null;
       }
-      stopCompanionDrag(event);
+      if (companionDragState) {
+        stopCompanionDrag(event);
+      } else if (wasPressed) {
+        collectCoin(clickReward());
+      }
     });
     companion.addEventListener('pointercancel', () => {
       clearPress(companionPress);
@@ -738,9 +755,14 @@
       moveCompanion(event.touches[0]);
     }, { passive: false });
     window.addEventListener('touchend', (event) => {
+      const wasPressed = Boolean(companionPress);
       clearPress(companionPress);
       companionPress = null;
-      if (companionDragState && event.changedTouches[0]) stopCompanionDrag(event.changedTouches[0]);
+      if (companionDragState && event.changedTouches[0]) {
+        stopCompanionDrag(event.changedTouches[0]);
+      } else if (wasPressed) {
+        collectCoin(clickReward());
+      }
     }, { passive: false });
     window.addEventListener('touchcancel', () => {
       clearPress(companionPress);
