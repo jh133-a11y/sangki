@@ -262,9 +262,8 @@ if (accountSession?.account_id) {
   const currentClientId = localStorage.getItem(investmentClientKey);
   if (currentClientId && currentClientId !== accountSession.account_id) {
     localStorage.setItem(legacyInvestmentClientKey, currentClientId);
-  } else if (!currentClientId) {
-    localStorage.setItem(investmentClientKey, accountSession.account_id);
   }
+  localStorage.setItem(investmentClientKey, accountSession.account_id);
 }
 updateAccountButton();
 
@@ -1115,26 +1114,29 @@ try {
   // Private browsing can block localStorage; the form remains usable.
 }
 
-if (accountSession?.session_token && localStorage.getItem(legacyInvestmentClientKey)) {
+if (accountSession?.session_token) {
   retryAccountInvestmentLink()
-    .then((linked) => {
-      if (!linked) return;
-      const nickname = localStorage.getItem('sangki-investor-nickname');
-      if (nickname) {
-        investorNickname.value = nickname;
-        return loadInvestmentState(nickname);
-      }
-      return callInvestmentRpc('investment_build_state', {
-        p_client_id: accountSession.account_id
-      }).then((state) => {
-        if (!state?.nickname) return;
-        localStorage.setItem('sangki-investor-nickname', state.nickname);
-        investorNickname.value = state.nickname;
-        renderInvestmentState(state);
-      });
-    })
     .catch((error) => {
-      investorStatus.textContent = error.message;
+      console.warn('account investment link retry failed:', error.message);
+    })
+    .then(() => callInvestmentRpc('investment_build_state', {
+      p_client_id: accountSession.account_id
+    }))
+    .then((state) => {
+      if (!state?.nickname) return;
+      localStorage.setItem(
+        `sangki-account-nickname-${accountSession.account_id}`,
+        state.nickname
+      );
+      localStorage.setItem('sangki-investor-nickname', state.nickname);
+      investorNickname.value = state.nickname;
+      renderInvestmentState(state);
+    })
+    .catch(() => {
+      const savedNickname = localStorage.getItem('sangki-investor-nickname');
+      if (savedNickname) {
+        investorNickname.value = savedNickname;
+      }
     });
 }
 
