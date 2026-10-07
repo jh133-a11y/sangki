@@ -1900,6 +1900,11 @@ begin
   set quantity = quantity - 1
   where client_id = p_client_id and item_type = p_item_type;
 
+  delete from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = p_item_type
+    and quantity <= 0;
+
   v_success := random() < v_chance;
   if not v_success then
     insert into public.investment_shop_messages(client_id, message)
