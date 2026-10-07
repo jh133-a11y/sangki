@@ -131,6 +131,10 @@ nav a:hover { opacity: .5; }
 .shop-intro { display: flex; justify-content: space-between; gap: 30px; margin: 48px 0 28px; }
 .shop-intro p { max-width: 300px; margin: 0; font: 12px/1.7 var(--mono); }
 .shop-balance { border: 1px solid var(--ink); padding: 12px; font: 11px var(--mono); }
+.shop-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 34px 0 18px; }
+.shop-tab { border: 1px solid var(--ink); padding: 9px 15px; background: #fff; color: var(--ink); cursor: pointer; font: 11px var(--mono); }
+.shop-tab:hover, .shop-tab.is-active { background: var(--ink); color: #fff; }
+.shop-products[hidden] { display: none; }
 .shop-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .shop-card { display: flex; min-height: 300px; flex-direction: column; justify-content: space-between; border: 1px solid var(--ink); padding: 18px; background: #fff; box-shadow: 6px 6px 0 var(--ink); }
 .shop-icon { width: 92px; height: 92px; margin-bottom: 20px; }

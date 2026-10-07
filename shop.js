@@ -23,6 +23,36 @@ let confirmResolve = null;
 let currentCashExact = '0';
 let currentItems = [];
 
+const shopTabs = document.querySelectorAll('.shop-tab');
+const shopPanels = document.querySelectorAll('.shop-products[role="tabpanel"]');
+const shopCategoryByItem = {
+  letter: 'shop-message',
+  megaphone: 'shop-message',
+  low_missile: 'shop-missile',
+  mid_missile: 'shop-missile',
+  high_missile: 'shop-missile',
+  nuclear_missile: 'shop-missile',
+  missile_shield: 'shop-protection',
+  nickname_ticket: 'shop-other'
+};
+document.querySelectorAll('.shop-buy[data-item]').forEach((button) => {
+  const category = shopCategoryByItem[button.dataset.item];
+  const card = button.closest('.shop-card');
+  if (category && card) document.querySelector(`#${category}`)?.append(card);
+});
+shopTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    shopTabs.forEach((item) => {
+      const active = item === tab;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+    shopPanels.forEach((panel) => {
+      panel.hidden = panel.id !== tab.getAttribute('aria-controls');
+    });
+  });
+});
+
 const siteConfirm = (message) => new Promise((resolve) => {
   confirmResolve = resolve;
   confirmMessage.textContent = message;
