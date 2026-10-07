@@ -258,6 +258,7 @@ declare
   min_pct numeric;
   max_pct numeric;
   next_price bigint;
+  next_price_two bigint;
   new_direction_day boolean := false;
 begin
   insert into public.investment_market (id, last_market_date)
@@ -467,6 +468,18 @@ begin
     where symbol = asset.symbol;
 
     if next_price <= 10 then
+      if asset.listed then
+        insert into public.investment_shop_messages(client_id, message)
+        select
+          h.client_id,
+          '보유하고 있던 ' || a.name || ' 종목이 상장폐지되었습니다. 보유 수량 '
+            || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+            || '주는 정리되었습니다.'
+        from public.investment_holdings h
+        join public.investment_assets a on a.symbol = h.symbol
+        where h.symbol = asset.symbol
+          and h.quantity > 0;
+      end if;
       delete from public.investment_holdings where symbol = asset.symbol;
     end if;
 
@@ -479,11 +492,37 @@ begin
         pct_two := -abs(pct_two);
       end if;
 
+      next_price_two := round(
+        (select current_price from public.investment_assets where symbol = 'JEONGMIN_ROCKET')
+        * (1 + pct_two / 100)
+      );
+      if next_price_two <= 10 then
+        insert into public.investment_shop_messages(client_id, message)
+        select
+          h.client_id,
+          '보유하고 있던 ' || a.name || ' 종목이 상장폐지되었습니다. 보유 수량 '
+            || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+            || '주는 정리되었습니다.'
+        from public.investment_holdings h
+        join public.investment_assets a on a.symbol = h.symbol
+        where h.symbol = 'JEONGMIN_ROCKET'
+          and h.quantity > 0
+          and exists (
+            select 1
+            from public.investment_assets
+            where symbol = 'JEONGMIN_ROCKET'
+              and listed = true
+          );
+      end if;
       update public.investment_assets
-      set current_price = case when round(current_price * (1 + pct_two / 100)) <= 10 then 0 else round(current_price * (1 + pct_two / 100)) end,
+      set current_price = case when next_price_two <= 10 then 0 else next_price_two end,
           change_pct = pct_two,
-          listed = round(current_price * (1 + pct_two / 100)) > 10
+          listed = next_price_two > 10
       where symbol = 'JEONGMIN_ROCKET';
+      if next_price_two <= 10 then
+        delete from public.investment_holdings
+        where symbol = 'JEONGMIN_ROCKET';
+      end if;
     end if;
   end loop;
 
