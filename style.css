@@ -388,14 +388,18 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 
 @media (max-width: 720px) {
   .wrap { width: min(100% - 30px, 1240px); }
-  header { padding: 18px 0; }
+  header { min-height: 62px; padding: 18px 0; }
   .brand { display: none; }
-  #site-nav { position: absolute; top: 18px; right: 135px; gap: 0; }
+  .eyebrow { position: relative; min-height: 26px; }
+  #site-nav { position: absolute; top: 0; right: 240px; gap: 0; }
   #site-nav a { display: none; }
   #site-nav .notification-toggle { display: inline-block; }
-  .account-button { position: absolute; top: 18px; right: 15px; }
-  .bag-button { position: absolute; top: 18px; right: 75px; }
-  .message-button { position: absolute; top: 18px; right: 135px; }
+  .account-button,
+  .bag-button,
+  .message-button { position: absolute; top: 0; z-index: 1; }
+  .account-button { right: 0; }
+  .bag-button { right: 72px; }
+  .message-button { right: 144px; }
   .menu-toggle { top: 18px; left: 15px; width: 24px; height: 21px; }
   nav { gap: 12px; font-size: 9px; }
   nav a[href="#guestbook"] { margin-left: -5px; }
@@ -460,4 +464,14 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .comment-body { margin: 12px 0; }
   .comment-meta { display: flex; flex-direction: row; justify-content: space-between; align-items: center; }
   .comments-pagination { padding-bottom: 4px; }
+}
+
+@media (max-width: 390px) {
+  .account-button,
+  .bag-button,
+  .message-button,
+  .notification-toggle { padding-left: 4px; padding-right: 4px; font-size: 8px; }
+  #site-nav { right: 222px; }
+  .message-button { right: 136px; }
+  .bag-button { right: 68px; }
 }
