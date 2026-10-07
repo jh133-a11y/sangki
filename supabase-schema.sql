@@ -2109,7 +2109,11 @@ alter table public.investment_shop_items
     'letter',
     'normal_potion',
     'advanced_potion',
-    'legendary_potion'
+    'legendary_potion',
+    'sanggi_hanbok',
+    'sanggi_spacesuit',
+    'juseong_hanbok',
+    'juseong_spacesuit'
   ));
 
 create table if not exists public.investment_shop_messages (
@@ -2203,6 +2207,11 @@ begin
           when 'nickname_ticket' then '닉네임 변경권'
           when 'normal_potion' then '일반 물약'
           when 'advanced_potion' then '고급 물약'
+          when 'legendary_potion' then '전설 물약'
+          when 'sanggi_hanbok' then '상기 한복'
+          when 'sanggi_spacesuit' then '상기 우주복'
+          when 'juseong_hanbok' then '주성 한복'
+          when 'juseong_spacesuit' then '주성 우주복'
           else '편지'
         end,
         'quantity', quantity
@@ -2269,6 +2278,13 @@ begin
           when 'nuclear_missile' then '핵 미사일'
           when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
+          when 'normal_potion' then '일반 물약'
+          when 'advanced_potion' then '고급 물약'
+          when 'legendary_potion' then '전설 물약'
+          when 'sanggi_hanbok' then '상기 한복'
+          when 'sanggi_spacesuit' then '상기 우주복'
+          when 'juseong_hanbok' then '주성 한복'
+          when 'juseong_spacesuit' then '주성 우주복'
           else '편지'
         end,
         'quantity', quantity
@@ -2322,6 +2338,10 @@ begin
     ('normal_potion', 10000000::bigint, '일반 물약'),
     ('advanced_potion', 100000000::bigint, '고급 물약'),
     ('legendary_potion', 1000000000::bigint, '전설 물약'),
+    ('sanggi_hanbok', 1000000::bigint, '상기 한복'),
+    ('sanggi_spacesuit', 10000000::bigint, '상기 우주복'),
+    ('juseong_hanbok', 2000000::bigint, '주성 한복'),
+    ('juseong_spacesuit', 20000000::bigint, '주성 우주복'),
     ('letter', 10000::bigint, '편지')
   ) items(item_type, price, name)
   where item_type = p_item_type;
@@ -2342,6 +2362,10 @@ begin
 
   if coalesce(v_owned_quantity, 0) + p_quantity > 100 then
     raise exception '아이템은 한 종류당 최대 100개까지 보유할 수 있습니다.';
+  end if;
+  if p_item_type in ('sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok', 'juseong_spacesuit')
+    and coalesce(v_owned_quantity, 0) >= 1 then
+    raise exception '이미 구매한 의상입니다.';
   end if;
 
   select cash into v_cash
@@ -2826,6 +2850,13 @@ begin
     when 'nuclear_missile' then '핵 미사일'
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
+    when 'normal_potion' then '일반 물약'
+    when 'advanced_potion' then '고급 물약'
+    when 'legendary_potion' then '전설 물약'
+    when 'sanggi_hanbok' then '상기 한복'
+    when 'sanggi_spacesuit' then '상기 우주복'
+    when 'juseong_hanbok' then '주성 한복'
+    when 'juseong_spacesuit' then '주성 우주복'
     when 'letter' then '편지'
     else null
   end;
