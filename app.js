@@ -50,6 +50,16 @@ const accountStorageKey = 'sangki-auth-session';
 const accountSessionStorageKey = 'sangki-auth-session-tab';
 const rememberedUsernameKey = 'sangki-remembered-username';
 const keepLoginKey = 'sangki-keep-login';
+const sanggiLocalStateKeys = [
+  'sanggi-coin-balance',
+  'sanggi-ability-levels',
+  'sanggi-character-position',
+  'sanggi-companion-position',
+  'sanggi-companion-state'
+];
+const clearSanggiLocalState = () => {
+  sanggiLocalStateKeys.forEach((key) => localStorage.removeItem(key));
+};
 let accountMode = 'login';
 let accountSession = null;
 const accountButton = document.querySelector('#account-button');
@@ -218,6 +228,7 @@ accountButton.addEventListener('click', async () => {
     accountSession = null;
     localStorage.removeItem(accountStorageKey);
     sessionStorage.removeItem(accountSessionStorageKey);
+    clearSanggiLocalState();
     clearInvestmentView();
     updateAccountButton();
     return;
@@ -275,6 +286,7 @@ const logoutAccount = () => {
   accountSession = null;
   localStorage.removeItem(accountStorageKey);
   sessionStorage.removeItem(accountSessionStorageKey);
+  clearSanggiLocalState();
   clearInvestmentView();
   updateAccountButton();
   closeSettings();
@@ -322,6 +334,7 @@ settingsDeleteAccount.addEventListener('click', async () => {
     sessionStorage.removeItem(accountSessionStorageKey);
     localStorage.removeItem(legacyInvestmentClientKey);
     localStorage.removeItem('sangki-investor-nickname');
+    clearSanggiLocalState();
     accountSession = null;
     localStorage.removeItem(investmentClientKey);
     updateAccountButton();
