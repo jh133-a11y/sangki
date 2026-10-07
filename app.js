@@ -811,6 +811,16 @@ const useShopItem = async (itemType) => {
   }
   if (itemType === 'cash_box' || itemType === 'weird_cash_box') {
     const targetId = bagTarget.value || null;
+    const quantityText = bagDiscardQuantity.value.trim();
+    if (targetId && (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n)) {
+      bagStatus.textContent = '선물할 수량은 1개 이상의 정수로 입력하세요.';
+      return;
+    }
+    const giftQuantity = targetId ? quantityText : '1';
+    if (targetId && BigInt(giftQuantity) > BigInt(String(selectedShopItem.quantity))) {
+      bagStatus.textContent = `보유 수량(${selectedShopItem.quantity})보다 많이 선물할 수 없습니다.`;
+      return;
+    }
     const targetName = targetId
       ? bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저'
       : null;
@@ -827,7 +837,8 @@ const useShopItem = async (itemType) => {
       const result = await callInvestmentRpc('shop_use_cash_box', {
         p_client_id: await resolveShopClientId(),
         p_item_type: itemType,
-        p_target_client_id: targetId
+        p_target_client_id: targetId,
+        p_quantity: giftQuantity
       });
       bagStatus.textContent = result.message;
       window.alert(result.message);

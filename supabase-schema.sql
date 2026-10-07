@@ -2500,10 +2500,13 @@ begin
 end;
 $$;
 
+drop function if exists public.shop_use_cash_box(uuid, text, uuid);
+
 create or replace function public.shop_use_cash_box(
   p_client_id uuid,
   p_item_type text,
-  p_target_client_id uuid default null
+  p_target_client_id uuid default null,
+  p_quantity bigint default 1
 )
 returns jsonb
 language plpgsql
@@ -2519,6 +2522,7 @@ declare
   v_factor numeric;
   v_percent integer;
   v_new_cash bigint;
+  v_transfer_quantity bigint;
 begin
   if p_item_type not in ('cash_box', 'weird_cash_box') then
     raise exception '사용할 수 없는 현금 박스입니다.';
@@ -2527,7 +2531,14 @@ begin
   from public.investment_shop_items
   where client_id = p_client_id and item_type = p_item_type
   for update;
-  if coalesce(v_quantity, 0) < 1 then
+  v_transfer_quantity := case
+    when p_target_client_id is null or p_target_client_id = p_client_id then 1
+    else coalesce(p_quantity, 0)
+  end;
+  if v_transfer_quantity < 1 then
+    raise exception '선물할 수량은 1개 이상이어야 합니다.';
+  end if;
+  if coalesce(v_quantity, 0) < v_transfer_quantity then
     raise exception '가방에 해당 현금 박스가 없습니다.';
   end if;
   if p_target_client_id is not null
@@ -2537,7 +2548,7 @@ begin
       from public.investment_shop_items
       where client_id = p_target_client_id
         and item_type = p_item_type
-        and quantity >= 100
+        and quantity + v_transfer_quantity > 100
     ) then
     raise exception '선물받는 유저의 상자 보유 한도에 도달했습니다.';
   end if;
@@ -2553,16 +2564,16 @@ begin
   end if;
 
   update public.investment_shop_items
-  set quantity = quantity - 1
+  set quantity = quantity - v_transfer_quantity
   where client_id = p_client_id and item_type = p_item_type;
   delete from public.investment_shop_items
   where client_id = p_client_id and item_type = p_item_type and quantity <= 0;
 
   if p_target_client_id is not null and p_target_client_id <> p_client_id then
     insert into public.investment_shop_items(client_id, item_type, quantity)
-    values (p_target_client_id, p_item_type, 1)
+    values (p_target_client_id, p_item_type, v_transfer_quantity)
     on conflict (client_id, item_type)
-    do update set quantity = public.investment_shop_items.quantity + 1;
+    do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
     if v_sender_name is not null then
       insert into public.investment_shop_messages(client_id, message)
       values (p_target_client_id, v_sender_name || '님이 ' || case p_item_type
@@ -2571,7 +2582,7 @@ begin
       end || '를 선물했습니다.');
     end if;
     return jsonb_build_object(
-      'message', v_target_name || '님에게 상자를 선물했습니다.'
+      'message', v_target_name || '님에게 상자 ' || v_transfer_quantity || '개를 선물했습니다.'
     );
   end if;
 
@@ -3195,7 +3206,7 @@ revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text, bigint) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_purchase_coin_box(uuid, text, bigint) from public;
-revoke all on function public.shop_use_cash_box(uuid, text, uuid) from public;
+revoke all on function public.shop_use_cash_box(uuid, text, uuid, bigint) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
 revoke all on function public.shop_discard_item(uuid, text, bigint) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
@@ -3208,7 +3219,7 @@ grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
 grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
-grant execute on function public.shop_use_cash_box(uuid, text, uuid) to anon, authenticated;
+grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
 
 notify pgrst, 'reload schema';
 
@@ -3817,7 +3828,7 @@ grant execute on function public.shop_discard_item(uuid, text, bigint) to anon, 
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
-grant execute on function public.shop_use_cash_box(uuid, text, uuid) to anon, authenticated;
+grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
 
 notify pgrst, 'reload schema';
