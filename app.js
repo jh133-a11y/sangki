@@ -883,8 +883,8 @@ const renderInvestmentState = (state) => {
     maxBuy.textContent = '최대 매수';
     maxBuy.disabled = !asset.listed;
     maxBuy.addEventListener('click', () => {
-      const cash = BigInt(String(state.cash));
-      const price = BigInt(String(asset.current_price));
+      const cash = BigInt(String(state.cash_exact ?? state.cash));
+      const price = BigInt(String(asset.current_price_exact ?? asset.current_price));
       quantity.value = String(price > 0n ? cash / price : 0n);
     });
     const maxSell = document.createElement('button');
@@ -953,8 +953,8 @@ const renderInvestmentState = (state) => {
     maxBuy.textContent = '최대 매수';
     maxBuy.disabled = !asset || !asset.listed;
     maxBuy.addEventListener('click', () => {
-      const cash = BigInt(String(state.cash));
-      const price = BigInt(String(asset.current_price));
+      const cash = BigInt(String(state.cash_exact ?? state.cash));
+      const price = BigInt(String(asset.current_price_exact ?? asset.current_price));
       quantity.value = String(price > 0n ? cash / price : 0n);
     });
     const maxSell = document.createElement('button');

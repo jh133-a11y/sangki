@@ -493,6 +493,7 @@ as $$
   select jsonb_build_object(
     'nickname', u.nickname,
     'cash', u.cash,
+    'cash_exact', u.cash::text,
     'total_asset', u.cash + coalesce((
       select sum(h.quantity * a.current_price)
       from public.investment_holdings h
@@ -500,7 +501,17 @@ as $$
       where h.client_id = u.client_id and a.listed
     ), 0),
     'market_date', (select last_market_date from public.investment_market where id = 1),
-    'assets', coalesce((select jsonb_agg(to_jsonb(a) order by a.symbol) from public.investment_assets a), '[]'::jsonb),
+    'assets', coalesce((
+      select jsonb_agg(
+        jsonb_set(
+          to_jsonb(a),
+          '{current_price_exact}',
+          to_jsonb(a.current_price::text)
+        )
+        order by a.symbol
+      )
+      from public.investment_assets a
+    ), '[]'::jsonb),
     'holdings', coalesce((select jsonb_agg(to_jsonb(h) order by h.symbol) from public.investment_holdings h where h.client_id = u.client_id), '[]'::jsonb),
     'ranking', coalesce((
       select jsonb_agg(jsonb_build_object('client_id', r.client_id, 'nickname', r.nickname, 'total_asset', r.total_asset) order by r.total_asset desc)
