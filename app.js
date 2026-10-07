@@ -86,6 +86,7 @@ const authenticateAccount = async (username, password) => {
 };
 accountButton.addEventListener('click', () => {
   if (accountSession) {
+    if (!window.confirm('정말로 로그아웃하시겠습니까?')) return;
     accountSession = null;
     localStorage.removeItem(accountStorageKey);
     updateAccountButton();
