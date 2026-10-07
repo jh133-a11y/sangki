@@ -964,7 +964,10 @@ const renderInvestmentState = (state) => {
 
 investmentTransferToggle.addEventListener('click', () => {
   investmentTransfer.hidden = !investmentTransfer.hidden;
-  if (!investmentTransfer.hidden) transferTarget.focus();
+  if (!investmentTransfer.hidden) {
+    transferStatus.textContent = '';
+    transferTarget.focus();
+  }
 });
 
 investmentTransfer.addEventListener('submit', async (event) => {
