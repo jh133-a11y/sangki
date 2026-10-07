@@ -37,6 +37,26 @@ const updateAccountButton = () => {
     ? `${accountSession.username} · 로그아웃`
     : '로그인';
 };
+const clearInvestmentView = () => {
+  if (accountSession?.account_id && investorNickname.value.trim()) {
+    localStorage.setItem(
+      `sangki-account-nickname-${accountSession.account_id}`,
+      investorNickname.value.trim()
+    );
+  }
+  investmentState = null;
+  localStorage.removeItem(investmentClientKey);
+  localStorage.removeItem('sangki-investor-nickname');
+  investorForm.reset();
+  investorNickname.disabled = false;
+  investorForm.querySelector('button').disabled = false;
+  portfolioSummary.hidden = true;
+  investmentHoldings.hidden = true;
+  investmentProducts.replaceChildren();
+  holdingsList.replaceChildren();
+  investmentRankingList.replaceChildren();
+  investmentRankingPagination.replaceChildren();
+};
 const closeAccountModal = () => {
   accountModal.hidden = true;
   accountBackdrop.hidden = true;
@@ -82,13 +102,20 @@ const authenticateAccount = async (username, password) => {
   }
   localStorage.setItem(investmentClientKey, accountSession.account_id);
   updateAccountButton();
-
+  const savedAccountNickname = localStorage.getItem(
+    `sangki-account-nickname-${accountSession.account_id}`
+  );
+  if (savedAccountNickname) {
+    investorNickname.value = savedAccountNickname;
+    await loadInvestmentState(savedAccountNickname);
+  }
 };
 accountButton.addEventListener('click', () => {
   if (accountSession) {
     if (!window.confirm('정말로 로그아웃하시겠습니까?')) return;
     accountSession = null;
     localStorage.removeItem(accountStorageKey);
+    clearInvestmentView();
     updateAccountButton();
     return;
   }
@@ -138,6 +165,7 @@ const closeSettings = () => {
 const logoutAccount = () => {
   accountSession = null;
   localStorage.removeItem(accountStorageKey);
+  clearInvestmentView();
   updateAccountButton();
   closeSettings();
   investorStatus.textContent = '로그아웃되었습니다.';
