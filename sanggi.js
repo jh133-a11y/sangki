@@ -31,6 +31,7 @@
   let audioContext = null;
   let autoTimer = null;
   let remoteReady = false;
+  let accountSyncing = false;
   let remoteSaveTimer = null;
   const character = document.querySelector('.sanggi-character');
   const companion = document.querySelector('#sanggi-companion');
@@ -478,10 +479,12 @@
   const companionUpgradeCost = () => companionLevel >= maxCompanionLevel ? null : upgradeCost(companionLevel);
   const renderCompanion = () => {
     companion.hidden = !companionSummoned;
+    companion.style.display = companionSummoned ? 'block' : 'none';
     companionLevelPanel.hidden = !companionUnlocked;
     companionAction.textContent = companionUnlocked
       ? (companionSummoned ? '소환 해제' : '주성 소환')
       : '50,000원으로 잠금 해제';
+    companionAction.disabled = accountSyncing;
     companionLevelElement.textContent = `LV ${companionLevel}`;
     companionEffect.textContent = `클릭·자동 +${formatCoins(companionBonus())}원`;
     companionLevelEffect.textContent = `클릭·자동 +${formatCoins(companionBonus())}원`;
@@ -501,6 +504,7 @@
   document.querySelector('#sanggi-companion-close').addEventListener('click', closeCompanion);
   companionBackdrop.addEventListener('click', closeCompanion);
   companionAction.addEventListener('click', async () => {
+    if (accountSyncing) return;
     if (!companionUnlocked) {
       const cost = 50000n;
       if (coins < cost) {
@@ -724,11 +728,15 @@
   });
 
   const initialize = async () => {
+    accountSyncing = true;
+    renderCompanion();
     try {
       await syncAccountState();
       remoteReady = Boolean(getSession()?.session_token);
     } catch (error) {
       console.warn('Sanggi account sync failed:', error.message);
+    } finally {
+      accountSyncing = false;
     }
     loadCharacterPosition();
     renderCompanion();
@@ -737,5 +745,6 @@
     renderAbilities();
     scheduleAutoCoin();
   };
+  companion?.addEventListener('load', loadCompanionPosition);
   initialize();
 })();
