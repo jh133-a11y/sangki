@@ -940,14 +940,17 @@ begin
     where listed = true
       and (
         (
-          symbol in (
-            'SURGE_STOCK',
-            'CURRENT_SURGE_STOCK',
-            'DONGHWA_SURGE_STOCK',
-            'JEONGMIN_SURGE_STOCK',
-            'JUSEONG_SURGE_STOCK'
+          (
+            symbol in (
+              'SURGE_STOCK',
+              'CURRENT_SURGE_STOCK',
+              'DONGHWA_SURGE_STOCK',
+              'JEONGMIN_SURGE_STOCK',
+              'JUSEONG_SURGE_STOCK'
+            )
+            or name like '%급등%'
           )
-          and current_price > 2000000
+          and current_price >= 2000000
         )
         or (
           symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET', 'SANGI_BIO')
@@ -981,7 +984,7 @@ begin
       'DONGHWA_SURGE_STOCK',
       'JEONGMIN_SURGE_STOCK',
       'JUSEONG_SURGE_STOCK'
-    ) then
+    ) or asset_row.name like '%급등%' then
       v_split_factor := 1000;
     elsif asset_row.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE') then
       v_split_factor := 10;
@@ -1043,12 +1046,15 @@ as $$
 begin
   if pg_trigger_depth() = 1
      and new.listed = true
-     and new.symbol in (
-       'SURGE_STOCK',
-       'CURRENT_SURGE_STOCK',
-       'DONGHWA_SURGE_STOCK',
-       'JEONGMIN_SURGE_STOCK',
-       'JUSEONG_SURGE_STOCK'
+     and (
+       new.symbol in (
+         'SURGE_STOCK',
+         'CURRENT_SURGE_STOCK',
+         'DONGHWA_SURGE_STOCK',
+         'JEONGMIN_SURGE_STOCK',
+         'JUSEONG_SURGE_STOCK'
+       )
+       or new.name like '%급등%'
      )
      and new.current_price >= 2000000 then
     update public.investment_holdings
