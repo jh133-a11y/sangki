@@ -875,6 +875,129 @@ begin
 end;
 $$;
 
+create or replace function public.investment_admin_get_users(
+  p_admin_password text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(
+      jsonb_build_object(
+        'client_id', client_id,
+        'nickname', nickname
+      )
+      order by nickname
+    )
+    from public.investment_users
+  ), '[]'::jsonb);
+end;
+$$;
+
+create or replace function public.investment_admin_grant_item(
+  p_admin_password text,
+  p_target_client_id uuid,
+  p_item_type text,
+  p_quantity bigint,
+  p_message text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item_name text;
+  v_message text;
+  v_user_count integer;
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  if p_item_type not in (
+    'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
+    'missile_shield', 'nickname_ticket', 'letter',
+    'normal_potion', 'advanced_potion', 'legendary_potion',
+    'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
+    'juseong_spacesuit', 'cash_box', 'weird_cash_box'
+  ) then
+    raise exception '지급할 수 없는 아이템입니다.';
+  end if;
+
+  if p_quantity is null or p_quantity < 1 or p_quantity > 1000000 then
+    raise exception '수량은 1개 이상 1,000,000개 이하로 입력하세요.';
+  end if;
+
+  if p_message is null or char_length(trim(p_message)) < 1 then
+    raise exception '전달할 메시지를 입력하세요.';
+  end if;
+
+  if char_length(trim(p_message)) > 500 then
+    raise exception '메시지는 500자 이하로 입력하세요.';
+  end if;
+
+  v_item_name := case p_item_type
+    when 'low_missile' then '하급 미사일'
+    when 'mid_missile' then '중급 미사일'
+    when 'high_missile' then '고급 미사일'
+    when 'nuclear_missile' then '핵 미사일'
+    when 'missile_shield' then '미사일 방어막'
+    when 'nickname_ticket' then '닉네임 변경권'
+    when 'letter' then '편지'
+    when 'normal_potion' then '일반 물약'
+    when 'advanced_potion' then '고급 물약'
+    when 'legendary_potion' then '전설 물약'
+    when 'sanggi_hanbok' then '상기 한복'
+    when 'sanggi_spacesuit' then '상기 우주복'
+    when 'juseong_hanbok' then '주성 한복'
+    when 'juseong_spacesuit' then '주성 우주복'
+    when 'cash_box' then '랜덤 현금 박스'
+    when 'weird_cash_box' then '이상한 랜덤 현금 박스'
+  end;
+
+  if p_target_client_id is not null
+    and not exists (
+      select 1 from public.investment_users
+      where client_id = p_target_client_id
+    ) then
+    raise exception '지급할 유저를 찾을 수 없습니다.';
+  end if;
+
+  insert into public.investment_shop_items(client_id, item_type, quantity)
+  select u.client_id, p_item_type, p_quantity
+  from public.investment_users u
+  where p_target_client_id is null or u.client_id = p_target_client_id
+  on conflict (client_id, item_type)
+  do update set
+    quantity = public.investment_shop_items.quantity + excluded.quantity;
+
+  get diagnostics v_user_count = row_count;
+
+  v_message := '관리자가 ' || v_item_name || ' ' || p_quantity
+    || '개를 지급했습니다.' || E'\n' || trim(p_message);
+
+  insert into public.investment_shop_messages(client_id, message)
+  select u.client_id, v_message
+  from public.investment_users u
+  where p_target_client_id is null or u.client_id = p_target_client_id;
+
+  return jsonb_build_object(
+    'user_count', v_user_count,
+    'item_type', p_item_type,
+    'quantity', p_quantity,
+    'message', v_message
+  );
+end;
+$$;
+
 create or replace function public.investment_transfer_cash(
   p_sender_client_id uuid,
   p_recipient_client_id uuid,
@@ -1076,11 +1199,15 @@ revoke all on function public.investment_get_state(uuid, text) from public;
 revoke all on function public.investment_trade(uuid, text, text, bigint) from public;
 revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
 revoke all on function public.investment_admin_grant_cash_to_all(text, bigint, text) from public;
+revoke all on function public.investment_admin_get_users(text) from public;
+revoke all on function public.investment_admin_grant_item(text, uuid, text, bigint, text) from public;
 revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
 grant execute on function public.investment_trade(uuid, text, text, bigint) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_grant_cash_to_all(text, bigint, text) to anon;
+grant execute on function public.investment_admin_get_users(text) to anon, authenticated;
+grant execute on function public.investment_admin_grant_item(text, uuid, text, bigint, text) to anon, authenticated;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_transfer_cash(uuid, uuid, bigint) to anon, authenticated;
 

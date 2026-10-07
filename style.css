@@ -202,8 +202,32 @@ nav a:hover { opacity: .5; }
 .admin-kicker { font: 11px var(--mono); text-transform: uppercase; }
 .admin-card h1 { margin: 18px 0 10px; font-size: clamp(48px, 10vw, 90px); line-height: .9; letter-spacing: -.09em; }
 .admin-card p { margin: 0 0 28px; font: 12px/1.6 var(--mono); }
+.admin-console { max-width: 920px; margin-top: 8vh; }
+.admin-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 12px; }
+.admin-console label { display: grid; gap: 7px; margin-top: 14px; font: 10px var(--mono); }
+.admin-console select, .admin-console input, .admin-console textarea { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px var(--mono); }
+.admin-console textarea { resize: vertical; }
+.admin-item-heading { display: flex; justify-content: space-between; gap: 15px; align-items: baseline; margin-top: 26px; padding-bottom: 9px; border-bottom: 1px solid var(--ink); font: 10px var(--mono); }
+.admin-item-heading strong { color: var(--orange); }
+.admin-item-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.admin-item-card { min-height: 115px; display: grid; place-items: center; gap: 7px; border: 1px solid var(--ink); padding: 10px 6px; background: #fff; color: var(--ink); cursor: pointer; }
+.admin-item-card:hover, .admin-item-card.is-selected { background: var(--acid); box-shadow: 3px 3px 0 var(--ink); }
+.admin-item-card strong { font: 10px var(--mono); text-align: center; }
+.admin-item-visual { width: 55px; height: 55px; display: grid; place-items: center; color: var(--orange); font: 34px/1 var(--mono); }
+.admin-item-visual.is-image img { width: 55px; height: 55px; object-fit: contain; }
+.admin-grant-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+.admin-grant-actions button { border: 1px solid var(--ink); padding: 12px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
+.admin-grant-actions button:last-child { background: var(--orange); color: var(--ink); }
+.admin-grant-actions button:disabled { cursor: wait; opacity: .5; }
+.admin-status { min-height: 18px; margin: 14px 0 20px !important; color: var(--orange); }
 .admin-back { display: inline-block; border: 1px solid var(--ink); padding: 11px 14px; background: var(--ink); color: var(--paper); font: 11px var(--mono); }
 .admin-back:hover { background: var(--orange); color: var(--ink); }
+@media (max-width: 640px) {
+  .admin-page { padding: 20px 14px 40px; }
+  .admin-card.admin-console { margin-top: 5vh; padding: 22px 16px; }
+  .admin-form-grid, .admin-grant-actions { grid-template-columns: 1fr; }
+  .admin-item-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .hero {
   min-height: 790px; padding: 164px 0 65px; display: flex; flex-direction: column;

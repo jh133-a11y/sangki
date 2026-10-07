@@ -440,6 +440,7 @@ settingsAdmin.addEventListener('click', () => {
     settingsStatus.textContent = '관리자 비밀번호가 틀렸습니다.';
     return;
   }
+  sessionStorage.setItem('sangki-admin-auth', password);
   window.location.href = 'admin.html';
 });
 
