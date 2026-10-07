@@ -423,6 +423,26 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   width: 31px;
   height: 31px;
 }
+.sanggi-refresh-button {
+  display: none;
+  position: absolute;
+  top: 24px;
+  right: 76px;
+  z-index: 4;
+  width: 42px;
+  height: 42px;
+  padding: 5px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.sanggi-refresh-button svg {
+  width: 32px;
+  height: 32px;
+}
+.sanggi-refresh-button:hover {
+  transform: rotate(25deg);
+}
 .sanggi-sky,
 .sanggi-moon,
 .sanggi-city,
@@ -563,6 +583,11 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   font: 700 17px var(--sans);
 }
 @media (max-width: 640px) {
+  .sanggi-refresh-button {
+    display: block;
+    top: 28px;
+    right: 66px;
+  }
   .sanggi-character {
     left: 8%;
     top: 13%;
