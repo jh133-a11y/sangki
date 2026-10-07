@@ -630,7 +630,14 @@ const shopItemIcons = {
   ,nuclear_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 35 27 13l10 10-22 22H5v-10Z" fill="#b9c0c8" stroke="#171717" stroke-width="2.5"/><path d="M29 11c4-5 10-7 15-6-1 5-3 10-8 13" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m9 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>'
   ,missile_shield: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 40 10v12c0 10-6 17-16 22C14 39 8 32 8 22V10l16-6Z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m15 24 6 6 12-13" fill="none" stroke="#d9ff36" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
-  letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>'
+  letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>',
+  normal_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#e8f7ff" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#398fe5"/></svg>',
+  advanced_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#fff8d0" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#e6a62f"/></svg>',
+  legendary_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#f3e7ff" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#8b3fd6"/></svg>',
+  sanggi_hanbok: '<img src="sanggi-hanbok.png" alt="" aria-hidden="true">',
+  sanggi_spacesuit: '<img src="sanggi-spacesuit.png" alt="" aria-hidden="true">',
+  juseong_hanbok: '<img src="juseong-hanbok.png" alt="" aria-hidden="true">',
+  juseong_spacesuit: '<img src="juseong-spacesuit.png" alt="" aria-hidden="true">'
 };
 const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
@@ -639,7 +646,14 @@ const shopItemDescriptions = {
   ,nuclear_missile: '80% 확률로 선택한 유저의 전체 자산 80%를 감소시킵니다.'
   ,missile_shield: '다른 유저의 미사일을 막을 수 있습니다. 하급 미사일을 막는 데에는 1개, 중급 미사일에는 3개, 고급 미사일에는 5개, 핵 미사일에는 미사일 방어막 10개가 필요합니다. 미사일에 피격되면 자동으로 소모됩니다.'
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
-  letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
+  letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.',
+  normal_potion: '10초 동안 획득 코인이 2배가 됩니다.',
+  advanced_potion: '10초 동안 획득 코인이 10배가 됩니다.',
+  legendary_potion: '10초 동안 획득 코인이 100배가 됩니다.',
+  sanggi_hanbok: '상기가 착용할 수 있는 한복입니다.',
+  sanggi_spacesuit: '상기가 착용할 수 있는 우주복입니다.',
+  juseong_hanbok: '주성이 착용할 수 있는 한복입니다.',
+  juseong_spacesuit: '주성이 착용할 수 있는 우주복입니다.'
 };
 const shopItemNames = {
   low_missile: '하급 미사일',
@@ -648,8 +662,16 @@ const shopItemNames = {
   nuclear_missile: '핵 미사일',
   missile_shield: '미사일 방어막',
   nickname_ticket: '닉네임 변경권',
-  letter: '편지'
+  letter: '편지',
+  normal_potion: '일반 물약',
+  advanced_potion: '고급 물약',
+  legendary_potion: '전설 물약',
+  sanggi_hanbok: '상기 한복',
+  sanggi_spacesuit: '상기 우주복',
+  juseong_hanbok: '주성 한복',
+  juseong_spacesuit: '주성 우주복'
 };
+const validShopItemTypes = new Set(Object.keys(shopItemNames));
 const normalizeShopItem = (item) => ({
   ...item,
   name: shopItemNames[item.item_type] || item.name || '아이템'
@@ -721,7 +743,10 @@ const loadBag = async () => {
   bagCash.textContent = `보유 현금 ${formatWon(state.cash)}`;
   const slots = [];
   for (let index = 0; index < 27; index += 1) {
-    const item = state.items[index] ? normalizeShopItem(state.items[index]) : null;
+    const availableItems = (Array.isArray(state.items) ? state.items : [])
+      .filter((entry) => validShopItemTypes.has(entry.item_type) && Number(entry.quantity) > 0)
+      .map(normalizeShopItem);
+    const item = availableItems[index] || null;
     const slot = document.createElement('button');
     slot.type = 'button';
     slot.className = 'bag-slot';
@@ -737,11 +762,14 @@ const loadBag = async () => {
     slots.push(slot);
   }
   bagItems.replaceChildren(...slots);
-  bagCount.textContent = state.items.reduce((sum, item) => sum + Number(item.quantity), 0);
+  bagCount.textContent = state.items
+    .filter((item) => validShopItemTypes.has(item.item_type))
+    .reduce((sum, item) => sum + Number(item.quantity), 0);
   bagTargets = state.targets;
   bagTarget.replaceChildren();
   if (selectedShopItem) {
     const refreshedItem = state.items
+      .filter((item) => validShopItemTypes.has(item.item_type))
       .map(normalizeShopItem)
       .find((item) => item.item_type === selectedShopItem.item_type);
     if (refreshedItem?.quantity > 0) {
