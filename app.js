@@ -539,7 +539,7 @@ const shopItemDescriptions = {
   mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
   high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
   ,nuclear_missile: '80% 확률로 선택한 유저의 전체 자산 80%를 감소시킵니다.'
-  ,missile_shield: '다른 유저의 미사일을 막습니다. 하급 1개, 중급 3개, 고급 5개, 핵 미사일 10개가 필요합니다.'
+  ,missile_shield: '다른 유저의 미사일을 막을 수 있습니다. 하급 미사일을 막는 데에는 1개, 중급 미사일에는 3개, 고급 미사일에는 5개, 핵 미사일에는 미사일 방어막 10개가 필요합니다. 미사일에 피격되면 자동으로 소모됩니다.'
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
 };
@@ -639,7 +639,7 @@ const loadBag = async () => {
 
 const useShopItem = async (itemType) => {
   if (itemType === 'missile_shield') {
-    bagStatus.textContent = '미사일 방어막은 다른 유저의 미사일이 명중할 때 자동으로 사용됩니다.';
+    bagStatus.textContent = '미사일 방어막은 미사일에 피격되면 필요한 수량만큼 자동으로 소모됩니다.';
     return;
   }
   if (itemType === 'letter') {
