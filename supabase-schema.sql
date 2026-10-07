@@ -216,10 +216,16 @@ declare
   asset record;
   pct numeric;
   pct_two numeric;
-  direction integer;
+  previous_pct numeric;
+  previous_pct_two numeric;
+  daily_direction integer;
+  movement_direction integer;
+  step numeric;
+  step_two numeric;
+  min_pct numeric;
+  max_pct numeric;
   next_price bigint;
   new_direction_day boolean := false;
-  event_state jsonb;
 begin
   insert into public.investment_market (id, last_market_date)
   values (1, null)
@@ -294,6 +300,8 @@ begin
       update public.investment_assets
       set current_price = base_price, change_pct = 0, listed = true
       where symbol = asset.symbol;
+      asset.current_price := asset.base_price;
+      asset.change_pct := 0;
     end if;
 
     if asset.symbol in ('JEONGMIN_ROCKET', 'SEOK_HYNIX') then
@@ -301,54 +309,120 @@ begin
     end if;
 
     pct := 0;
-    event_state := direction_state_value;
+    previous_pct := asset.change_pct;
     if asset.symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET') then
-      direction := (direction_state_value->>'SANGI_ROCKET')::integer;
-      if (direction_state_value->>'rocket_event')::boolean and direction > 0 then
+      daily_direction := (direction_state_value->>'SANGI_ROCKET')::integer;
+      min_pct := -30;
+      max_pct := 30;
+      if new_direction_day and (direction_state_value->>'rocket_event')::boolean
+         and daily_direction > 0 then
         pct := floor(random() * 101) + 100;
         pct_two := floor(random() * 101) + 100;
       else
-        pct := direction * (floor(random() * 30) + 1);
-        pct_two := direction * (floor(random() * 30) + 1);
+        movement_direction := case
+          when previous_pct = 0 then daily_direction
+          when random() < 0.7 then sign(previous_pct)::integer
+          else -sign(previous_pct)::integer
+        end;
+        step := floor(random() * 5) + 1;
+        step_two := floor(random() * 5) + 1;
+        pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
+        previous_pct_two := (
+          select change_pct from public.investment_assets
+          where symbol = 'JEONGMIN_ROCKET'
+        );
+        pct_two := greatest(min_pct, least(max_pct, previous_pct_two + movement_direction * step_two));
+        if pct = 0 then pct := movement_direction; end if;
+        if pct_two = 0 then pct_two := movement_direction; end if;
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol in ('SAMSUNG_MICROWAVE', 'SEOK_HYNIX') then
-      direction := (direction_state_value->>'SAMSUNG_MICROWAVE')::integer;
-      pct := direction * (floor(random() * 15) + 1);
-      pct_two := direction * (floor(random() * 15) + 1);
+      daily_direction := (direction_state_value->>'SAMSUNG_MICROWAVE')::integer;
+      min_pct := -15;
+      max_pct := 15;
+      movement_direction := case
+        when previous_pct = 0 then daily_direction
+        when random() < 0.7 then sign(previous_pct)::integer
+        else -sign(previous_pct)::integer
+      end;
+      step := floor(random() * 5) + 1;
+      step_two := floor(random() * 5) + 1;
+      pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
+      previous_pct_two := (
+        select change_pct from public.investment_assets
+        where symbol = 'SEOK_HYNIX'
+      );
+      pct_two := greatest(min_pct, least(max_pct, previous_pct_two + movement_direction * step_two));
+      if pct = 0 then pct := movement_direction; end if;
+      if pct_two = 0 then pct_two := movement_direction; end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SANGI_BIO' then
-      direction := (direction_state_value->>'SANGI_BIO')::integer;
-      if (direction_state_value->>'bio_event')::boolean and direction > 0 then
+      daily_direction := (direction_state_value->>'SANGI_BIO')::integer;
+      if new_direction_day and (direction_state_value->>'bio_event')::boolean
+         and daily_direction > 0 then
         pct := floor(random() * 501) + 500;
       else
-        pct := direction * (floor(random() * 30) + 1);
+        movement_direction := case
+          when previous_pct = 0 then daily_direction
+          when random() < 0.7 then sign(previous_pct)::integer
+          else -sign(previous_pct)::integer
+        end;
+        step := floor(random() * 5) + 1;
+        pct := greatest(-30, least(30, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SURGE_STOCK' then
-      direction := (direction_state_value->>'SURGE_STOCK')::integer;
-      pct := direction * case when direction < 0
-        then (floor(random() * 99) + 1)
-        else (floor(random() * 2000) + 1)
-      end;
+      daily_direction := (direction_state_value->>'SURGE_STOCK')::integer;
+      if random() < 0.2 then
+        pct := floor(random() * 201) + 300;
+      else
+        movement_direction := case
+          when previous_pct = 0 then daily_direction
+          when random() < 0.7 then sign(previous_pct)::integer
+          else -sign(previous_pct)::integer
+        end;
+        step := floor(random() * 100) + 1;
+        pct := greatest(-100, least(100, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
+      end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'KOREA_SANGI_INDEX' then
-      direction := (direction_state_value->>'KOREA_SANGI_INDEX')::integer;
-      pct := direction * case when direction < 0 then 1 else (floor(random() * 3) + 1) end;
+      daily_direction := (direction_state_value->>'KOREA_SANGI_INDEX')::integer;
+      movement_direction := case
+        when previous_pct = 0 then daily_direction
+        when random() < 0.7 then sign(previous_pct)::integer
+        else -sign(previous_pct)::integer
+      end;
+      step := floor(random() * 3) + 1;
+      pct := greatest(-1, least(3, previous_pct + movement_direction * step));
+      if pct = 0 then pct := movement_direction; end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SANGI_AI' then
-      direction := (direction_state_value->>'SANGI_AI')::integer;
-      pct := direction * case when direction < 0
-        then (floor(random() * 10) + 1)
-        else (floor(random() * 20) + 1)
+      daily_direction := (direction_state_value->>'SANGI_AI')::integer;
+      movement_direction := case
+        when previous_pct = 0 then daily_direction
+        when random() < 0.7 then sign(previous_pct)::integer
+        else -sign(previous_pct)::integer
       end;
+      step := floor(random() * 5) + 1;
+      pct := greatest(-10, least(20, previous_pct + movement_direction * step));
+      if pct = 0 then pct := movement_direction; end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     else
-      direction := (direction_state_value->>'QUANTUM_YOON')::integer;
-      if (direction_state_value->>'quantum_event')::boolean and direction > 0 then
+      daily_direction := (direction_state_value->>'QUANTUM_YOON')::integer;
+      if new_direction_day and (direction_state_value->>'quantum_event')::boolean
+         and daily_direction > 0 then
         pct := floor(random() * 101) + 100;
       else
-        pct := direction * (floor(random() * 30) + 1);
+        movement_direction := case
+          when previous_pct = 0 then daily_direction
+          when random() < 0.7 then sign(previous_pct)::integer
+          else -sign(previous_pct)::integer
+        end;
+        step := floor(random() * 5) + 1;
+        pct := greatest(-30, least(50, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     end if;
