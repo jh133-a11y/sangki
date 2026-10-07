@@ -440,23 +440,36 @@ const getShopClientId = () => {
   return getInvestmentClientId();
 };
 
+const shopItemIcons = {
+  low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
+  mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
+  high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
+};
+
 const loadBag = async () => {
   const state = await callInvestmentRpc('shop_get_state', {
     p_client_id: getShopClientId()
   });
   bagCash.textContent = `보유 현금 ${formatWon(state.cash)}`;
-  bagItems.replaceChildren(...state.items.map((item) => {
-    const row = document.createElement('div');
-    row.className = 'bag-item';
-    row.innerHTML = `<strong>${item.name}</strong><span>${item.quantity}개</span>`;
-    const useButton = document.createElement('button');
-    useButton.type = 'button';
-    useButton.textContent = '사용';
-    useButton.disabled = item.quantity < 1;
-    useButton.addEventListener('click', () => useShopItem(item.item_type));
-    row.append(useButton);
-    return row;
-  }));
+  const slots = [];
+  for (let index = 0; index < 27; index += 1) {
+    const item = state.items[index];
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'bag-slot';
+    if (item) {
+      slot.disabled = item.quantity < 1;
+      slot.title = `${item.name} ${item.quantity}개`;
+      slot.innerHTML = `<span class="bag-slot-icon">${shopItemIcons[item.item_type] || '◆'}</span><span class="bag-slot-count">${item.quantity}</span><span class="bag-slot-name">${item.name}</span>`;
+      slot.addEventListener('click', () => {
+        document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
+        slot.classList.add('is-selected');
+        useShopItem(item.item_type);
+      });
+    }
+    slots.push(slot);
+  }
+  bagItems.replaceChildren(...slots);
   bagCount.textContent = state.items.reduce((sum, item) => sum + Number(item.quantity), 0);
   bagTarget.replaceChildren(...state.targets
     .filter((target) => target.client_id !== getShopClientId())
