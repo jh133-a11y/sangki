@@ -7,16 +7,18 @@
 
   let coins = Number.parseInt(localStorage.getItem(storageKey) || '0', 10);
   if (!Number.isFinite(coins) || coins < 0) coins = 0;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  let audioContext = null;
 
   const renderBalance = () => {
     balance.textContent = `${coins.toLocaleString('ko-KR')}원`;
   };
 
   const playCoinSound = () => {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return;
 
-    const audioContext = new AudioContextClass();
+    if (!audioContext) audioContext = new AudioContextClass();
+    if (audioContext.state === 'suspended') audioContext.resume();
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
     const now = audioContext.currentTime;
@@ -31,13 +33,12 @@
     gain.connect(audioContext.destination);
     oscillator.start(now);
     oscillator.stop(now + 0.17);
-    oscillator.addEventListener('ended', () => audioContext.close(), { once: true });
   };
 
   const isInteractiveControl = (target) =>
     target.closest('.sanggi-wallet, .sanggi-coin-display, .sanggi-coin-balance, .sanggi-home-button, .sanggi-refresh-button, .sanggi-action-bar');
 
-  main.addEventListener('click', (event) => {
+  main.addEventListener('pointerdown', (event) => {
     if (isInteractiveControl(event.target)) return;
 
     coins += 1;
