@@ -723,7 +723,6 @@ const renderInvestmentState = (state) => {
   investorForm.querySelector('button').disabled = true;
   portfolioSummary.hidden = false;
   investmentTransferToggle.hidden = false;
-  investmentTransfer.hidden = true;
   transferTarget.replaceChildren(new Option('유저를 선택하세요', ''));
   transferTarget.append(...state.ranking
     .filter((entry) => entry.client_id !== getInvestmentClientId())
@@ -963,8 +962,9 @@ const renderInvestmentState = (state) => {
 };
 
 investmentTransferToggle.addEventListener('click', () => {
-  investmentTransfer.hidden = !investmentTransfer.hidden;
-  if (!investmentTransfer.hidden) {
+  const willOpen = investmentTransfer.hidden;
+  investmentTransfer.hidden = !willOpen;
+  if (willOpen) {
     transferStatus.textContent = '';
     transferTarget.focus();
   }
