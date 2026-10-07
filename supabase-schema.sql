@@ -193,7 +193,7 @@ create table if not exists public.investment_users (
 create table if not exists public.investment_holdings (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
   symbol text not null references public.investment_assets(symbol),
-  quantity integer not null default 0 check (quantity >= 0),
+  quantity bigint not null default 0 check (quantity >= 0),
   invested_amount bigint not null default 0 check (invested_amount >= 0),
   primary key (client_id, symbol)
 );
@@ -755,6 +755,9 @@ begin
   if p_quantity is null or p_quantity < 1 then raise exception '수량은 1주 이상이어야 합니다.'; end if;
   select * into asset_row from public.investment_assets where symbol = p_symbol for update;
   if asset_row.symbol is null or not asset_row.listed then raise exception '현재 거래할 수 없는 상품입니다.'; end if;
+  if (asset_row.current_price::numeric * p_quantity::numeric) > 9223372036854775807 then
+    raise exception '거래 금액이 너무 큽니다.';
+  end if;
   total_price := asset_row.current_price * p_quantity;
   select coalesce(quantity, 0), coalesce(invested_amount, 0)
   into current_quantity, current_invested
@@ -763,6 +766,12 @@ begin
 
   if p_side = 'buy' then
     if user_row.cash < total_price then raise exception '보유 현금이 부족합니다.'; end if;
+    if (current_quantity::numeric + p_quantity::numeric) > 9223372036854775807 then
+      raise exception '보유 주식 수량이 너무 큽니다.';
+    end if;
+    if (current_invested::numeric + total_price::numeric) > 9223372036854775807 then
+      raise exception '투자 금액이 너무 큽니다.';
+    end if;
     update public.investment_users set cash = cash - total_price where client_id = p_client_id;
     insert into public.investment_holdings (client_id, symbol, quantity, invested_amount)
     values (p_client_id, p_symbol, p_quantity, total_price)
@@ -771,6 +780,9 @@ begin
         invested_amount = public.investment_holdings.invested_amount + excluded.invested_amount;
   elsif p_side = 'sell' then
     if current_quantity < p_quantity then raise exception '보유 주식보다 많이 팔 수 없습니다.'; end if;
+    if (user_row.cash::numeric + total_price::numeric) > 9223372036854775807 then
+      raise exception '거래 후 현금이 너무 큽니다.';
+    end if;
     update public.investment_users set cash = cash + total_price where client_id = p_client_id;
     update public.investment_holdings
     set quantity = quantity - p_quantity,
