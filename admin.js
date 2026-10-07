@@ -134,14 +134,15 @@ const removeItems = async (targetClientId) => {
   }
   const message = messageInput.value.trim();
   if (!message) throw new Error('전달할 메시지를 입력하세요.');
+  const normalizedTargetClientId = targetClientId.trim() || null;
   await callRpc('investment_admin_remove_item', {
     p_admin_password: adminPassword,
-    p_target_client_id: targetClientId,
+    p_target_client_id: normalizedTargetClientId,
     p_item_type: selectedItemType,
     p_quantity: quantity,
     p_message: message
   });
-  status.textContent = targetClientId
+  status.textContent = normalizedTargetClientId
     ? '선택한 유저의 아이템을 차감했습니다.'
     : '모든 유저의 아이템을 차감했습니다.';
   messageInput.value = '';
