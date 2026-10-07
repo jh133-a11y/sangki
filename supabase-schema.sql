@@ -340,7 +340,7 @@ begin
       asset.change_pct := 0;
     end if;
 
-    if asset.symbol in ('JEONGMIN_ROCKET', 'SEOK_HYNIX') then
+    if asset.symbol = 'JEONGMIN_ROCKET' then
       continue;
     end if;
 
@@ -441,6 +441,11 @@ begin
       next_price := round(asset.current_price * (1 + pct / 100));
     end if;
 
+    if previous_pct >= 10 and random() < 0.7 then
+      pct := -abs(pct);
+      next_price := round(asset.current_price * (1 + pct / 100));
+    end if;
+
     update public.investment_assets
     set current_price = case when next_price <= 10 then 0 else next_price end,
         change_pct = pct,
@@ -452,17 +457,19 @@ begin
     end if;
 
     if asset.symbol = 'SANGI_ROCKET' then
+      if (
+        select change_pct
+        from public.investment_assets
+        where symbol = 'JEONGMIN_ROCKET'
+      ) >= 10 and random() < 0.7 then
+        pct_two := -abs(pct_two);
+      end if;
+
       update public.investment_assets
       set current_price = case when round(current_price * (1 + pct_two / 100)) <= 10 then 0 else round(current_price * (1 + pct_two / 100)) end,
           change_pct = pct_two,
           listed = round(current_price * (1 + pct_two / 100)) > 10
       where symbol = 'JEONGMIN_ROCKET';
-    elsif asset.symbol = 'SAMSUNG_MICROWAVE' then
-      update public.investment_assets
-      set current_price = case when round(current_price * (1 + pct_two / 100)) <= 10 then 0 else round(current_price * (1 + pct_two / 100)) end,
-          change_pct = pct_two,
-          listed = round(current_price * (1 + pct_two / 100)) > 10
-      where symbol = 'SEOK_HYNIX';
     end if;
   end loop;
 
