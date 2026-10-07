@@ -683,6 +683,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   max-width: 40vw;
   object-fit: contain;
   object-position: top center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.sanggi-character.is-dragging {
+  cursor: grabbing;
 }
 .sanggi-action-bar {
   position: absolute;

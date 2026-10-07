@@ -3,6 +3,7 @@
   const balance = document.querySelector('#sanggi-coin-balance');
   const storageKey = 'sanggi-coin-balance';
   const abilityStorageKey = 'sanggi-ability-levels';
+  const characterPositionKey = 'sanggi-character-position';
   const maxBreathLevel = 3000;
   const maxAutoLevel = 50;
 
@@ -21,6 +22,8 @@
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   let audioContext = null;
   let autoTimer = null;
+  const character = document.querySelector('.sanggi-character');
+  let dragState = null;
 
   const formatCoins = (value) => value.toLocaleString('ko-KR');
   const clickReward = () => 1n + BigInt((breathLevel - 1) * 10);
@@ -125,6 +128,57 @@
   const isInteractiveControl = (target) =>
     target.closest('.sanggi-wallet, .sanggi-coin-display, .sanggi-coin-balance, .sanggi-home-button, .sanggi-refresh-button, .sanggi-action-bar, .sanggi-ability-modal');
 
+  const loadCharacterPosition = () => {
+    if (!character) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(characterPositionKey) || 'null');
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        const mainBounds = main.getBoundingClientRect();
+        const maxLeft = Math.max(0, mainBounds.width - character.offsetWidth);
+        const maxTop = Math.max(0, mainBounds.height - character.offsetHeight);
+        character.style.left = `${Math.max(0, Math.min(1, saved.x)) * maxLeft}px`;
+        character.style.top = `${Math.max(0, Math.min(1, saved.y)) * maxTop}px`;
+      }
+    } catch {
+      // Ignore invalid position data and use the default CSS position.
+    }
+  };
+
+  const saveCharacterPosition = () => {
+    const mainBounds = main.getBoundingClientRect();
+    const characterBounds = character.getBoundingClientRect();
+    const maxX = Math.max(1, mainBounds.width - characterBounds.width);
+    const maxY = Math.max(1, mainBounds.height - characterBounds.height);
+    localStorage.setItem(characterPositionKey, JSON.stringify({
+      x: Math.max(0, Math.min(1, (characterBounds.left - mainBounds.left) / maxX)),
+      y: Math.max(0, Math.min(1, (characterBounds.top - mainBounds.top) / maxY))
+    }));
+  };
+
+  const moveCharacter = (event) => {
+    if (!dragState) return;
+    const mainBounds = main.getBoundingClientRect();
+    const characterWidth = character.offsetWidth;
+    const characterHeight = character.offsetHeight;
+    const maxLeft = Math.max(0, mainBounds.width - characterWidth);
+    const maxTop = Math.max(0, mainBounds.height - characterHeight);
+    const nextLeft = Math.max(0, Math.min(maxLeft, event.clientX - mainBounds.left - dragState.offsetX));
+    const nextTop = Math.max(0, Math.min(maxTop, event.clientY - mainBounds.top - dragState.offsetY));
+    character.style.left = `${nextLeft}px`;
+    character.style.top = `${nextTop}px`;
+    dragState.moved = dragState.moved || Math.abs(nextLeft - dragState.startLeft) > 5 || Math.abs(nextTop - dragState.startTop) > 5;
+  };
+
+  const stopCharacterDrag = (event) => {
+    if (!dragState) return;
+    character.releasePointerCapture?.(event.pointerId);
+    const wasMoved = dragState.moved;
+    dragState = null;
+    character.classList.remove('is-dragging');
+    saveCharacterPosition();
+    if (!wasMoved) collectCoin(clickReward());
+  };
+
   const abilityButton = document.querySelector('#sanggi-ability-button');
   const abilityModal = document.querySelector('#sanggi-ability-modal');
   const abilityBackdrop = document.querySelector('#sanggi-ability-backdrop');
@@ -141,6 +195,29 @@
   abilityBackdrop.addEventListener('click', closeAbility);
   document.querySelector('#sanggi-breath-upgrade').addEventListener('click', () => upgrade('breath'));
   document.querySelector('#sanggi-auto-upgrade').addEventListener('click', () => upgrade('auto'));
+
+  if (character) {
+    loadCharacterPosition();
+    character.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const characterBounds = character.getBoundingClientRect();
+      const mainBounds = main.getBoundingClientRect();
+      dragState = {
+        offsetX: event.clientX - characterBounds.left,
+        offsetY: event.clientY - characterBounds.top,
+        startLeft: characterBounds.left - mainBounds.left,
+        startTop: characterBounds.top - mainBounds.top,
+        moved: false
+      };
+      character.classList.add('is-dragging');
+      character.setPointerCapture?.(event.pointerId);
+    });
+    character.addEventListener('pointermove', moveCharacter);
+    character.addEventListener('pointerup', stopCharacterDrag);
+    character.addEventListener('pointercancel', stopCharacterDrag);
+  }
 
   main.addEventListener('pointerdown', (event) => {
     if (isInteractiveControl(event.target)) return;
