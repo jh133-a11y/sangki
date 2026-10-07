@@ -356,37 +356,48 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   isolation: isolate;
   background: #1b202c;
 }
-.sanggi-wallet {
+.sanggi-coin-display {
   position: absolute;
   top: 24px;
   left: 24px;
   z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px 8px 8px;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  padding: 4px;
   border: 2px solid rgba(40, 31, 31, .8);
-  border-radius: 999px;
+  border-radius: 50%;
   background: rgba(255, 247, 220, .9);
   box-shadow: 0 4px 0 rgba(20, 20, 30, .25), 0 0 18px rgba(255, 212, 92, .25);
   color: #2a2730;
 }
 .sanggi-coin-icon {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
 }
-.sanggi-wallet-copy {
+.sanggi-coin-balance {
+  position: absolute;
+  top: 31px;
+  left: 82px;
+  z-index: 4;
   display: grid;
   gap: 1px;
+  min-width: 78px;
+  padding: 8px 12px;
+  border: 2px solid rgba(40, 31, 31, .8);
+  border-radius: 10px;
+  background: rgba(255, 247, 220, .9);
+  box-shadow: 0 4px 0 rgba(20, 20, 30, .25);
+  color: #2a2730;
   line-height: 1;
 }
-.sanggi-wallet-copy small {
+.sanggi-coin-balance small {
   font: 700 9px var(--mono);
   letter-spacing: .12em;
   color: #8b6a38;
 }
-.sanggi-wallet-copy strong {
+.sanggi-coin-balance strong {
   font: 700 17px var(--sans);
 }
 .sanggi-home-button {
