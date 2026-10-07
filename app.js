@@ -55,7 +55,16 @@ const authenticateAccount = async (username, password) => {
       p_old_client_id: getInvestmentClientId()
     })
   });
-  if (!linkResponse.ok) throw new Error('기존 투자 정보를 계정에 연결하지 못했습니다.');
+  if (!linkResponse.ok) {
+    let detail = '';
+    try {
+      const linkError = await linkResponse.json();
+      detail = linkError.message || linkError.details || linkError.hint || '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(detail || '기존 투자 정보를 계정에 연결하지 못했습니다.');
+  }
   localStorage.setItem(investmentClientKey, accountSession.account_id);
   updateAccountButton();
 };
