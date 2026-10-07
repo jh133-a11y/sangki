@@ -1049,13 +1049,6 @@ begin
     raise exception '메시지는 500자 이하로 입력하세요.';
   end if;
 
-  if p_item_type in (
-    'sanggi_hanbok', 'sanggi_spacesuit',
-    'juseong_hanbok', 'juseong_spacesuit'
-  ) then
-    raise exception '의상 아이템은 차감할 수 없습니다.';
-  end if;
-
   v_item_name := case p_item_type
     when 'low_missile' then '하급 미사일'
     when 'mid_missile' then '중급 미사일'
