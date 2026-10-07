@@ -109,6 +109,11 @@ nav a:hover { opacity: .5; }
 .bag-use-button { grid-column: 1 / -1; border: 1px solid var(--ink); padding: 10px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
 .bag-use-button:hover { background: var(--orange); color: var(--ink); }
 .bag-use-button:disabled { cursor: wait; opacity: .5; }
+.bag-discard-label { display: grid; gap: 6px; grid-column: 1 / -1; font: 10px var(--mono); }
+.bag-discard-label input { border: 1px solid var(--ink); padding: 8px; background: #fff; color: var(--ink); font: 11px var(--mono); }
+.bag-discard-button { grid-column: 1 / -1; border: 1px solid #a32626; padding: 10px; background: #fff; color: #a32626; cursor: pointer; font: 11px var(--mono); }
+.bag-discard-button:hover { background: #a32626; color: #fff; }
+.bag-discard-button:disabled { cursor: wait; opacity: .5; }
 .bag-status { min-height: 18px; color: var(--orange); }
 .shop-page { min-height: 100vh; padding: 38px 24px 70px; background: #fff; color: var(--ink); }
 .shop-shell { width: min(1120px, 100%); margin: 0 auto; }

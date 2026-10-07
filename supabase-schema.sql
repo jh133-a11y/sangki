@@ -2603,6 +2603,67 @@ begin
 end;
 $$;
 
+create or replace function public.shop_discard_item(
+  p_client_id uuid,
+  p_item_type text,
+  p_quantity bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_owned_quantity bigint;
+  v_name text;
+begin
+  if p_quantity is null or p_quantity < 1 then
+    raise exception '버릴 수량은 1개 이상이어야 합니다.';
+  end if;
+
+  v_name := case p_item_type
+    when 'low_missile' then '하급 미사일'
+    when 'mid_missile' then '중급 미사일'
+    when 'high_missile' then '고급 미사일'
+    when 'nuclear_missile' then '핵 미사일'
+    when 'missile_shield' then '미사일 방어막'
+    when 'nickname_ticket' then '닉네임 변경권'
+    when 'letter' then '편지'
+    else null
+  end;
+
+  if v_name is null then
+    raise exception '버릴 수 없는 아이템입니다.';
+  end if;
+
+  select quantity
+  into v_owned_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = p_item_type
+  for update;
+
+  if coalesce(v_owned_quantity, 0) < p_quantity then
+    raise exception '보유 수량보다 많이 버릴 수 없습니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - p_quantity
+  where client_id = p_client_id
+    and item_type = p_item_type;
+
+  delete from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = p_item_type
+    and quantity <= 0;
+
+  return jsonb_build_object(
+    'message',
+    v_name || ' ' || p_quantity || '개를 버렸습니다.'
+  );
+end;
+$$;
+
 -- 계정 연결 시 투자정보와 상점 아이템·메시지를 함께 이전
 create or replace function public.investment_link_account(
   p_session_token uuid,
@@ -2722,6 +2783,7 @@ revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text, bigint) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
+revoke all on function public.shop_discard_item(uuid, text, bigint) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
 revoke all on function public.shop_change_nickname(uuid, uuid, text) from public;
 revoke all on function public.investment_link_account(uuid, uuid) from public;
@@ -2963,6 +3025,7 @@ grant execute on function public.sanggi_sync_state(uuid, bigint, integer, intege
 grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) to anon, authenticated;
 grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
+grant execute on function public.shop_discard_item(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;

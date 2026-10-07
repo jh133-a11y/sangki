@@ -493,6 +493,8 @@ const bagUseIcon = document.querySelector('#bag-use-icon');
 const bagUseName = document.querySelector('#bag-use-name');
 const bagUseDescription = document.querySelector('#bag-use-description');
 const bagUseButton = document.querySelector('#bag-use-button');
+const bagDiscardQuantity = document.querySelector('#bag-discard-quantity');
+const bagDiscardButton = document.querySelector('#bag-discard-button');
 let selectedShopItem = null;
 let bagTargets = [];
 const messageButton = document.querySelector('#message-button');
@@ -566,6 +568,7 @@ const resetBagSelection = () => {
   document.querySelector('.bag-target-label').hidden = true;
   bagNewNickname.value = '';
   document.querySelector('#bag-letter-message').value = '';
+  bagDiscardQuantity.value = '1';
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => {
     selected.classList.remove('is-selected');
   });
@@ -578,6 +581,8 @@ const selectShopItem = (item) => {
   bagUsePanel.style.display = 'grid';
   bagUseIcon.innerHTML = shopItemIcons[item.item_type] || '◆';
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
+  bagDiscardQuantity.max = String(item.quantity);
+  bagDiscardQuantity.value = '1';
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
   const isNicknameTicket = item.item_type === 'nickname_ticket';
   const isLetter = item.item_type === 'letter';
@@ -763,6 +768,39 @@ const useShopItem = async (itemType) => {
   }
 };
 
+const discardShopItem = async () => {
+  if (!selectedShopItem) return;
+  const quantityText = bagDiscardQuantity.value.trim();
+  if (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n) {
+    bagStatus.textContent = '버릴 수량은 1개 이상의 정수로 입력하세요.';
+    return;
+  }
+  const quantity = BigInt(quantityText);
+  const owned = BigInt(String(selectedShopItem.quantity));
+  if (quantity > owned) {
+    bagStatus.textContent = `보유 수량(${owned})보다 많이 버릴 수 없습니다.`;
+    return;
+  }
+  if (!await siteConfirm(`${selectedShopItem.name} ${quantity}개를 정말 버릴까요?`)) return;
+  bagDiscardButton.disabled = true;
+  bagStatus.textContent = '아이템을 버리는 중...';
+  try {
+    const result = await callInvestmentRpc('shop_discard_item', {
+      p_client_id: await resolveShopClientId(),
+      p_item_type: selectedShopItem.item_type,
+      p_quantity: quantityText
+    });
+    bagStatus.textContent = result.message;
+    window.alert(result.message);
+    await loadBag();
+  } catch (error) {
+    bagStatus.textContent = error.message;
+    window.alert(`아이템 버리기 실패: ${error.message}`);
+  } finally {
+    bagDiscardButton.disabled = false;
+  }
+};
+
 const loadMessageCount = async () => {
   try {
     const result = await callInvestmentRpc('shop_get_unread_count', {
@@ -857,6 +895,7 @@ bagUseButton.addEventListener('click', async () => {
   await useShopItem(selectedShopItem.item_type);
   bagUseButton.disabled = false;
 });
+bagDiscardButton.addEventListener('click', discardShopItem);
 
 bagButton.addEventListener('click', async () => {
   bagModal.hidden = false;
