@@ -132,6 +132,9 @@
   const shopBackdrop = document.querySelector('#sanggi-shop-backdrop');
   const shopCash = document.querySelector('#sanggi-shop-cash');
   const shopStatus = document.querySelector('#sanggi-shop-status');
+  const shopCompleteModal = document.querySelector('#sanggi-shop-complete-modal');
+  const shopCompleteBackdrop = document.querySelector('#sanggi-shop-complete-backdrop');
+  const shopCompleteMessage = document.querySelector('#sanggi-shop-complete-message');
   const shopSession = () => getSession();
   const loadShopCash = async () => {
     const session = shopSession();
@@ -158,6 +161,9 @@
     const button = document.querySelector(
       type === 'normal_potion' ? '#sanggi-buy-normal-potion' : '#sanggi-buy-advanced-potion'
     );
+    const potionName = type === 'normal_potion' ? '일반 물약' : '고급 물약';
+    const price = type === 'normal_potion' ? '10,000,000원' : '100,000,000원';
+    if (!window.confirm(`${potionName} ${price}을(를) 구매하시겠습니까?`)) return;
     button.disabled = true;
     shopStatus.textContent = '구매 처리 중...';
     try {
@@ -172,6 +178,9 @@
       renderPotions();
       await loadShopCash();
       shopStatus.textContent = '물약을 구매했습니다.';
+      shopCompleteMessage.textContent = `${potionName} 1개를 구매했습니다. 물약 수량이 늘어났습니다.`;
+      shopCompleteModal.hidden = false;
+      shopCompleteBackdrop.hidden = false;
     } catch (error) {
       shopStatus.textContent = error.message || '물약 구매에 실패했습니다.';
     } finally {
@@ -732,6 +741,12 @@
   });
   document.querySelector('#sanggi-shop-close')?.addEventListener('click', closeShop);
   shopBackdrop?.addEventListener('click', closeShop);
+  const closeShopComplete = () => {
+    shopCompleteModal.hidden = true;
+    shopCompleteBackdrop.hidden = true;
+  };
+  document.querySelector('#sanggi-shop-complete-close')?.addEventListener('click', closeShopComplete);
+  shopCompleteBackdrop?.addEventListener('click', closeShopComplete);
   document.querySelector('#sanggi-buy-normal-potion')?.addEventListener('click', () => buyPotion('normal_potion'));
   document.querySelector('#sanggi-buy-advanced-potion')?.addEventListener('click', () => buyPotion('advanced_potion'));
 

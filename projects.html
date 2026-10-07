@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=78">
+  <link rel="stylesheet" href="style.css?v=79">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -108,6 +108,12 @@
       </div>
       <p class="sanggi-shop-status" id="sanggi-shop-status" role="status"></p>
     </section>
+    <div class="sanggi-shop-complete-backdrop" id="sanggi-shop-complete-backdrop" hidden></div>
+    <section class="sanggi-shop-complete-modal" id="sanggi-shop-complete-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-complete-title" hidden>
+      <h2 id="sanggi-shop-complete-title">구매 완료</h2>
+      <p id="sanggi-shop-complete-message"></p>
+      <button class="sanggi-shop-buy" id="sanggi-shop-complete-close" type="button">확인</button>
+    </section>
     <div class="sanggi-player-backdrop" id="sanggi-player-backdrop" hidden></div>
     <section class="sanggi-ability-modal sanggi-player-modal" id="sanggi-player-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-player-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-player-close" type="button" aria-label="닫기">×</button>
@@ -178,6 +184,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=43"></script>
+  <script src="sanggi.js?v=44"></script>
 </body>
 </html>

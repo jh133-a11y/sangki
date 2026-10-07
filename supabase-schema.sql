@@ -1944,7 +1944,9 @@ alter table public.investment_shop_items
     'nuclear_missile',
     'missile_shield',
     'nickname_ticket',
-    'letter'
+    'letter',
+    'normal_potion',
+    'advanced_potion'
   ));
 
 create table if not exists public.investment_shop_messages (
