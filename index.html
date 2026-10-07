@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
   <div class="noise"></div>
@@ -19,6 +19,7 @@
         <a href="#guestbook">COMMENT</a>
         <button class="notification-toggle" id="notification-toggle" type="button">알림 허용</button>
       </nav>
+      <button class="bag-button" id="bag-button" type="button" aria-label="가방 열기">가방 <span id="bag-count">0</span></button>
       <button class="account-button" id="account-button" type="button">로그인</button>
     </div>
   </header>
@@ -71,6 +72,17 @@
     <button class="settings-action" id="settings-logout" type="button">로그아웃</button>
     <button class="settings-action settings-danger" id="settings-delete-account" type="button">아이디 삭제</button>
     <p class="settings-status" id="settings-status" role="status"></p>
+  </section>
+  <div class="bag-backdrop" id="bag-backdrop" hidden></div>
+  <section class="bag-modal" id="bag-modal" role="dialog" aria-modal="true" aria-labelledby="bag-title" hidden>
+    <button class="account-close" id="bag-close" type="button" aria-label="가방 닫기">×</button>
+    <h2 id="bag-title">가방</h2>
+    <p id="bag-cash">투자 계정의 현금으로 아이템을 구매합니다.</p>
+    <div id="bag-items" class="bag-items"><p>가방을 불러오는 중...</p></div>
+    <label class="bag-target-label">공격 대상
+      <select id="bag-target"></select>
+    </label>
+    <p class="bag-status" id="bag-status" role="status"></p>
   </section>
 
   <main>
@@ -243,6 +255,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

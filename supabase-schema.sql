@@ -1600,6 +1600,257 @@ to anon, authenticated;
 grant execute on function public.site_account_online_users()
 to anon, authenticated;
 
+create table if not exists public.investment_shop_items (
+  client_id uuid not null references public.investment_users(client_id) on delete cascade,
+  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile')),
+  quantity bigint not null default 0 check (quantity >= 0),
+  primary key (client_id, item_type)
+);
+
+alter table public.investment_shop_items enable row level security;
+revoke all on table public.investment_shop_items from anon, authenticated;
+
+create or replace function public.shop_get_state(p_client_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_cash bigint;
+begin
+  select cash into v_cash
+  from public.investment_users
+  where client_id = p_client_id;
+
+  if v_cash is null then
+    raise exception '먼저 투자 닉네임을 설정하세요.';
+  end if;
+
+  return jsonb_build_object(
+    'cash', v_cash,
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'item_type', item_type,
+        'name', case item_type
+          when 'low_missile' then '하급 미사일'
+          when 'mid_missile' then '중급 미사일'
+          else '고급 미사일'
+        end,
+        'quantity', quantity
+      ) order by item_type)
+      from public.investment_shop_items
+      where client_id = p_client_id
+    ), '[]'::jsonb),
+    'targets', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'client_id', u.client_id,
+        'nickname', u.nickname,
+        'total_asset', u.cash + coalesce((
+          select sum(h.quantity * a.current_price)
+          from public.investment_holdings h
+          join public.investment_assets a on a.symbol = h.symbol
+          where h.client_id = u.client_id and a.listed
+        ), 0)
+      ) order by u.nickname)
+      from public.investment_users u
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+create or replace function public.shop_purchase(
+  p_client_id uuid,
+  p_item_type text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_price bigint;
+  v_name text;
+  v_cash bigint;
+begin
+  select price, name into v_price, v_name
+  from (values
+    ('low_missile', 2000000::bigint, '하급 미사일'),
+    ('mid_missile', 5000000::bigint, '중급 미사일'),
+    ('high_missile', 15000000::bigint, '고급 미사일')
+  ) items(item_type, price, name)
+  where item_type = p_item_type;
+
+  if v_price is null then
+    raise exception '존재하지 않는 상품입니다.';
+  end if;
+
+  select cash into v_cash
+  from public.investment_users
+  where client_id = p_client_id
+  for update;
+
+  if v_cash is null then
+    raise exception '먼저 투자 닉네임을 설정하세요.';
+  end if;
+  if v_cash < v_price then
+    raise exception '보유 현금이 부족합니다.';
+  end if;
+
+  update public.investment_users
+  set cash = cash - v_price
+  where client_id = p_client_id;
+
+  insert into public.investment_shop_items(client_id, item_type, quantity)
+  values (p_client_id, p_item_type, 1)
+  on conflict (client_id, item_type)
+  do update set quantity = public.investment_shop_items.quantity + 1;
+
+  return jsonb_build_object('message', v_name || '을(를) 구매했습니다.');
+end;
+$$;
+
+create or replace function public.shop_use_missile(
+  p_client_id uuid,
+  p_item_type text,
+  p_target_client_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quantity bigint;
+  v_chance numeric;
+  v_damage numeric;
+  v_name text;
+  v_target_name text;
+  v_total bigint;
+  v_remaining bigint;
+  v_old_cash bigint;
+  v_cash_loss bigint;
+  holding_row record;
+  v_remove_quantity bigint;
+  v_removed_value bigint;
+  v_success boolean;
+begin
+  if p_client_id = p_target_client_id then
+    raise exception '자기 자신에게는 사용할 수 없습니다.';
+  end if;
+
+  select quantity into v_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id and item_type = p_item_type
+  for update;
+
+  if coalesce(v_quantity, 0) < 1 then
+    raise exception '가방에 해당 아이템이 없습니다.';
+  end if;
+
+  select nickname into v_target_name
+  from public.investment_users
+  where client_id = p_target_client_id
+  for update;
+  if v_target_name is null then
+    raise exception '공격 대상을 찾을 수 없습니다.';
+  end if;
+
+  select
+    case p_item_type
+      when 'low_missile' then 0.20
+      when 'mid_missile' then 0.30
+      when 'high_missile' then 0.40
+    end,
+    case p_item_type
+      when 'low_missile' then 0.20
+      when 'mid_missile' then 0.30
+      when 'high_missile' then 0.40
+    end,
+    case p_item_type
+      when 'low_missile' then '하급 미사일'
+      when 'mid_missile' then '중급 미사일'
+      else '고급 미사일'
+    end
+  into v_chance, v_damage, v_name;
+
+  update public.investment_shop_items
+  set quantity = quantity - 1
+  where client_id = p_client_id and item_type = p_item_type;
+
+  v_success := random() < v_chance;
+  if not v_success then
+    return jsonb_build_object(
+      'success', false,
+      'message', v_name || '을(를) 발사했지만 ' || v_target_name || '에게 명중하지 않았습니다.'
+    );
+  end if;
+
+  select u.cash + coalesce((
+    select sum(h.quantity * a.current_price)
+    from public.investment_holdings h
+    join public.investment_assets a on a.symbol = h.symbol
+    where h.client_id = u.client_id and a.listed
+  ), 0)
+  into v_total
+  from public.investment_users u
+  where u.client_id = p_target_client_id;
+
+  v_remaining := greatest(1, round(v_total * v_damage));
+  select cash into v_old_cash
+  from public.investment_users
+  where client_id = p_target_client_id
+  for update;
+  v_cash_loss := least(v_old_cash, v_remaining);
+  update public.investment_users
+  set cash = cash - v_cash_loss
+  where client_id = p_target_client_id;
+  v_remaining := v_remaining - v_cash_loss;
+
+  for holding_row in
+    select h.client_id, h.symbol, h.quantity, h.invested_amount, a.current_price
+    from public.investment_holdings h
+    join public.investment_assets a on a.symbol = h.symbol
+    where h.client_id = p_target_client_id
+      and h.quantity > 0
+      and a.listed
+    order by h.quantity * a.current_price desc
+    for update of h
+  loop
+    exit when v_remaining <= 0;
+    v_remove_quantity := least(
+      holding_row.quantity,
+      ceil(v_remaining::numeric / greatest(holding_row.current_price, 1))::bigint
+    );
+    v_removed_value := least(v_remaining, v_remove_quantity * holding_row.current_price);
+    update public.investment_holdings
+    set quantity = quantity - v_remove_quantity,
+        invested_amount = greatest(
+          0,
+          invested_amount - round(
+            invested_amount * v_remove_quantity::numeric
+            / greatest(holding_row.quantity, 1)
+          )
+        )
+    where client_id = holding_row.client_id
+      and symbol = holding_row.symbol;
+    v_remaining := v_remaining - v_removed_value;
+  end loop;
+
+  return jsonb_build_object(
+    'success', true,
+    'message', v_name || ' 명중! ' || v_target_name || '의 자산 일부가 감소했습니다.'
+  );
+end;
+$$;
+
+revoke all on function public.shop_get_state(uuid) from public;
+revoke all on function public.shop_purchase(uuid, text) from public;
+revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
+grant execute on function public.shop_get_state(uuid) to anon, authenticated;
+grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
+grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
+
 drop function if exists public.site_account_delete(uuid, text);
 
 create or replace function public.site_account_delete(

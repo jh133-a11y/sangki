@@ -1,5 +1,61 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>상점 — byungsin</title><link rel="stylesheet" href="style.css?v=27"></head>
-<body class="placeholder-page"><main><p class="eyebrow">new room / 03</p><h1>상점</h1><p>새로운 상품을 준비 중입니다.</p><a href="index.html">← back to byungsin</a></main></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>상점 — byungsin</title>
+  <link rel="stylesheet" href="style.css?v=41">
+</head>
+<body class="shop-page">
+  <main class="shop-shell">
+    <div class="shop-top">
+      <h1>상점</h1>
+      <a class="shop-back" href="index.html">← byungsin으로 돌아가기</a>
+    </div>
+    <div class="shop-intro">
+      <p>투자장에서 번 돈으로 특별한 아이템을 구매하세요. 구매한 아이템은 홈 화면의 가방에 보관됩니다.</p>
+      <div class="shop-balance" id="shop-balance">보유 현금 확인 중...</div>
+    </div>
+    <section class="shop-products" aria-label="판매 상품">
+      <article class="shop-card">
+        <div>
+          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="하급 미사일 아이콘" role="img">
+            <path d="M17 71 48 40l12 12-31 31H17V71Z" fill="#d9ff36" stroke="#171717" stroke-width="4"/>
+            <path d="m55 47 10-10 12 12-10 10M68 34l10-10 12 12-10 10" fill="none" stroke="#171717" stroke-width="5"/>
+            <path d="m24 82-8 8M34 82l-8 8" stroke="#ff5b36" stroke-width="5"/>
+          </svg>
+          <h2>하급 미사일</h2>
+          <p>선택한 유저의 자산을 20% 확률로 20% 감소시킵니다.</p>
+        </div>
+        <div><span class="shop-price">₩2,000,000</span><button class="shop-buy" data-item="low_missile" type="button">구매하기</button></div>
+      </article>
+      <article class="shop-card">
+        <div>
+          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="중급 미사일 아이콘" role="img">
+            <path d="M12 73 52 33l15 15-40 40H12V73Z" fill="#ffb02e" stroke="#171717" stroke-width="4"/>
+            <path d="m60 40 12-12 15 15-12 12M74 26l8-8 10 10-8 8" fill="none" stroke="#171717" stroke-width="5"/>
+            <path d="m19 86-9 9M32 86l-9 9M45 83l-8 8" stroke="#ff5b36" stroke-width="5"/>
+          </svg>
+          <h2>중급 미사일</h2>
+          <p>선택한 유저의 자산을 30% 확률로 30% 감소시킵니다.</p>
+        </div>
+        <div><span class="shop-price">₩5,000,000</span><button class="shop-buy" data-item="mid_missile" type="button">구매하기</button></div>
+      </article>
+      <article class="shop-card">
+        <div>
+          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="고급 미사일 아이콘" role="img">
+            <path d="M8 75 55 28l19 19-47 47H8V75Z" fill="#ff5b36" stroke="#171717" stroke-width="4"/>
+            <path d="m65 38 12-12 16 16-12 12M79 23l8-8 10 10-8 8" fill="none" stroke="#171717" stroke-width="5"/>
+            <path d="m17 91-10 9M32 90l-9 9M48 86l-8 8" stroke="#d9ff36" stroke-width="6"/>
+          </svg>
+          <h2>고급 미사일</h2>
+          <p>선택한 유저의 자산을 40% 확률로 40% 감소시킵니다.</p>
+        </div>
+        <div><span class="shop-price">₩15,000,000</span><button class="shop-buy" data-item="high_missile" type="button">구매하기</button></div>
+      </article>
+    </section>
+    <p class="shop-status" id="shop-status" role="status"></p>
+  </main>
+  <script src="shop.js?v=1"></script>
+</body>
 </html>

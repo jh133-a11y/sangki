@@ -425,6 +425,83 @@ const callInvestmentRpc = async (name, payload) => {
   return response.json();
 };
 
+const bagButton = document.querySelector('#bag-button');
+const bagCount = document.querySelector('#bag-count');
+const bagModal = document.querySelector('#bag-modal');
+const bagBackdrop = document.querySelector('#bag-backdrop');
+const bagClose = document.querySelector('#bag-close');
+const bagCash = document.querySelector('#bag-cash');
+const bagItems = document.querySelector('#bag-items');
+const bagTarget = document.querySelector('#bag-target');
+const bagStatus = document.querySelector('#bag-status');
+
+const getShopClientId = () => {
+  if (accountSession?.account_id) return accountSession.account_id;
+  return getInvestmentClientId();
+};
+
+const loadBag = async () => {
+  const state = await callInvestmentRpc('shop_get_state', {
+    p_client_id: getShopClientId()
+  });
+  bagCash.textContent = `보유 현금 ${formatWon(state.cash)}`;
+  bagItems.replaceChildren(...state.items.map((item) => {
+    const row = document.createElement('div');
+    row.className = 'bag-item';
+    row.innerHTML = `<strong>${item.name}</strong><span>${item.quantity}개</span>`;
+    const useButton = document.createElement('button');
+    useButton.type = 'button';
+    useButton.textContent = '사용';
+    useButton.disabled = item.quantity < 1;
+    useButton.addEventListener('click', () => useShopItem(item.item_type));
+    row.append(useButton);
+    return row;
+  }));
+  bagCount.textContent = state.items.reduce((sum, item) => sum + Number(item.quantity), 0);
+  bagTarget.replaceChildren(...state.targets
+    .filter((target) => target.client_id !== getShopClientId())
+    .map((target) => new Option(`${target.nickname} · ${formatWon(target.total_asset)}`, target.client_id)));
+};
+
+const useShopItem = async (itemType) => {
+  if (!bagTarget.value) {
+    bagStatus.textContent = '공격 대상을 선택하세요.';
+    return;
+  }
+  bagStatus.textContent = '아이템 사용 중...';
+  try {
+    const result = await callInvestmentRpc('shop_use_missile', {
+      p_client_id: getShopClientId(),
+      p_item_type: itemType,
+      p_target_client_id: bagTarget.value
+    });
+    bagStatus.textContent = result.message;
+    await loadBag();
+    if (investmentState) await loadInvestmentState();
+  } catch (error) {
+    bagStatus.textContent = error.message;
+  }
+};
+
+bagButton.addEventListener('click', async () => {
+  bagModal.hidden = false;
+  bagBackdrop.hidden = false;
+  bagStatus.textContent = '';
+  try {
+    await loadBag();
+  } catch (error) {
+    bagItems.replaceChildren(Object.assign(document.createElement('p'), {
+      textContent: error.message
+    }));
+  }
+});
+const closeBag = () => {
+  bagModal.hidden = true;
+  bagBackdrop.hidden = true;
+};
+bagClose.addEventListener('click', closeBag);
+bagBackdrop.addEventListener('click', closeBag);
+
 updateOnlinePresence();
 window.setInterval(updateOnlinePresence, 60000);
 window.setInterval(() => {
