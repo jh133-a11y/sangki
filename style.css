@@ -345,7 +345,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   min-height: 100vh;
   padding: 0;
   overflow: hidden;
-  background: #1b202c;
+  background: #8ed7f2;
 }
 .sanggi-page main {
   position: relative;
@@ -354,7 +354,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   min-height: 600px;
   overflow: hidden;
   isolation: isolate;
-  background: #1b202c;
+  background: #8ed7f2;
 }
 .sanggi-coin-display {
   position: absolute;
@@ -455,10 +455,10 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   inset: 0;
   z-index: -5;
   background:
-    radial-gradient(circle at 20% 18%, rgba(242, 224, 176, .9) 0 2px, transparent 3px),
-    radial-gradient(circle at 78% 24%, rgba(242, 224, 176, .8) 0 1px, transparent 2px),
-    radial-gradient(circle at 58% 12%, rgba(242, 224, 176, .8) 0 1px, transparent 2px),
-    linear-gradient(180deg, #161b2a 0%, #30354c 54%, #5d4852 100%);
+    radial-gradient(ellipse at 16% 22%, rgba(255, 255, 255, .9) 0 4%, transparent 4.5%),
+    radial-gradient(ellipse at 22% 23%, rgba(255, 255, 255, .75) 0 3%, transparent 3.5%),
+    radial-gradient(ellipse at 78% 18%, rgba(255, 255, 255, .82) 0 5%, transparent 5.5%),
+    linear-gradient(180deg, #55b9e9 0%, #b7eaf4 58%, #f6c88b 100%);
 }
 .sanggi-moon {
   width: clamp(70px, 9vw, 130px);
@@ -467,14 +467,16 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   right: 15%;
   z-index: -4;
   border-radius: 50%;
-  background: #f4dfad;
-  box-shadow: 0 0 45px rgba(244, 223, 173, .28);
+  background: #fff3a7;
+  box-shadow: 0 0 45px rgba(255, 229, 121, .45);
+  transform: translateY(-3vh);
 }
 .sanggi-city {
   left: 0;
   right: 0;
   bottom: 35%;
   height: 36%;
+  transform: translateY(-3vh);
   z-index: -3;
   background:
     linear-gradient(90deg, #202538 0 12%, #2b2e43 12% 25%, #1d2235 25% 39%, #303149 39% 52%, #202538 52% 68%, #2e3045 68% 83%, #1b2030 83%);
@@ -492,6 +494,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   right: -12%;
   bottom: -8%;
   height: 47%;
+  transform: translateY(-2vh);
   z-index: -2;
   background:
     linear-gradient(90deg, transparent 0 17%, rgba(255, 222, 154, .2) 17.1% 17.5%, transparent 17.6% 82.4%, rgba(255, 222, 154, .2) 82.5% 82.9%, transparent 83%),
@@ -514,6 +517,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   bottom: 33%;
   width: 7px;
   height: 27%;
+  transform: translateY(-2vh);
   z-index: -1;
   background: #171b28;
 }
@@ -528,8 +532,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   background: #f2c477;
   box-shadow: 0 0 35px rgba(242, 196, 119, .65);
 }
-.sanggi-lamp-left { left: 14%; transform: rotate(5deg); }
-.sanggi-lamp-right { right: 14%; transform: rotate(-5deg); }
+.sanggi-lamp-left { left: 14%; transform: translateY(-2vh) rotate(5deg); }
+.sanggi-lamp-right { right: 14%; transform: translateY(-2vh) rotate(-5deg); }
 .sanggi-character {
   position: absolute;
   left: 17%;
