@@ -1571,16 +1571,14 @@ as $$
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
-        'nickname', coalesce(iu.nickname, p.username),
-        'username', coalesce(iu.nickname, p.username)
+        'nickname', p.username,
+        'username', p.username
       )
-      order by coalesce(iu.nickname, p.username)
+      order by p.username
     ),
     '[]'::jsonb
   )
   from public.site_account_presence p
-  join public.investment_users iu
-    on iu.client_id = p.account_id
   where p.last_seen_at > now() - interval '2 minutes';
 $$;
 

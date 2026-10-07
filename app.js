@@ -412,6 +412,11 @@ const callInvestmentRpc = async (name, payload) => {
 
 updateOnlinePresence();
 window.setInterval(updateOnlinePresence, 60000);
+window.setInterval(() => {
+  if (sideMenu.classList.contains('is-open')) {
+    loadOnlineUsers();
+  }
+}, 60000);
 
 const renderInvestmentState = (state) => {
   investmentState = state;
