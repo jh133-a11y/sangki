@@ -55,9 +55,9 @@ nav a:hover { opacity: .5; }
 .notification-toggle:hover { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-enabled { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-blocked { opacity: .55; }
-.side-menu-backdrop { position: fixed; inset: 0; z-index: 20; display: none; background: rgba(23,23,23,.28); }
+.side-menu-backdrop { position: fixed; inset: 0; z-index: 35; display: none; background: rgba(23,23,23,.28); }
 .side-menu-backdrop.is-open { display: block; }
-.side-menu { position: fixed; top: 0; left: 0; z-index: 21; width: min(340px, 86vw); height: 100vh; padding: 30px 25px; transform: translateX(-105%); transition: transform .25s ease; background: var(--paper); box-shadow: 8px 0 0 var(--ink); }
+.side-menu { position: fixed; top: 0; left: 0; z-index: 40; width: min(340px, 86vw); height: 100vh; padding: 30px 25px; transform: translateX(-105%); transition: transform .25s ease; background: var(--paper); box-shadow: 8px 0 0 var(--ink); }
 .side-menu.is-open { transform: translateX(0); }
 .side-menu-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--ink); font: 11px var(--mono); text-transform: uppercase; }
 .side-menu-close { border: 0; padding: 0; background: transparent; color: var(--ink); cursor: pointer; font: 28px/1 var(--mono); }
