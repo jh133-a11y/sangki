@@ -41,7 +41,7 @@
   let companionDragState = null;
   let characterPress = null;
   let companionPress = null;
-  const longPressDelay = 450;
+  const longPressDelay = 2000;
   const clearPress = (press) => {
     if (press?.timer) window.clearTimeout(press.timer);
   };
