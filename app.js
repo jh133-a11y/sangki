@@ -718,7 +718,8 @@ const selectShopItem = (item) => {
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
   bagDiscardQuantity.max = String(item.quantity);
   bagDiscardQuantity.value = '1';
-  bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
+  const itemDescription = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
+  bagUseDescription.textContent = `${itemDescription} 상기 키우기 상점에서 구매하실 수 있습니다.`;
   const isNicknameTicket = item.item_type === 'nickname_ticket';
   const isLetter = item.item_type === 'letter';
   const isShield = item.item_type === 'missile_shield';
