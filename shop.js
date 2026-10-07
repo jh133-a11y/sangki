@@ -6,6 +6,7 @@ const shopInvestmentKey = 'sangki-investment-client-id';
 const shopSessionKey = 'sangki-auth-session';
 const shopTabSessionKey = 'sangki-auth-session-tab';
 const shopKeepKey = 'sangki-keep-login';
+const shopLegacyInvestmentKey = 'sangki-legacy-investment-client-id';
 const balance = document.querySelector('#shop-balance');
 const status = document.querySelector('#shop-status');
 
@@ -29,6 +30,31 @@ const shopClientId = () => {
   }
   return id;
 };
+let activeShopClientId = null;
+const resolveShopClientId = async () => {
+  if (activeShopClientId) return activeShopClientId;
+  const session = shopSession();
+  if (!session?.account_id) {
+    activeShopClientId = shopClientId();
+    return activeShopClientId;
+  }
+
+  const legacyId = localStorage.getItem(shopLegacyInvestmentKey);
+  if (legacyId && legacyId !== session.account_id) {
+    try {
+      await rpc('investment_link_account', {
+        p_session_token: session.session_token,
+        p_old_client_id: legacyId
+      });
+      localStorage.setItem(shopInvestmentKey, session.account_id);
+      localStorage.removeItem(shopLegacyInvestmentKey);
+    } catch (error) {
+      console.warn('shop investment linking failed:', error.message);
+    }
+  }
+  activeShopClientId = session.account_id;
+  return activeShopClientId;
+};
 const won = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
 const rpc = async (name, payload) => {
   const response = await fetch(`${shopRpc}/${name}`, {
@@ -41,7 +67,16 @@ const rpc = async (name, payload) => {
   return result;
 };
 const refreshShop = async () => {
-  const state = await rpc('shop_get_state', { p_client_id: shopClientId() });
+  const clientId = await resolveShopClientId();
+  let state;
+  try {
+    state = await rpc('shop_get_state', { p_client_id: clientId });
+  } catch (error) {
+    const legacyId = localStorage.getItem(shopLegacyInvestmentKey);
+    if (!legacyId || legacyId === clientId) throw error;
+    activeShopClientId = legacyId;
+    state = await rpc('shop_get_state', { p_client_id: legacyId });
+  }
   balance.textContent = `보유 현금 ${won(state.cash)}`;
 };
 document.querySelectorAll('.shop-buy').forEach((button) => {
@@ -55,8 +90,9 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
     button.disabled = true;
     status.textContent = '구매 처리 중...';
     try {
+      const clientId = await resolveShopClientId();
       const result = await rpc('shop_purchase', {
-        p_client_id: shopClientId(),
+        p_client_id: clientId,
         p_item_type: button.dataset.item
       });
       status.textContent = `${result.message} 홈 화면의 가방에서 확인하세요.`;

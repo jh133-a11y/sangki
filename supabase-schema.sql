@@ -1734,9 +1734,9 @@ declare
 begin
   select price, name into v_price, v_name
   from (values
-    ('low_missile', 2000000::bigint, '하급 미사일'),
-    ('mid_missile', 5000000::bigint, '중급 미사일'),
-    ('high_missile', 15000000::bigint, '고급 미사일')
+    ('low_missile', 20000000::bigint, '하급 미사일'),
+    ('mid_missile', 50000000::bigint, '중급 미사일'),
+    ('high_missile', 150000000::bigint, '고급 미사일')
   ) items(item_type, price, name)
   where item_type = p_item_type;
 
