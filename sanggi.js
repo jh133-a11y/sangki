@@ -3,7 +3,8 @@
   const balance = document.querySelector('#sanggi-coin-balance');
   const storageKey = 'sanggi-coin-balance';
   const abilityStorageKey = 'sanggi-ability-levels';
-  const maxLevel = 3000;
+  const maxBreathLevel = 3000;
+  const maxAutoLevel = 50;
 
   if (!main || !balance) return;
 
@@ -15,8 +16,8 @@
   } catch {
     abilities = {};
   }
-  let breathLevel = Math.min(maxLevel, Math.max(1, Number(abilities.breathLevel) || 1));
-  let autoLevel = Math.min(maxLevel, Math.max(1, Number(abilities.autoLevel) || 1));
+  let breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(abilities.breathLevel) || 1));
+  let autoLevel = Math.min(maxAutoLevel, Math.max(1, Number(abilities.autoLevel) || 1));
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   let audioContext = null;
   let autoTimer = null;
@@ -82,8 +83,8 @@
   };
 
   const renderAbilities = () => {
-    const breathCost = breathLevel >= maxLevel ? null : upgradeCost(breathLevel);
-    const autoCost = autoLevel >= maxLevel ? null : upgradeCost(autoLevel);
+    const breathCost = breathLevel >= maxBreathLevel ? null : upgradeCost(breathLevel);
+    const autoCost = autoLevel >= maxAutoLevel ? null : upgradeCost(autoLevel);
     document.querySelector('#sanggi-breath-level').textContent = `LV ${breathLevel}`;
     document.querySelector('#sanggi-auto-level').textContent = `LV ${autoLevel}`;
     document.querySelector('#sanggi-breath-effect').textContent = `클릭당 ${formatCoins(clickReward())}원`;
@@ -104,7 +105,8 @@
 
   const upgrade = (type) => {
     const level = type === 'breath' ? breathLevel : autoLevel;
-    if (level >= maxLevel) return;
+    const levelLimit = type === 'breath' ? maxBreathLevel : maxAutoLevel;
+    if (level >= levelLimit) return;
     const cost = upgradeCost(level);
     if (coins < cost) {
       document.querySelector('#sanggi-ability-status').textContent = `코인이 부족합니다. 필요한 비용: ${formatCoins(cost)}원`;
