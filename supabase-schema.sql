@@ -1584,7 +1584,9 @@ as $$
     ),
     '[]'::jsonb
   )
-  from public.investment_users iu;
+  from public.investment_users iu
+  join public.site_accounts a
+    on a.id = iu.client_id;
 $$;
 
 revoke all on function public.site_account_presence_heartbeat(uuid)
