@@ -263,6 +263,7 @@ nav a:hover { opacity: .5; }
 .records-site-header nav { display: flex; gap: 0; color: #777; font: 11px var(--sans); }
 .records-site-header nav a { padding: 0 9px; border-right: 1px solid #e5e5e5; }
 .records-site-header nav a:last-child { padding-right: 0; border-right: 0; }
+.records-gallery-head, .records-tabs, .records-toolbar, .records-board { padding: 0; }
 .records-gallery-head { display: grid; grid-template-columns: 78px minmax(0, 1fr) 88px; gap: 8px; align-items: center; min-height: 46px; border-bottom: 1px solid #cfcfcf; background: #fff; }
 .records-gallery-label { display: grid; place-items: center; width: 66px; height: 34px; background: #5578b5; color: #fff; font: 700 10px var(--sans); letter-spacing: .08em; }
 .records-gallery-copy { min-width: 0; }
