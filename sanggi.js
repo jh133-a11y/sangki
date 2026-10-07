@@ -514,6 +514,7 @@
 
   const playCoinSound = () => {
     if (!AudioContextClass) return;
+    if (document.hidden || document.visibilityState !== 'visible') return;
     if (!audioContext) audioContext = new AudioContextClass();
     if (audioContext.state === 'suspended') audioContext.resume();
     const oscillator = audioContext.createOscillator();
