@@ -133,6 +133,21 @@
     return result;
   };
 
+  const remoteSanggiRpc = async (name, payload) => {
+    try {
+      return await remoteRpc(name, payload);
+    } catch (error) {
+      if (!error.message.includes('p_guest_legendary_potions')
+        && !error.message.includes('p_legendary_potions')) {
+        throw error;
+      }
+      const legacyPayload = { ...payload };
+      delete legacyPayload.p_guest_legendary_potions;
+      delete legacyPayload.p_legendary_potions;
+      return remoteRpc(name, legacyPayload);
+    }
+  };
+
   const shopModal = document.querySelector('#sanggi-shop-modal');
   const shopBackdrop = document.querySelector('#sanggi-shop-backdrop');
   const shopCash = document.querySelector('#sanggi-shop-cash');
@@ -291,7 +306,7 @@
       const position = getLocalPosition();
       const companionPosition = getLocalCompanionPosition();
       try {
-        await remoteRpc('sanggi_save_state', {
+        await remoteSanggiRpc('sanggi_save_state', {
           p_session_token: session.session_token,
           p_coins: coins.toString(),
           p_breath_level: breathLevel,
@@ -582,7 +597,7 @@
       return false;
     }
     const position = getLocalPosition();
-    const state = await remoteRpc('sanggi_sync_state', {
+    const state = await remoteSanggiRpc('sanggi_sync_state', {
       p_session_token: session.session_token,
       p_guest_coins: coins.toString(),
       p_guest_breath_level: breathLevel,
