@@ -20,6 +20,25 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
   });
 });
 
+const menuToggle = document.querySelector('#menu-toggle');
+const siteNav = document.querySelector('#site-nav');
+
+menuToggle.addEventListener('click', () => {
+  const isOpen = siteNav.classList.toggle('is-open');
+  menuToggle.classList.toggle('is-open', isOpen);
+  menuToggle.setAttribute('aria-expanded', String(isOpen));
+  menuToggle.setAttribute('aria-label', isOpen ? '메뉴 닫기' : '메뉴 열기');
+});
+
+siteNav.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => {
+    siteNav.classList.remove('is-open');
+    menuToggle.classList.remove('is-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    menuToggle.setAttribute('aria-label', '메뉴 열기');
+  });
+});
+
 const investorForm = document.querySelector('#investor-form');
 const investorNickname = document.querySelector('#investor-nickname');
 const investorStatus = document.querySelector('#investor-status');

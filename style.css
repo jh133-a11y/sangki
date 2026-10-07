@@ -35,12 +35,24 @@ button { color: inherit; font: inherit; }
   display: flex; justify-content: space-between; align-items: center;
   font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase;
 }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.menu-toggle {
+ display: inline-flex; width: 28px; height: 24px; padding: 3px 0;
+ flex-direction: column; justify-content: space-between;
+ border: 0; background: transparent; cursor: pointer;
+}
+.menu-toggle span { display: block; width: 100%; height: 2px; background: var(--ink); transition: transform .2s, opacity .2s; }
+.menu-toggle:hover span { background: var(--orange); }
+.menu-toggle.is-open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.menu-toggle.is-open span:nth-child(2) { opacity: 0; }
+.menu-toggle.is-open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 header {
   position: absolute; top: 0; left: 0; width: 100%; z-index: 3;
   padding: 23px 0; border-bottom: 1px solid var(--line);
 }
 .brand { font-size: 19px; font-weight: 700; letter-spacing: -.08em; }
-nav { display: flex; gap: 27px; font: 11px var(--mono); text-transform: uppercase; }
+nav { position: absolute; top: 70px; right: max(15px, calc((100% - 1240px) / 2)); display: none; width: max-content; padding: 16px; flex-direction: column; align-items: flex-end; gap: 14px; background: var(--paper); border: 1px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); font: 11px var(--mono); text-transform: uppercase; }
+nav.is-open { display: flex; }
 nav a { transition: opacity .2s; }
 nav a:hover { opacity: .5; }
 .notification-toggle { border: 1px solid var(--ink); padding: 5px 8px; background: transparent; cursor: pointer; font: 10px var(--mono); text-transform: uppercase; }
@@ -260,7 +272,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 @media (max-width: 720px) {
   .wrap { width: min(100% - 30px, 1240px); }
   header { padding: 18px 0; }
-  nav { gap: 12px; font-size: 9px; }
+  .header-left { gap: 11px; }
+  .menu-toggle { width: 24px; height: 21px; }
+  nav { top: 58px; right: 15px; padding: 14px; }
   nav a[href="#guestbook"] { margin-left: -5px; }
   .notification-toggle { padding: 4px 5px; font-size: 8px; }
   .hero { min-height: 700px; padding-top: 140px; }
