@@ -553,6 +553,20 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   margin: 9px 0 0;
   font: 11px/1.6 var(--mono);
 }
+.sanggi-companion-description {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sanggi-companion-description img {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 72px;
+  object-fit: contain;
+}
+.sanggi-companion-description p {
+  margin-top: 9px;
+}
 .sanggi-upgrade-button {
   min-width: 86px;
   border: 1px solid #2a2730;
