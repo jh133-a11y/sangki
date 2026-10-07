@@ -389,6 +389,29 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-wallet-copy strong {
   font: 700 17px var(--sans);
 }
+.sanggi-home-button {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 4;
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border: 2px solid rgba(40, 31, 31, .8);
+  border-radius: 50%;
+  background: rgba(255, 247, 220, .9);
+  box-shadow: 0 4px 0 rgba(20, 20, 30, .25);
+  transition: transform .2s, background .2s;
+}
+.sanggi-home-button:hover {
+  background: #ffd45c;
+  transform: translateY(-2px);
+}
+.sanggi-home-button svg {
+  width: 31px;
+  height: 31px;
+}
 .sanggi-sky,
 .sanggi-moon,
 .sanggi-city,
