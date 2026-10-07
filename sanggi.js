@@ -574,6 +574,7 @@
     playerLevelLabel.textContent = `LV ${playerLevel}`;
     playerLevelElement.textContent = `LV ${playerLevel}`;
     playerCostElement.textContent = `다음 레벨 ${formatCoins(cost)}원`;
+    playerUpgrade.textContent = `레벨업 · ${formatCoins(cost)}원`;
     playerUpgrade.disabled = accountSyncing || coins < cost;
   };
   const closePlayer = () => {
