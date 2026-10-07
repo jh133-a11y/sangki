@@ -543,6 +543,19 @@ const shopItemDescriptions = {
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
 };
+const shopItemNames = {
+  low_missile: '하급 미사일',
+  mid_missile: '중급 미사일',
+  high_missile: '고급 미사일',
+  nuclear_missile: '핵 미사일',
+  missile_shield: '미사일 방어막',
+  nickname_ticket: '닉네임 변경권',
+  letter: '편지'
+};
+const normalizeShopItem = (item) => ({
+  ...item,
+  name: shopItemNames[item.item_type] || item.name || '아이템'
+});
 
 const resetBagSelection = () => {
   selectedShopItem = null;
@@ -559,6 +572,7 @@ const resetBagSelection = () => {
 };
 
 const selectShopItem = (item) => {
+  item = normalizeShopItem(item);
   selectedShopItem = item;
   bagUsePanel.hidden = false;
   bagUsePanel.style.display = 'grid';
@@ -604,7 +618,7 @@ const loadBag = async () => {
   bagCash.textContent = `보유 현금 ${formatWon(state.cash)}`;
   const slots = [];
   for (let index = 0; index < 27; index += 1) {
-    const item = state.items[index];
+    const item = state.items[index] ? normalizeShopItem(state.items[index]) : null;
     const slot = document.createElement('button');
     slot.type = 'button';
     slot.className = 'bag-slot';
@@ -624,7 +638,9 @@ const loadBag = async () => {
   bagTargets = state.targets;
   bagTarget.replaceChildren();
   if (selectedShopItem) {
-    const refreshedItem = state.items.find((item) => item.item_type === selectedShopItem.item_type);
+    const refreshedItem = state.items
+      .map(normalizeShopItem)
+      .find((item) => item.item_type === selectedShopItem.item_type);
     if (refreshedItem?.quantity > 0) {
       selectShopItem(refreshedItem);
     } else {
