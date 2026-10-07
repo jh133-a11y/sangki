@@ -48,6 +48,10 @@
   let remoteReady = false;
   let accountSyncing = false;
   let remoteSaveTimer = null;
+  let remoteSaveInFlight = null;
+  let remoteSaveRequested = false;
+  let remoteSaveRevision = 0;
+  let remoteSaveCompletedRevision = 0;
   let lastSyncedSessionToken = null;
   const character = document.querySelector('.sanggi-character');
   const companion = document.querySelector('#sanggi-companion');
@@ -125,7 +129,10 @@
       summoned: companionSummoned,
       level: companionLevel
     }));
-    if (remoteReady) scheduleRemoteSave();
+    if (remoteReady) {
+      remoteSaveRevision += 1;
+      scheduleRemoteSave();
+    }
   };
 
   const getSession = () => {
@@ -188,6 +195,43 @@
       p_sanggi_outfit: sanggiOutfit,
       p_companion_outfit: companionOutfit
     });
+  };
+
+  const flushRemoteSave = async () => {
+    const session = getSession();
+    if (!session?.session_token || !remoteReady) return;
+    remoteSaveRequested = true;
+    if (remoteSaveInFlight) return remoteSaveInFlight;
+    remoteSaveInFlight = (async () => {
+      while (remoteSaveRequested || remoteSaveCompletedRevision < remoteSaveRevision) {
+        remoteSaveRequested = false;
+        const revision = remoteSaveRevision;
+        const position = getLocalPosition();
+        const companionPosition = getLocalCompanionPosition();
+        await remoteSanggiRpc('sanggi_save_state', {
+          p_session_token: session.session_token,
+          p_coins: coins.toString(),
+          p_breath_level: breathLevel,
+          p_auto_level: autoLevel,
+          p_character_x: position.x,
+          p_character_y: position.y,
+          p_companion_unlocked: companionUnlocked,
+          p_companion_summoned: companionSummoned,
+          p_companion_level: companionLevel,
+          p_companion_x: companionPosition.x,
+          p_companion_y: companionPosition.y,
+          p_normal_potions: normalPotions,
+          p_advanced_potions: advancedPotions,
+          p_legendary_potions: legendaryPotions
+        });
+        remoteSaveCompletedRevision = Math.max(remoteSaveCompletedRevision, revision);
+      }
+    })();
+    try {
+      await remoteSaveInFlight;
+    } finally {
+      remoteSaveInFlight = null;
+    }
   };
 
   const shopModal = document.querySelector('#sanggi-shop-modal');
@@ -412,31 +456,10 @@
 
   const scheduleRemoteSave = () => {
     window.clearTimeout(remoteSaveTimer);
-    remoteSaveTimer = window.setTimeout(async () => {
-      const session = getSession();
-      if (!session?.session_token) return;
-      const position = getLocalPosition();
-      const companionPosition = getLocalCompanionPosition();
-      try {
-        await remoteSanggiRpc('sanggi_save_state', {
-          p_session_token: session.session_token,
-          p_coins: coins.toString(),
-          p_breath_level: breathLevel,
-          p_auto_level: autoLevel,
-          p_character_x: position.x,
-          p_character_y: position.y,
-          p_companion_unlocked: companionUnlocked,
-          p_companion_summoned: companionSummoned,
-          p_companion_level: companionLevel,
-          p_companion_x: companionPosition.x,
-          p_companion_y: companionPosition.y,
-          p_normal_potions: normalPotions,
-          p_advanced_potions: advancedPotions,
-          p_legendary_potions: legendaryPotions
-        });
-      } catch (error) {
+    remoteSaveTimer = window.setTimeout(() => {
+      flushRemoteSave().catch((error) => {
         console.warn('Sanggi state save failed:', error.message);
-      }
+      });
     }, 400);
   };
 
@@ -473,6 +496,7 @@
   };
 
   const collectCoin = (amount, showFeedback = true) => {
+    if (accountSyncing) return;
     const boostedAmount = amount * potionMultiplier;
     coins += boostedAmount;
     saveState();
@@ -521,8 +545,10 @@
     const available = isLegendary ? legendaryPotions : isAdvanced ? advancedPotions : normalPotions;
     if (available < 1) return;
     const session = getSession();
+    accountSyncing = true;
     try {
       if (session?.session_token) {
+        await flushRemoteSave();
         const state = await remoteRpc('sanggi_use_potion', {
           p_session_token: session.session_token,
           p_potion_type: type
@@ -551,6 +577,9 @@
       renderPotions();
     } catch (error) {
       window.alert(error.message || '물약 사용에 실패했습니다.');
+    } finally {
+      accountSyncing = false;
+      renderPotions();
     }
   };
 
@@ -980,7 +1009,9 @@
       return;
     }
     playerUpgrade.disabled = true;
+    accountSyncing = true;
     try {
+      await flushRemoteSave();
       const state = await remoteRpc('sanggi_upgrade_player', {
         p_session_token: session.session_token
       });
@@ -993,6 +1024,8 @@
       renderPlayer();
     } catch (error) {
       playerStatus.textContent = error.message || '플레이어 레벨업에 실패했습니다.';
+    } finally {
+      accountSyncing = false;
       renderPlayer();
     }
   });
