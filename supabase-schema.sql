@@ -216,6 +216,39 @@ revoke all on function public.delete_comment(uuid, text, text) from public;
 grant execute on function public.update_comment(uuid, text, text) to anon;
 grant execute on function public.delete_comment(uuid, text, text) to anon;
 
+create or replace function public.delete_investor_comment(
+  p_id uuid,
+  p_session_token uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+begin
+  select account_id
+  into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token
+    and expires_at > now();
+
+  if v_account_id is null then
+    return false;
+  end if;
+
+  delete from public.comments
+  where id = p_id
+    and author_account_id = v_account_id;
+
+  return found;
+end;
+$$;
+
+revoke all on function public.delete_investor_comment(uuid, uuid) from public;
+grant execute on function public.delete_investor_comment(uuid, uuid) to anon, authenticated;
+
 drop function if exists public.delete_all_comments(text);
 
 create table if not exists public.speed_game_scores (

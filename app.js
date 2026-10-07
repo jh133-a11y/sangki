@@ -1843,7 +1843,6 @@ const renderComment = (item, isReply = false) => {
   replyButton.addEventListener('click', () => addReply(item.id));
   if (item.author_account_id) {
     article.querySelector('[data-action="edit"]').remove();
-    article.querySelector('[data-action="delete"]').remove();
   }
   article.querySelectorAll('[data-vote]').forEach((button) => {
     button.addEventListener('click', async () => {
@@ -1869,7 +1868,7 @@ const renderComment = (item, isReply = false) => {
     });
   });
   article.querySelector('[data-action="edit"]')?.addEventListener('click', () => editComment(item));
-  article.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteComment(item.id));
+  article.querySelector('[data-action="delete"]')?.addEventListener('click', () => deleteComment(item));
   return article;
 };
 
@@ -2053,20 +2052,34 @@ const editComment = async (item) => {
   }
 };
 
-const deleteComment = async (id) => {
-  const password = requestPassword();
-  if (password === null) return;
-  const isAdmin = password === '8170';
-  if (!await siteConfirm(isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
+const deleteComment = async (item) => {
+  const isInvestorComment = Boolean(item.author_account_id);
+  if (isInvestorComment && !accountSession?.session_token) {
+    window.alert('이 투자자 댓글을 삭제하려면 작성한 계정으로 로그인해야 합니다.');
+    return;
+  }
+  const password = isInvestorComment ? null : requestPassword();
+  if (!isInvestorComment && password === null) return;
+  const isAdmin = !isInvestorComment && password === '8170';
+  if (!await siteConfirm(isInvestorComment
+    ? '로그인한 본인의 투자자 댓글을 삭제할까요?'
+    : isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
 
   try {
-    const deleted = await callCommentRpc('delete_comment', {
-      p_id: id,
-      p_password_hash: await hashPassword(password),
-      p_admin_password: isAdmin ? password : ''
-    });
+    const deleted = isInvestorComment
+      ? await callCommentRpc('delete_investor_comment', {
+        p_id: item.id,
+        p_session_token: accountSession.session_token
+      })
+      : await callCommentRpc('delete_comment', {
+        p_id: item.id,
+        p_password_hash: await hashPassword(password),
+        p_admin_password: isAdmin ? password : ''
+      });
     if (!deleted) {
-      throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+      throw new Error(isInvestorComment
+        ? '작성한 계정으로 로그인했는지 확인해주세요.'
+        : '비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
     }
     await loadComments();
   } catch (error) {
@@ -2267,14 +2280,14 @@ const updateInvestorCommentFields = () => {
     if (accountSession?.account_id && investmentState?.nickname) {
       investorCommentHint.textContent = storedPlayerLevel
         ? `현재 표시: 레벨 ${storedPlayerLevel} · ${investmentState.nickname} — 댓글에도 작은 색상 레벨 숫자와 닉네임으로 표시됩니다.`
-        : `${investmentState.nickname} — 댓글에 상기 키우기 레벨 숫자와 닉네임으로 표시됩니다.`;
+        : `${investmentState.nickname} — 댓글에 플레이어 레벨과 닉네임으로 표시됩니다.`;
       investorCommentHint.classList.remove('is-error');
     } else {
       investorCommentHint.textContent = '로그인하고 투자 닉네임을 설정해야 사용할 수 있습니다.';
       investorCommentHint.classList.add('is-error');
     }
   } else {
-    investorCommentHint.textContent = '체크하면 로그인한 투자자의 고유 닉네임과 레벨로 댓글을 작성합니다.';
+    investorCommentHint.textContent = '체크하면 로그인한 투자자의 플레이어 레벨과 고유 닉네임으로 댓글을 작성합니다.';
     investorCommentHint.classList.remove('is-error');
   }
 };
