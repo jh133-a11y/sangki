@@ -698,12 +698,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 }
 .sanggi-companion {
   position: absolute;
-  left: 28%;
-  top: 43%;
+  right: 8%;
+  bottom: 18%;
   z-index: 3;
   width: auto;
-  height: min(12vh, 96px);
-  max-width: 14vw;
+  height: min(55vh, 440px);
+  max-width: 40vw;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
@@ -783,10 +783,10 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
     max-width: 55vw;
   }
   .sanggi-companion {
-    left: 27%;
-    top: 42%;
-    height: min(12vh, 72px);
-    max-width: 20vw;
+    right: 5%;
+    bottom: 25%;
+    height: min(42vh, 315px);
+    max-width: 55vw;
   }
   .sanggi-action-bar {
     bottom: 70px;
