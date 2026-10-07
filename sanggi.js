@@ -13,6 +13,7 @@
   const rpcKey = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
   const maxBreathLevel = 3000;
   const maxAutoLevel = 50;
+  const maxCompanionLevel = 3000;
 
   if (!main || !balance) return;
 
@@ -35,19 +36,24 @@
   const companion = document.querySelector('#sanggi-companion');
   let companionUnlocked = false;
   let companionSummoned = false;
+  let companionLevel = 1;
   let dragState = null;
-  let companionDragState = null;
   try {
     const savedCompanion = JSON.parse(localStorage.getItem(companionStateKey) || '{}');
     companionUnlocked = savedCompanion.unlocked === true;
     companionSummoned = savedCompanion.summoned === true;
+    companionLevel = Math.min(maxCompanionLevel, Math.max(1, Number(savedCompanion.level) || 1));
   } catch {
     companionUnlocked = false;
     companionSummoned = false;
+    companionLevel = 1;
   }
 
   const formatCoins = (value) => value.toLocaleString('ko-KR');
-  const clickReward = () => 1n + BigInt((breathLevel - 1) * 10);
+  const companionBonus = () => companionUnlocked
+    ? 100n + BigInt((companionLevel - 1) * 10)
+    : 0n;
+  const clickReward = () => 1n + BigInt((breathLevel - 1) * 10) + companionBonus();
   const autoReward = () => clickReward();
   const autoIntervalMs = () => Math.max(5000, 10000 - (autoLevel - 1) * 100);
   const upgradeCost = (level) => {
@@ -64,7 +70,8 @@
     localStorage.setItem(abilityStorageKey, JSON.stringify({ breathLevel, autoLevel }));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
-      summoned: companionSummoned
+      summoned: companionSummoned,
+      level: companionLevel
     }));
     if (remoteReady) scheduleRemoteSave();
   };
@@ -85,7 +92,7 @@
       method: 'POST',
       headers: {
         apikey: rpcKey,
-        Authorization: `Bearer ${rpcKey}`,
+        Authorization: 'Bearer ' + rpcKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -125,7 +132,6 @@
       const session = getSession();
       if (!session?.session_token) return;
       const position = getLocalPosition();
-      const companionPosition = getLocalCompanionPosition();
       try {
         await remoteRpc('sanggi_save_state', {
           p_session_token: session.session_token,
@@ -136,8 +142,9 @@
           p_character_y: position.y,
           p_companion_unlocked: companionUnlocked,
           p_companion_summoned: companionSummoned,
-          p_companion_x: companionPosition.x,
-          p_companion_y: companionPosition.y
+          p_companion_level: companionLevel,
+          p_companion_x: 0.58,
+          p_companion_y: 0.1
         });
       } catch (error) {
         console.warn('Sanggi state save failed:', error.message);
@@ -272,8 +279,9 @@
       p_guest_character_y: position.y,
       p_guest_companion_unlocked: companionUnlocked,
       p_guest_companion_summoned: companionSummoned,
-      p_guest_companion_x: getLocalCompanionPosition().x,
-      p_guest_companion_y: getLocalCompanionPosition().y
+      p_guest_companion_level: companionLevel,
+      p_guest_companion_x: 0.58,
+      p_guest_companion_y: 0.1
     });
     coins = BigInt(String(state.coins || '0'));
     breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(state.breath_level) || 1));
@@ -286,9 +294,11 @@
     }));
     companionUnlocked = state.companion_unlocked === true;
     companionSummoned = state.companion_summoned === true;
+    companionLevel = Math.min(maxCompanionLevel, Math.max(1, Number(state.companion_level) || 1));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
-      summoned: companionSummoned
+      summoned: companionSummoned,
+      level: companionLevel
     }));
     localStorage.setItem(companionPositionKey, JSON.stringify({
       x: Number.isFinite(Number(state.companion_x)) ? Number(state.companion_x) : 0.58,
@@ -349,69 +359,6 @@
     if (!wasMoved) collectCoin(clickReward());
   };
 
-  const loadCompanionPosition = () => {
-    if (!companion) return;
-    const saved = getLocalCompanionPosition();
-    const mainBounds = main.getBoundingClientRect();
-    const maxLeft = Math.max(0, mainBounds.width - companion.offsetWidth);
-    const maxTop = Math.max(0, mainBounds.height - companion.offsetHeight);
-    companion.style.left = `${Math.max(0, Math.min(1, saved.x)) * maxLeft}px`;
-    companion.style.top = `${Math.max(0, Math.min(1, saved.y)) * maxTop}px`;
-  };
-
-  const saveCompanionPosition = () => {
-    const mainBounds = main.getBoundingClientRect();
-    const companionBounds = companion.getBoundingClientRect();
-    const maxX = Math.max(1, mainBounds.width - companionBounds.width);
-    const maxY = Math.max(1, mainBounds.height - companionBounds.height);
-    localStorage.setItem(companionPositionKey, JSON.stringify({
-      x: Math.max(0, Math.min(1, (companionBounds.left - mainBounds.left) / maxX)),
-      y: Math.max(0, Math.min(1, (companionBounds.top - mainBounds.top) / maxY))
-    }));
-    if (remoteReady) scheduleRemoteSave();
-  };
-
-  const moveCompanion = (event) => {
-    if (!companionDragState) return;
-    companionDragState.clientX = event.clientX;
-    companionDragState.clientY = event.clientY;
-    if (companionDragState.frame) return;
-    companionDragState.frame = window.requestAnimationFrame(() => {
-      companionDragState.frame = 0;
-      if (!companionDragState) return;
-      const left = Math.max(0, Math.min(
-        companionDragState.maxLeft,
-        companionDragState.clientX - companionDragState.mainLeft - companionDragState.offsetX
-      ));
-      const top = Math.max(0, Math.min(
-        companionDragState.maxTop,
-        companionDragState.clientY - companionDragState.mainTop - companionDragState.offsetY
-      ));
-      companion.style.left = `${left}px`;
-      companion.style.top = `${top}px`;
-    });
-  };
-
-  const stopCompanionDrag = (event, cancelled = false) => {
-    if (!companionDragState) return;
-    if (companionDragState.frame) window.cancelAnimationFrame(companionDragState.frame);
-    companionDragState.frame = 0;
-    if (!cancelled && event) {
-      companion.style.left = `${Math.max(0, Math.min(
-        companionDragState.maxLeft,
-        event.clientX - companionDragState.mainLeft - companionDragState.offsetX
-      ))}px`;
-      companion.style.top = `${Math.max(0, Math.min(
-        companionDragState.maxTop,
-        event.clientY - companionDragState.mainTop - companionDragState.offsetY
-      ))}px`;
-    }
-    if (event?.pointerId !== undefined) companion.releasePointerCapture?.(event.pointerId);
-    companionDragState = null;
-    companion.classList.remove('is-dragging');
-    saveCompanionPosition();
-  };
-
   const abilityButton = document.querySelector('#sanggi-ability-button');
   const abilityModal = document.querySelector('#sanggi-ability-modal');
   const abilityBackdrop = document.querySelector('#sanggi-ability-backdrop');
@@ -434,11 +381,24 @@
   const companionBackdrop = document.querySelector('#sanggi-companion-backdrop');
   const companionAction = document.querySelector('#sanggi-companion-action');
   const companionStatus = document.querySelector('#sanggi-companion-status');
+  const companionLevelPanel = document.querySelector('#sanggi-companion-level-panel');
+  const companionLevelElement = document.querySelector('#sanggi-companion-level');
+  const companionEffect = document.querySelector('#sanggi-companion-effect');
+  const companionLevelEffect = document.querySelector('#sanggi-companion-level-effect');
+  const companionUpgrade = document.querySelector('#sanggi-companion-upgrade');
+  const companionUpgradeCost = () => companionLevel >= maxCompanionLevel ? null : upgradeCost(companionLevel);
   const renderCompanion = () => {
     companion.hidden = !companionSummoned;
+    companionLevelPanel.hidden = !companionUnlocked;
     companionAction.textContent = companionUnlocked
       ? (companionSummoned ? '소환 해제' : '주성 소환')
       : '50,000원으로 잠금 해제';
+    companionLevelElement.textContent = `LV ${companionLevel}`;
+    companionEffect.textContent = `클릭·자동 +${formatCoins(companionBonus())}원`;
+    companionLevelEffect.textContent = `클릭·자동 +${formatCoins(companionBonus())}원`;
+    const cost = companionUpgradeCost();
+    companionUpgrade.textContent = cost === null ? 'MAX' : `강화 · ${formatCoins(cost)}원`;
+    companionUpgrade.disabled = cost === null;
   };
   const closeCompanion = () => {
     companionModal.hidden = true;
@@ -484,6 +444,20 @@
     saveState();
     renderBalance();
     renderCompanion();
+  });
+  companionUpgrade.addEventListener('click', () => {
+    const cost = companionUpgradeCost();
+    if (cost === null) return;
+    if (coins < cost) {
+      companionStatus.textContent = `코인이 부족합니다. 필요한 비용: ${formatCoins(cost)}원`;
+      return;
+    }
+    coins -= cost;
+    companionLevel += 1;
+    saveState();
+    renderBalance();
+    renderCompanion();
+    companionStatus.textContent = `주성 레벨이 ${companionLevel}이 되었습니다.`;
   });
 
   if (character) {
@@ -553,56 +527,7 @@
       });
     }
 
-  if (companion) {
-    renderCompanion();
-    loadCompanionPosition();
-    companion.addEventListener('pointerdown', (event) => {
-      if (event.button !== 0 && event.pointerType === 'mouse') return;
-      event.preventDefault();
-      event.stopPropagation();
-      const bounds = companion.getBoundingClientRect();
-      const mainBounds = main.getBoundingClientRect();
-      companionDragState = {
-        offsetX: event.clientX - bounds.left,
-        offsetY: event.clientY - bounds.top,
-        mainLeft: mainBounds.left,
-        mainTop: mainBounds.top,
-        maxLeft: Math.max(0, mainBounds.width - companion.offsetWidth),
-        maxTop: Math.max(0, mainBounds.height - companion.offsetHeight),
-        frame: 0
-      };
-      companion.classList.add('is-dragging');
-      companion.setPointerCapture?.(event.pointerId);
-    });
-    companion.addEventListener('pointermove', moveCompanion);
-    companion.addEventListener('pointerup', stopCompanionDrag);
-    companion.addEventListener('pointercancel', () => stopCompanionDrag(null, true));
-    companion.addEventListener('touchmove', (event) => {
-      if (!companionDragState || !event.touches[0]) return;
-      event.preventDefault();
-      moveCompanion(event.touches[0]);
-    }, { passive: false });
-    companion.addEventListener('touchend', (event) => {
-      if (companionDragState && event.changedTouches[0]) stopCompanionDrag(event.changedTouches[0]);
-    }, { passive: false });
-    companion.addEventListener('touchcancel', () => stopCompanionDrag(null, true));
-    window.addEventListener('pointermove', (event) => {
-      if (!companionDragState) return;
-      event.preventDefault();
-      moveCompanion(event);
-    }, { passive: false });
-    window.addEventListener('pointerup', (event) => {
-      if (companionDragState) stopCompanionDrag(event);
-    });
-    window.addEventListener('touchmove', (event) => {
-      if (!companionDragState || !event.touches[0]) return;
-      event.preventDefault();
-      moveCompanion(event.touches[0]);
-    }, { passive: false });
-    window.addEventListener('touchend', (event) => {
-      if (companionDragState && event.changedTouches[0]) stopCompanionDrag(event.changedTouches[0]);
-    }, { passive: false });
-  }
+  if (companion) renderCompanion();
 
   main.addEventListener('pointerdown', (event) => {
     if (isInteractiveControl(event.target)) return;
@@ -618,7 +543,6 @@
     }
     loadCharacterPosition();
     renderCompanion();
-    loadCompanionPosition();
     renderBalance();
     renderAbilities();
     scheduleAutoCoin();

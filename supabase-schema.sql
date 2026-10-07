@@ -2583,6 +2583,7 @@ create table if not exists public.sanggi_game_states (
   character_y numeric not null default 0.07 check (character_y between 0 and 1),
   companion_unlocked boolean not null default false,
   companion_summoned boolean not null default false,
+  companion_level integer not null default 1 check (companion_level between 1 and 3000),
   companion_x numeric not null default 0.58 check (companion_x between 0 and 1),
   companion_y numeric not null default 0.1 check (companion_y between 0 and 1),
   updated_at timestamptz not null default now()
@@ -2593,6 +2594,7 @@ revoke all on table public.sanggi_game_states from anon, authenticated;
 alter table public.sanggi_game_states
   add column if not exists companion_unlocked boolean not null default false,
   add column if not exists companion_summoned boolean not null default false,
+  add column if not exists companion_level integer not null default 1,
   add column if not exists companion_x numeric not null default 0.58,
   add column if not exists companion_y numeric not null default 0.1;
 alter table public.sanggi_game_states
@@ -2601,8 +2603,12 @@ alter table public.sanggi_game_states
 alter table public.sanggi_game_states
   add constraint sanggi_game_states_companion_x_check check (companion_x between 0 and 1),
   add constraint sanggi_game_states_companion_y_check check (companion_y between 0 and 1);
+alter table public.sanggi_game_states
+  drop constraint if exists sanggi_game_states_companion_level_check;
+alter table public.sanggi_game_states
+  add constraint sanggi_game_states_companion_level_check check (companion_level between 1 and 3000);
 
-drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric);
+drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric);
 create or replace function public.sanggi_sync_state(
   p_session_token uuid,
   p_guest_coins bigint default 0,
@@ -2612,6 +2618,7 @@ create or replace function public.sanggi_sync_state(
   p_guest_character_y numeric default 0.07,
   p_guest_companion_unlocked boolean default false,
   p_guest_companion_summoned boolean default false,
+  p_guest_companion_level integer default 1,
   p_guest_companion_x numeric default 0.58,
   p_guest_companion_y numeric default 0.1
 )
@@ -2643,7 +2650,7 @@ begin
   if v_state.account_id is null then
     insert into public.sanggi_game_states (
       account_id, coins, breath_level, auto_level, character_x, character_y,
-      companion_unlocked, companion_summoned, companion_x, companion_y
+      companion_unlocked, companion_summoned, companion_level, companion_x, companion_y
     )
     values (
       v_account_id,
@@ -2654,6 +2661,7 @@ begin
       greatest(0, least(1, coalesce(p_guest_character_y, 0.07))),
       coalesce(p_guest_companion_unlocked, false),
       coalesce(p_guest_companion_summoned, false) and coalesce(p_guest_companion_unlocked, false),
+      greatest(1, least(3000, coalesce(p_guest_companion_level, 1))),
       greatest(0, least(1, coalesce(p_guest_companion_x, 0.58))),
       greatest(0, least(1, coalesce(p_guest_companion_y, 0.1)))
     )
@@ -2668,13 +2676,14 @@ begin
     'character_y', v_state.character_y,
     'companion_unlocked', v_state.companion_unlocked,
     'companion_summoned', v_state.companion_summoned,
+    'companion_level', v_state.companion_level,
     'companion_x', v_state.companion_x,
     'companion_y', v_state.companion_y
   );
 end;
 $$;
 
-drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric);
+drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric);
 create or replace function public.sanggi_save_state(
   p_session_token uuid,
   p_coins bigint,
@@ -2684,6 +2693,7 @@ create or replace function public.sanggi_save_state(
   p_character_y numeric,
   p_companion_unlocked boolean,
   p_companion_summoned boolean,
+  p_companion_level integer,
   p_companion_x numeric,
   p_companion_y numeric
 )
@@ -2707,7 +2717,7 @@ begin
 
   insert into public.sanggi_game_states (
     account_id, coins, breath_level, auto_level, character_x, character_y,
-    companion_unlocked, companion_summoned, companion_x, companion_y, updated_at
+    companion_unlocked, companion_summoned, companion_level, companion_x, companion_y, updated_at
   )
   values (
     v_account_id,
@@ -2718,6 +2728,7 @@ begin
     greatest(0, least(1, p_character_y)),
     coalesce(p_companion_unlocked, false),
     coalesce(p_companion_summoned, false) and coalesce(p_companion_unlocked, false),
+    greatest(1, least(3000, coalesce(p_companion_level, 1))),
     greatest(0, least(1, p_companion_x)),
     greatest(0, least(1, p_companion_y)),
     now()
@@ -2730,6 +2741,7 @@ begin
     character_y = excluded.character_y,
     companion_unlocked = excluded.companion_unlocked,
     companion_summoned = excluded.companion_summoned,
+    companion_level = excluded.companion_level,
     companion_x = excluded.companion_x,
     companion_y = excluded.companion_y,
     updated_at = now();
@@ -2777,16 +2789,17 @@ begin
   return jsonb_build_object(
     'coins', v_state.coins::text,
     'companion_unlocked', v_state.companion_unlocked,
-    'companion_summoned', v_state.companion_summoned
+    'companion_summoned', v_state.companion_summoned,
+    'companion_level', v_state.companion_level
   );
 end;
 $$;
 
-revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) from public;
-revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) from public;
+revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) from public;
+revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) from public;
 revoke all on function public.sanggi_unlock_companion(uuid) from public;
-grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) to anon, authenticated;
-grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) to anon, authenticated;
+grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) to anon, authenticated;
+grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) to anon, authenticated;
 grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
@@ -2879,3 +2892,5 @@ from public;
 
 grant execute on function public.investment_next_direction(numeric, integer)
 to anon, authenticated;
+
+notify pgrst, 'reload schema';

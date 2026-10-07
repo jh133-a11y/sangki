@@ -81,22 +81,33 @@
       <p class="sanggi-ability-status" id="sanggi-ability-status" role="status"></p>
     </section>
     <div class="sanggi-companion-backdrop" id="sanggi-companion-backdrop" hidden></div>
-    <section class="sanggi-companion-modal" id="sanggi-companion-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-companion-title" hidden>
+    <section class="sanggi-ability-modal sanggi-companion-modal" id="sanggi-companion-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-companion-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-companion-close" type="button" aria-label="닫기">×</button>
       <p class="sanggi-ability-eyebrow">COMPANION</p>
       <h2 id="sanggi-companion-title">동료 소환</h2>
-      <div class="sanggi-companion-preview">
-        <img src="juseong-character.png" alt="주성 캐릭터 미리보기">
-        <div>
-          <h3>주성</h3>
-          <p>주성을 잠금 해제하면 원하는 때에 소환하거나 해제할 수 있습니다. 소환된 주성도 기존 캐릭터처럼 드래그할 수 있습니다.</p>
-          <strong id="sanggi-companion-price">잠금 해제 비용 50,000원</strong>
-        </div>
+      <div class="sanggi-ability-list">
+        <article class="sanggi-ability-card">
+          <div>
+            <div class="sanggi-ability-card-head"><h3>주성</h3><strong id="sanggi-companion-effect">잠금 해제 시 클릭·자동 +100원</strong></div>
+            <p>주성을 잠금 해제하면 클릭당 얻는 코인과 n초마다 자동으로 얻는 코인이 각각 100원 증가합니다. 소환된 주성은 배경에 작게 표시되며 정해진 위치에 나타납니다.</p>
+            <strong id="sanggi-companion-price">잠금 해제 비용 50,000원</strong>
+          </div>
+          <button class="sanggi-upgrade-button" id="sanggi-companion-action" type="button">50,000원으로 잠금 해제</button>
+        </article>
+        <article class="sanggi-ability-card sanggi-companion-level" id="sanggi-companion-level-panel" hidden>
+          <div>
+            <div class="sanggi-ability-card-head">
+              <h3>주성 레벨 <span id="sanggi-companion-level">LV 1</span></h3>
+              <strong id="sanggi-companion-level-effect">클릭·자동 +100원</strong>
+            </div>
+            <p>레벨업할 때마다 클릭당 코인과 n초마다 자동으로 얻는 코인이 10원씩 증가합니다. 강화 비용과 증가 방식은 입냄새 강화와 같습니다.</p>
+          </div>
+          <button class="sanggi-upgrade-button" id="sanggi-companion-upgrade" type="button">강화</button>
+        </article>
       </div>
-      <button class="sanggi-upgrade-button" id="sanggi-companion-action" type="button">50,000원으로 잠금 해제</button>
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=17"></script>
+  <script src="sanggi.js?v=19"></script>
 </body>
 </html>
