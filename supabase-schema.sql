@@ -689,7 +689,8 @@ begin
     || '원을 지급했습니다.' || E'\n' || trim(p_message);
 
   update public.investment_users
-  set cash = cash + p_amount;
+  set cash = cash + p_amount
+  where client_id is not null;
 
   get diagnostics v_user_count = row_count;
 
