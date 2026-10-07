@@ -137,8 +137,18 @@ grant execute on function public.delete_speed_game_score(uuid, text) to anon;
 
 create table if not exists public.investment_market (
   id integer primary key check (id = 1),
-  last_market_date date
+  last_market_date date,
+  direction_date date,
+  direction_state jsonb not null default '{}'::jsonb,
+  last_price_update timestamptz
 );
+
+alter table public.investment_market
+  add column if not exists direction_date date;
+alter table public.investment_market
+  add column if not exists direction_state jsonb not null default '{}'::jsonb;
+alter table public.investment_market
+  add column if not exists last_price_update timestamptz;
 
 create table if not exists public.investment_assets (
   symbol text primary key,
@@ -199,84 +209,146 @@ security definer
 set search_path = public
 as $$
 declare
-  today date := (now() at time zone 'Asia/Seoul')::date;
-  previous_date date;
+  kst_now timestamp := now() at time zone 'Asia/Seoul';
+  today date := kst_now::date;
+  direction_date_value date;
+  direction_state_value jsonb;
   asset record;
   pct numeric;
   pct_two numeric;
   direction integer;
   next_price bigint;
+  new_direction_day boolean := false;
+  event_state jsonb;
 begin
   insert into public.investment_market (id, last_market_date)
   values (1, null)
   on conflict (id) do nothing;
 
-  select last_market_date into previous_date
+  select direction_date, direction_state
+  into direction_date_value, direction_state_value
   from public.investment_market
   where id = 1
   for update;
 
-  if previous_date is not distinct from today then
+  if kst_now::time < time '12:00'
+     and direction_date_value is distinct from today then
+    return coalesce(direction_date_value, today);
+  end if;
+
+  if direction_date_value is distinct from today then
+    direction_state_value := jsonb_build_object(
+      'SANGI_ROCKET', case when random() < 0.5 then -1 else 1 end,
+      'JEONGMIN_ROCKET', 0,
+      'SANGI_BIO', case when random() < 0.5 then -1 else 1 end,
+      'SAMSUNG_MICROWAVE', case when random() < 0.5 then -1 else 1 end,
+      'SEOK_HYNIX', 0,
+      'KOREA_SANGI_INDEX', case when random() < 0.5 then -1 else 1 end,
+      'SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'SANGI_AI', case when random() < 0.5 then -1 else 1 end,
+      'QUANTUM_YOON', case when random() < 0.5 then -1 else 1 end,
+      'rocket_event', random() < 0.10,
+      'bio_event', random() < 0.05,
+      'quantum_event', random() < 0.05,
+      'tech_direction', case when random() < 0.5 then -1 else 1 end
+    );
+    direction_state_value := jsonb_set(
+      direction_state_value,
+      '{JEONGMIN_ROCKET}',
+      direction_state_value->'SANGI_ROCKET'
+    );
+    direction_state_value := jsonb_set(
+      direction_state_value,
+      '{SEOK_HYNIX}',
+      direction_state_value->'SAMSUNG_MICROWAVE'
+    );
+    update public.investment_market
+    set direction_date = today,
+        direction_state = direction_state_value,
+        last_market_date = today,
+        last_price_update = null
+    where id = 1;
+    new_direction_day := true;
+  end if;
+
+  select direction_state into direction_state_value
+  from public.investment_market
+  where id = 1;
+
+  if not new_direction_day
+     and (
+       (select last_price_update from public.investment_market where id = 1)
+       is not null
+       and now() < (select last_price_update from public.investment_market where id = 1)
+         + interval '30 minutes'
+     ) then
     return today;
   end if;
 
   for asset in select * from public.investment_assets order by symbol for update loop
-    if asset.symbol in ('JEONGMIN_ROCKET', 'SEOK_HYNIX') then
+    if not asset.listed and not new_direction_day then
       continue;
     end if;
-    if not asset.listed then
+
+    if not asset.listed and new_direction_day then
       update public.investment_assets
       set current_price = base_price, change_pct = 0, listed = true
       where symbol = asset.symbol;
+    end if;
+
+    if asset.symbol in ('JEONGMIN_ROCKET', 'SEOK_HYNIX') then
       continue;
     end if;
 
     pct := 0;
+    event_state := direction_state_value;
     if asset.symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET') then
-      if random() < 0.10 then
+      direction := (direction_state_value->>'SANGI_ROCKET')::integer;
+      if (direction_state_value->>'rocket_event')::boolean and direction > 0 then
         pct := floor(random() * 101) + 100;
         pct_two := floor(random() * 101) + 100;
       else
-        direction := case when random() < 0.5 then -1 else 1 end;
         pct := direction * (floor(random() * 30) + 1);
         pct_two := direction * (floor(random() * 30) + 1);
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol in ('SAMSUNG_MICROWAVE', 'SEOK_HYNIX') then
-      direction := case when random() < 0.5 then -1 else 1 end;
+      direction := (direction_state_value->>'SAMSUNG_MICROWAVE')::integer;
       pct := direction * (floor(random() * 15) + 1);
       pct_two := direction * (floor(random() * 15) + 1);
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SANGI_BIO' then
-      if random() < 0.05 then
+      direction := (direction_state_value->>'SANGI_BIO')::integer;
+      if (direction_state_value->>'bio_event')::boolean and direction > 0 then
         pct := floor(random() * 501) + 500;
       else
-        pct := (case when random() < 0.5 then -1 else 1 end) * (floor(random() * 30) + 1);
+        pct := direction * (floor(random() * 30) + 1);
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SURGE_STOCK' then
-      pct := case when random() < 0.5
-        then -(floor(random() * 99) + 1)
-        else floor(random() * 2001) + 1
+      direction := (direction_state_value->>'SURGE_STOCK')::integer;
+      pct := direction * case when direction < 0
+        then (floor(random() * 99) + 1)
+        else (floor(random() * 2000) + 1)
       end;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'KOREA_SANGI_INDEX' then
-      pct := case when random() < 0.5
-        then -(floor(random() * 1) + 1)
-        else floor(random() * 3) + 1
-      end;
+      direction := (direction_state_value->>'KOREA_SANGI_INDEX')::integer;
+      pct := direction * case when direction < 0 then 1 else (floor(random() * 3) + 1) end;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SANGI_AI' then
-      pct := case when random() < 0.5
-        then -(floor(random() * 10) + 1)
-        else floor(random() * 20) + 1
+      direction := (direction_state_value->>'SANGI_AI')::integer;
+      pct := direction * case when direction < 0
+        then (floor(random() * 10) + 1)
+        else (floor(random() * 20) + 1)
       end;
       next_price := round(asset.current_price * (1 + pct / 100));
     else
-      if random() < 0.05 then
+      direction := (direction_state_value->>'QUANTUM_YOON')::integer;
+      if (direction_state_value->>'quantum_event')::boolean and direction > 0 then
         pct := floor(random() * 101) + 100;
       else
-        pct := (case when random() < 0.5 then -1 else 1 end) * (floor(random() * 30) + 1);
+        pct := direction * (floor(random() * 30) + 1);
       end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     end if;
@@ -306,7 +378,10 @@ begin
     end if;
   end loop;
 
-  update public.investment_market set last_market_date = today where id = 1;
+  update public.investment_market
+  set last_market_date = today,
+      last_price_update = now()
+  where id = 1;
   return today;
 end;
 $$;

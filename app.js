@@ -77,7 +77,7 @@ const renderInvestmentState = (state) => {
   portfolioNickname.textContent = state.nickname;
   portfolioCash.textContent = formatWon(state.cash);
   portfolioTotal.textContent = formatWon(state.total_asset);
-  marketUpdated.textContent = `${state.market_date} 12:00`;
+  marketUpdated.textContent = `${state.market_date} 방향 · 30분 갱신`;
 
   investmentProducts.replaceChildren(...state.assets.map((asset) => {
     const row = document.createElement('article');
