@@ -2800,6 +2800,7 @@ notify pgrst, 'reload schema';
 create table if not exists public.sanggi_game_states (
   account_id uuid primary key references public.site_accounts(id) on delete cascade,
   coins bigint not null default 0 check (coins >= 0),
+  player_level integer not null default 1 check (player_level >= 1),
   breath_level integer not null default 1 check (breath_level between 1 and 3000),
   auto_level integer not null default 1 check (auto_level between 1 and 50),
   character_x numeric not null default 0.09 check (character_x between 0 and 1),
@@ -2819,7 +2820,12 @@ alter table public.sanggi_game_states
   add column if not exists companion_summoned boolean not null default false,
   add column if not exists companion_level integer not null default 1,
   add column if not exists companion_x numeric not null default 0.58,
-  add column if not exists companion_y numeric not null default 0.1;
+  add column if not exists companion_y numeric not null default 0.1,
+  add column if not exists player_level integer not null default 1;
+alter table public.sanggi_game_states
+  drop constraint if exists sanggi_game_states_player_level_check;
+alter table public.sanggi_game_states
+  add constraint sanggi_game_states_player_level_check check (player_level >= 1);
 alter table public.sanggi_game_states
   drop constraint if exists sanggi_game_states_companion_x_check,
   drop constraint if exists sanggi_game_states_companion_y_check;
@@ -2831,7 +2837,8 @@ alter table public.sanggi_game_states
 alter table public.sanggi_game_states
   add constraint sanggi_game_states_companion_level_check check (companion_level between 1 and 3000);
 
-drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric);
+drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric, numeric);
+drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric);
 create or replace function public.sanggi_sync_state(
   p_session_token uuid,
   p_guest_coins bigint default 0,
@@ -2843,7 +2850,8 @@ create or replace function public.sanggi_sync_state(
   p_guest_companion_summoned boolean default false,
   p_guest_companion_level integer default 1,
   p_guest_companion_x numeric default 0.58,
-  p_guest_companion_y numeric default 0.1
+  p_guest_companion_y numeric default 0.1,
+  p_guest_player_level integer default 1
 )
 returns jsonb
 language plpgsql
@@ -2873,7 +2881,7 @@ begin
   if v_state.account_id is null then
     insert into public.sanggi_game_states (
       account_id, coins, breath_level, auto_level, character_x, character_y,
-      companion_unlocked, companion_summoned, companion_level, companion_x, companion_y
+      companion_unlocked, companion_summoned, companion_level, companion_x, companion_y, player_level
     )
     values (
       v_account_id,
@@ -2886,7 +2894,8 @@ begin
       coalesce(p_guest_companion_summoned, false) and coalesce(p_guest_companion_unlocked, false),
       greatest(1, least(3000, coalesce(p_guest_companion_level, 1))),
       greatest(0, least(1, coalesce(p_guest_companion_x, 0.58))),
-      greatest(0, least(1, coalesce(p_guest_companion_y, 0.1)))
+      greatest(0, least(1, coalesce(p_guest_companion_y, 0.1))),
+      greatest(1, coalesce(p_guest_player_level, 1))
     )
     returning * into v_state;
   end if;
@@ -2901,12 +2910,102 @@ begin
     'companion_summoned', v_state.companion_summoned,
     'companion_level', v_state.companion_level,
     'companion_x', v_state.companion_x,
-    'companion_y', v_state.companion_y
+    'companion_y', v_state.companion_y,
+    'player_level', v_state.player_level
   );
 end;
 $$;
 
-drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric);
+create or replace function public.sanggi_upgrade_player(p_session_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_state public.sanggi_game_states%rowtype;
+  v_cost bigint;
+begin
+  select account_id
+  into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token
+    and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  select *
+  into v_state
+  from public.sanggi_game_states
+  where account_id = v_account_id
+  for update;
+
+  if v_state.account_id is null then
+    raise exception '상기 키우기 정보를 먼저 동기화하세요.';
+  end if;
+
+  v_cost := 10000 * v_state.player_level::bigint;
+  if v_state.coins < v_cost then
+    raise exception '코인이 부족합니다. 필요한 비용은 %원입니다.', to_char(v_cost, 'FM999,999,999,999,999,999');
+  end if;
+
+  update public.sanggi_game_states
+  set coins = coins - v_cost,
+      player_level = player_level + 1,
+      updated_at = now()
+  where account_id = v_account_id
+  returning * into v_state;
+
+  return jsonb_build_object(
+    'coins', v_state.coins::text,
+    'player_level', v_state.player_level
+  );
+end;
+$$;
+
+create or replace function public.sanggi_get_player_ranking(p_session_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_ranking jsonb;
+begin
+  select account_id
+  into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token
+    and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'nickname', u.nickname,
+      'player_level', s.player_level
+    )
+    order by s.player_level desc, u.nickname asc
+  ), '[]'::jsonb)
+  into v_ranking
+  from public.sanggi_game_states s
+  join public.investment_users u
+    on u.client_id = s.account_id
+  where u.nickname is not null
+    and char_length(trim(u.nickname)) > 0;
+
+  return v_ranking;
+end;
+$$;
+
+drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, numeric, numeric, numeric);
+drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric);
 create or replace function public.sanggi_save_state(
   p_session_token uuid,
   p_coins bigint,
@@ -3018,12 +3117,14 @@ begin
 end;
 $$;
 
-revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) from public;
+revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer) from public;
 revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) from public;
 revoke all on function public.sanggi_unlock_companion(uuid) from public;
-grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) to anon, authenticated;
+grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer) to anon, authenticated;
 grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric) to anon, authenticated;
 grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenticated;
+grant execute on function public.sanggi_upgrade_player(uuid) to anon, authenticated;
+grant execute on function public.sanggi_get_player_ranking(uuid) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.shop_discard_item(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;

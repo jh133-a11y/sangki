@@ -57,6 +57,42 @@
         <span>상점</span>
       </button>
     </nav>
+    <button class="sanggi-player-button" id="sanggi-player-button" type="button">
+      <span class="sanggi-player-icon">●</span>
+      <span>플레이어</span>
+      <strong id="sanggi-player-level-label">LV 1</strong>
+    </button>
+    <div class="sanggi-player-backdrop" id="sanggi-player-backdrop" hidden></div>
+    <section class="sanggi-ability-modal sanggi-player-modal" id="sanggi-player-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-player-title" hidden>
+      <button class="sanggi-ability-close" id="sanggi-player-close" type="button" aria-label="닫기">×</button>
+      <p class="sanggi-ability-eyebrow">PLAYER</p>
+      <h2 id="sanggi-player-title">플레이어</h2>
+      <div class="sanggi-player-tabs" role="tablist" aria-label="플레이어 메뉴">
+        <button class="sanggi-player-tab is-active" id="sanggi-player-upgrade-tab" type="button" role="tab" aria-selected="true">레벨업</button>
+        <button class="sanggi-player-tab" id="sanggi-player-ranking-tab" type="button" role="tab" aria-selected="false">랭킹</button>
+      </div>
+      <div id="sanggi-player-upgrade-panel" role="tabpanel">
+        <article class="sanggi-ability-card">
+          <div>
+            <div class="sanggi-ability-card-head">
+              <h3>플레이어 레벨 <span id="sanggi-player-level">LV 1</span></h3>
+              <strong id="sanggi-player-cost">다음 레벨 10,000원</strong>
+            </div>
+            <p>레벨업 비용은 10,000원부터 시작하며, 레벨이 오를 때마다 10,000원씩 증가합니다.</p>
+          </div>
+          <button class="sanggi-upgrade-button" id="sanggi-player-upgrade" type="button">레벨업</button>
+        </article>
+        <p class="sanggi-ability-status" id="sanggi-player-status" role="status"></p>
+      </div>
+      <div id="sanggi-player-ranking-panel" role="tabpanel" hidden>
+        <div class="sanggi-ranking-head"><span>nickname</span><span>level</span></div>
+        <ol class="sanggi-player-ranking-list" id="sanggi-player-ranking-list">
+          <li class="ranking-empty">랭킹을 불러오는 중...</li>
+        </ol>
+        <div class="sanggi-player-ranking-pagination" id="sanggi-player-ranking-pagination"></div>
+        <p class="ranking-note">플레이어 레벨이 높은 순서로 표시됩니다.</p>
+      </div>
+    </section>
     <div class="sanggi-ability-backdrop" id="sanggi-ability-backdrop" hidden></div>
     <section class="sanggi-ability-modal" id="sanggi-ability-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-ability-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-ability-close" type="button" aria-label="닫기">×</button>
@@ -108,6 +144,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=32"></script>
+  <script src="sanggi.js?v=33"></script>
 </body>
 </html>
