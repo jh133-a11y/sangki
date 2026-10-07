@@ -705,11 +705,14 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   height: min(55vh, 440px);
   max-width: 40vw;
   object-fit: contain;
-  pointer-events: none;
+  cursor: grab;
+  touch-action: none;
   user-select: none;
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
+  will-change: left, top;
 }
+.sanggi-companion.is-dragging { cursor: grabbing; }
 .sanggi-companion-backdrop {
   position: absolute;
   inset: 0;
