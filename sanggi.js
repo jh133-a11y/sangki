@@ -668,7 +668,13 @@
       }, longPressDelay);
       companionPress = press;
     });
-    companion.addEventListener('pointermove', moveCompanion);
+    companion.addEventListener('pointermove', (event) => {
+      if (companionPress) {
+        companionPress.clientX = event.clientX;
+        companionPress.clientY = event.clientY;
+      }
+      moveCompanion(event);
+    });
     companion.addEventListener('pointerup', (event) => {
       if (companionPress) {
         clearPress(companionPress);
@@ -682,10 +688,9 @@
       stopCompanionDrag(null, true);
     });
     window.addEventListener('pointermove', (event) => {
-      if (companionPress
-        && Math.hypot(event.clientX - companionPress.clientX, event.clientY - companionPress.clientY) > 8) {
-        clearPress(companionPress);
-        companionPress = null;
+      if (companionPress) {
+        companionPress.clientX = event.clientX;
+        companionPress.clientY = event.clientY;
       }
       if (!companionDragState) return;
       event.preventDefault();
@@ -697,11 +702,9 @@
       if (companionDragState) stopCompanionDrag(event);
     });
     window.addEventListener('touchmove', (event) => {
-      if (companionPress
-        && event.touches[0]
-        && Math.hypot(event.touches[0].clientX - companionPress.clientX, event.touches[0].clientY - companionPress.clientY) > 8) {
-        clearPress(companionPress);
-        companionPress = null;
+      if (companionPress && event.touches[0]) {
+        companionPress.clientX = event.touches[0].clientX;
+        companionPress.clientY = event.touches[0].clientY;
       }
       if (!companionDragState || !event.touches[0]) return;
       event.preventDefault();
