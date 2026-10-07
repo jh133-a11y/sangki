@@ -45,6 +45,12 @@
   const clearPress = (press) => {
     if (press?.timer) window.clearTimeout(press.timer);
   };
+  const disableNativeImageGestures = (image) => {
+    if (!image) return;
+    image.addEventListener('dragstart', (event) => event.preventDefault());
+    image.addEventListener('contextmenu', (event) => event.preventDefault());
+    image.addEventListener('selectstart', (event) => event.preventDefault());
+  };
   try {
     const savedCompanion = JSON.parse(localStorage.getItem(companionStateKey) || '{}');
     companionUnlocked = savedCompanion.unlocked === true;
@@ -534,6 +540,7 @@
   });
 
   if (character) {
+    disableNativeImageGestures(character);
     loadCharacterPosition();
     character.addEventListener('pointerdown', (event) => {
       if (event.button !== 0 && event.pointerType === 'mouse') return;
@@ -641,6 +648,7 @@
     }
 
   if (companion) {
+    disableNativeImageGestures(companion);
     renderCompanion();
     loadCompanionPosition();
     companion.addEventListener('pointerdown', (event) => {
@@ -658,7 +666,8 @@
         mainLeft: mainBounds.left,
         mainTop: mainBounds.top,
         maxLeft: Math.max(0, mainBounds.width - companion.offsetWidth),
-        maxTop: Math.max(0, mainBounds.height - companion.offsetHeight)
+        maxTop: Math.max(0, mainBounds.height - companion.offsetHeight),
+        moved: false
       };
       press.timer = window.setTimeout(() => {
         companionPress = null;
@@ -670,8 +679,14 @@
     });
     companion.addEventListener('pointermove', (event) => {
       if (companionPress) {
-        companionPress.clientX = event.clientX;
-        companionPress.clientY = event.clientY;
+        if (Math.hypot(
+          event.clientX - companionPress.clientX,
+          event.clientY - companionPress.clientY
+        ) > 8) {
+          clearPress(companionPress);
+          companionPress = null;
+          return;
+        }
       }
       moveCompanion(event);
     });
@@ -689,8 +704,14 @@
     });
     window.addEventListener('pointermove', (event) => {
       if (companionPress) {
-        companionPress.clientX = event.clientX;
-        companionPress.clientY = event.clientY;
+        if (Math.hypot(
+          event.clientX - companionPress.clientX,
+          event.clientY - companionPress.clientY
+        ) > 8) {
+          clearPress(companionPress);
+          companionPress = null;
+          return;
+        }
       }
       if (!companionDragState) return;
       event.preventDefault();
@@ -703,8 +724,14 @@
     });
     window.addEventListener('touchmove', (event) => {
       if (companionPress && event.touches[0]) {
-        companionPress.clientX = event.touches[0].clientX;
-        companionPress.clientY = event.touches[0].clientY;
+        if (Math.hypot(
+          event.touches[0].clientX - companionPress.clientX,
+          event.touches[0].clientY - companionPress.clientY
+        ) > 8) {
+          clearPress(companionPress);
+          companionPress = null;
+          return;
+        }
       }
       if (!companionDragState || !event.touches[0]) return;
       event.preventDefault();
