@@ -10,6 +10,8 @@
   const characterPositionKey = 'sanggi-character-position';
   const companionPositionKey = 'sanggi-companion-position';
   const companionStateKey = 'sanggi-companion-state';
+  const sanggiOutfitKey = 'sanggi-outfit';
+  const companionOutfitKey = 'sanggi-companion-outfit';
   const sessionKey = 'sangki-auth-session';
   const tabSessionKey = 'sangki-auth-session-tab';
   const keepLoginKey = 'sangki-keep-login';
@@ -52,6 +54,8 @@
   let companionUnlocked = false;
   let companionSummoned = false;
   let companionLevel = 1;
+  let sanggiOutfit = localStorage.getItem(sanggiOutfitKey) || 'default';
+  let companionOutfit = localStorage.getItem(companionOutfitKey) || 'default';
   let dragState = null;
   let companionDragState = null;
   let characterPress = null;
@@ -91,6 +95,22 @@
 
   const renderBalance = () => {
     balance.textContent = `${formatCoins(coins)}원`;
+  };
+
+  const outfitImages = {
+    default: 'sanggi-character.png',
+    sanggi_hanbok: 'sanggi-hanbok.png',
+    sanggi_spacesuit: 'sanggi-spacesuit.png'
+  };
+  const companionOutfitImages = {
+    default: 'juseong-character.png',
+    juseong_hanbok: 'juseong-hanbok.png',
+    juseong_spacesuit: 'juseong-spacesuit.png'
+  };
+  const renderOutfits = () => {
+    if (character) character.src = outfitImages[sanggiOutfit] || outfitImages.default;
+    if (companion) companion.src = companionOutfitImages[companionOutfit]
+      || companionOutfitImages.default;
   };
 
   const saveState = () => {
@@ -148,6 +168,28 @@
     }
   };
 
+  const loadOutfits = async () => {
+    const session = getSession();
+    if (!session?.session_token) return;
+    const state = await remoteRpc('sanggi_get_outfits', {
+      p_session_token: session.session_token
+    });
+    sanggiOutfit = state.sanggi_outfit || 'default';
+    companionOutfit = state.companion_outfit || 'default';
+    localStorage.setItem(sanggiOutfitKey, sanggiOutfit);
+    localStorage.setItem(companionOutfitKey, companionOutfit);
+    renderOutfits();
+  };
+  const saveOutfits = async () => {
+    const session = getSession();
+    if (!session?.session_token) return;
+    await remoteRpc('sanggi_set_outfits', {
+      p_session_token: session.session_token,
+      p_sanggi_outfit: sanggiOutfit,
+      p_companion_outfit: companionOutfit
+    });
+  };
+
   const shopModal = document.querySelector('#sanggi-shop-modal');
   const shopBackdrop = document.querySelector('#sanggi-shop-backdrop');
   const shopCash = document.querySelector('#sanggi-shop-cash');
@@ -166,6 +208,7 @@
   const shopOtherTab = document.querySelector('#sanggi-shop-other-tab');
   const shopItemsPanel = document.querySelector('#sanggi-shop-items');
   const shopOtherPanel = document.querySelector('#sanggi-shop-other');
+  const ownedOutfits = new Set();
   let shopConfirmResolve = null;
   const shopSession = () => getSession();
   const loadShopCash = async () => {
@@ -179,6 +222,24 @@
       p_nickname: localStorage.getItem(shopNicknameKey) || null
     });
     shopCash.textContent = `보유 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
+    ownedOutfits.clear();
+    (Array.isArray(state.items) ? state.items : []).forEach((item) => {
+      if (item.quantity > 0
+        && (outfitImages[item.item_type] || companionOutfitImages[item.item_type])) {
+        ownedOutfits.add(item.item_type);
+      }
+    });
+    document.querySelectorAll('[data-shop-other]').forEach((button) => {
+      const type = button.dataset.shopOther;
+      if (!ownedOutfits.has(type)) {
+        button.textContent = '구매하기';
+      } else {
+        const equipped = type.startsWith('sanggi_')
+          ? sanggiOutfit === type
+          : companionOutfit === type;
+        button.textContent = equipped ? '착용 해제' : '착용';
+      }
+    });
   };
   const closeShop = () => {
     shopModal.hidden = true;
@@ -283,6 +344,26 @@
       shopStatus.textContent = '로그인 후 상품을 구매할 수 있습니다.';
       return;
     }
+    if (ownedOutfits.has(type)) {
+      if (type.startsWith('sanggi_')) {
+        sanggiOutfit = sanggiOutfit === type ? 'default' : type;
+      } else {
+        companionOutfit = companionOutfit === type ? 'default' : type;
+      }
+      localStorage.setItem(sanggiOutfitKey, sanggiOutfit);
+      localStorage.setItem(companionOutfitKey, companionOutfit);
+      renderOutfits();
+      try {
+        await saveOutfits();
+        await loadShopCash();
+        shopStatus.textContent = `${name}을(를) ${(
+          type.startsWith('sanggi_') ? sanggiOutfit === type : companionOutfit === type
+        ) ? '착용했습니다.' : '착용 해제했습니다.'}`;
+      } catch (error) {
+        shopStatus.textContent = error.message || '착용 상태 저장에 실패했습니다.';
+      }
+      return;
+    }
     button.disabled = true;
     shopStatus.textContent = `${name} 구매 확인 중...`;
     try {
@@ -291,11 +372,13 @@
         p_item_type: type,
         p_quantity: 1
       });
+      ownedOutfits.add(type);
       await loadShopCash();
       shopStatus.textContent = `${name}을(를) 구매했습니다.`;
       shopCompleteMessage.textContent = `${name} 구매가 완료되었습니다.`;
       shopCompleteModal.hidden = false;
       shopCompleteBackdrop.hidden = false;
+      await loadShopCash();
     } catch (error) {
       shopStatus.textContent = error.message || `${name} 구매에 실패했습니다.`;
     } finally {
@@ -1135,9 +1218,11 @@
 
   const initialize = async () => {
     accountSyncing = true;
+    renderOutfits();
     renderCompanion();
     try {
       await syncAccountState();
+      await loadOutfits();
       remoteReady = Boolean(getSession()?.session_token);
     } catch (error) {
       console.warn('Sanggi account sync failed:', error.message);
@@ -1154,7 +1239,9 @@
     scheduleAutoCoin();
   };
   window.addEventListener('sanggi-account-changed', () => {
-    refreshAccountState(true);
+    refreshAccountState(true).then(() => loadOutfits().catch((error) => {
+      console.warn('Sanggi outfit restore failed:', error.message);
+    }));
   });
   window.addEventListener('pageshow', () => {
     refreshAccountState();

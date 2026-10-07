@@ -3138,7 +3138,9 @@ alter table public.sanggi_game_states
   add column if not exists player_level integer not null default 1,
   add column if not exists normal_potions integer not null default 0,
   add column if not exists advanced_potions integer not null default 0,
-  add column if not exists legendary_potions integer not null default 0;
+  add column if not exists legendary_potions integer not null default 0,
+  add column if not exists sanggi_outfit text not null default 'default',
+  add column if not exists companion_outfit text not null default 'default';
 alter table public.sanggi_game_states
   drop constraint if exists sanggi_game_states_player_level_check;
 alter table public.sanggi_game_states
@@ -3248,6 +3250,104 @@ begin
     'normal_potions', v_state.normal_potions,
     'advanced_potions', v_state.advanced_potions,
     'legendary_potions', v_state.legendary_potions
+  );
+end;
+$$;
+
+create or replace function public.sanggi_get_outfits(
+  p_session_token uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_sanggi_outfit text;
+  v_companion_outfit text;
+begin
+  select account_id
+    into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token
+    and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  select sanggi_outfit, companion_outfit
+    into v_sanggi_outfit, v_companion_outfit
+  from public.sanggi_game_states
+  where account_id = v_account_id;
+
+  return jsonb_build_object(
+    'sanggi_outfit', coalesce(v_sanggi_outfit, 'default'),
+    'companion_outfit', coalesce(v_companion_outfit, 'default')
+  );
+end;
+$$;
+
+create or replace function public.sanggi_set_outfits(
+  p_session_token uuid,
+  p_sanggi_outfit text default 'default',
+  p_companion_outfit text default 'default'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+begin
+  select account_id
+    into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token
+    and expires_at > now();
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  if p_sanggi_outfit not in ('default', 'sanggi_hanbok', 'sanggi_spacesuit')
+    or p_companion_outfit not in ('default', 'juseong_hanbok', 'juseong_spacesuit') then
+    raise exception '존재하지 않는 의상입니다.';
+  end if;
+
+  if p_sanggi_outfit <> 'default'
+    and not exists (
+      select 1
+      from public.investment_shop_items
+      where client_id = v_account_id
+        and item_type = p_sanggi_outfit
+        and quantity > 0
+    ) then
+    raise exception '구매한 상기 의상만 착용할 수 있습니다.';
+  end if;
+
+  if p_companion_outfit <> 'default'
+    and not exists (
+      select 1
+      from public.investment_shop_items
+      where client_id = v_account_id
+        and item_type = p_companion_outfit
+        and quantity > 0
+    ) then
+    raise exception '구매한 주성 의상만 착용할 수 있습니다.';
+  end if;
+
+  update public.sanggi_game_states
+  set sanggi_outfit = p_sanggi_outfit,
+      companion_outfit = p_companion_outfit,
+      updated_at = now()
+  where account_id = v_account_id;
+
+  return jsonb_build_object(
+    'sanggi_outfit', p_sanggi_outfit,
+    'companion_outfit', p_companion_outfit
   );
 end;
 $$;
@@ -3523,6 +3623,8 @@ grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenti
 grant execute on function public.sanggi_upgrade_player(uuid) to anon, authenticated;
 grant execute on function public.sanggi_get_player_ranking(uuid) to anon, authenticated;
 grant execute on function public.sanggi_use_potion(uuid, text) to anon, authenticated;
+grant execute on function public.sanggi_get_outfits(uuid) to anon, authenticated;
+grant execute on function public.sanggi_set_outfits(uuid, text, text) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.shop_discard_item(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
