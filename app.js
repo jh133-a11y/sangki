@@ -365,6 +365,10 @@ try {
   // Private browsing can block localStorage; the form remains usable.
 }
 
+window.setInterval(() => {
+  if (investmentState) loadInvestmentState().catch(() => {});
+}, 60000);
+
 const form = document.querySelector('#comment-form');
 const comments = document.querySelector('#comments');
 const status = document.querySelector('#form-status');
