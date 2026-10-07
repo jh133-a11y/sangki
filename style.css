@@ -78,8 +78,8 @@ nav a:hover { opacity: .5; }
 .side-menu-intro { margin: 28px 0 34px; font-size: 14px; line-height: 1.6; }
 .side-menu a { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid rgba(23,23,23,.3); font: 14px var(--mono); }
 .side-menu a:hover { color: var(--orange); }
-.side-menu-settings { width: 100%; display: flex; justify-content: space-between; margin-top: 16px; padding: 16px 0; border: 0; border-top: 1px solid rgba(23,23,23,.3); background: transparent; color: var(--ink); cursor: pointer; text-align: left; font: 14px var(--mono); }
-.side-menu-settings:hover { color: var(--orange); }
+.side-menu-settings { width: 100%; display: flex; justify-content: flex-end; margin-top: 16px; padding: 16px 0; border: 0; border-top: 1px solid rgba(23,23,23,.3); background: transparent; color: var(--ink); cursor: pointer; text-align: right; font: 22px/1 var(--mono); }
+.side-menu-settings:hover { color: var(--orange); transform: rotate(18deg); }
 .settings-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
 .settings-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(380px, calc(100% - 30px)); transform: translate(-50%, -50%); padding: 28px; background: var(--paper); box-shadow: 7px 7px 0 var(--ink); }
 .settings-modal h2 { margin: 0 0 8px; font-size: 34px; }
