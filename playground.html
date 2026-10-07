@@ -4,27 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body class="records-page">
   <main class="records-shell">
     <header class="records-header">
       <div>
-        <p class="eyebrow">new room / 02</p>
         <h1>기록(?)</h1>
-        <p>누구나 남기고, 함께 읽는 이상한 기록 보관소.</p>
+        <p>자유롭게 글을 남기는 게시판입니다.</p>
       </div>
       <a class="records-back" href="index.html">← byungsin</a>
     </header>
 
     <section class="records-toolbar">
       <div>
-        <strong>RECORDS</strong>
+        <strong>전체글</strong>
         <span id="records-count">게시물을 불러오는 중...</span>
       </div>
       <div class="records-toolbar-actions">
         <button class="records-button records-button-dark" id="records-write-button" type="button">글쓰기</button>
-        <button class="records-button" id="records-admin-button" type="button">관리자 모드</button>
+        <button class="records-button" id="records-notice-button" type="button">공지</button>
       </div>
     </section>
 
@@ -62,19 +61,6 @@
     </form>
   </section>
 
-  <section class="records-modal" id="records-admin-modal" role="dialog" aria-modal="true" aria-labelledby="records-admin-title" hidden>
-    <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
-    <h2 id="records-admin-title">관리자 모드</h2>
-    <form id="records-admin-form">
-      <label>관리자 비밀번호<input id="records-admin-password" type="password" required></label>
-      <div class="records-admin-actions">
-        <button class="records-submit" type="submit">공지 작성</button>
-        <button class="records-button" id="records-admin-exit" type="button">닫기</button>
-      </div>
-      <p class="records-form-status" id="records-admin-form-status"></p>
-    </form>
-  </section>
-
   <section class="records-modal" id="records-notice-modal" role="dialog" aria-modal="true" aria-labelledby="records-notice-title" hidden>
     <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
     <h2 id="records-notice-title">공지 작성</h2>
@@ -87,6 +73,6 @@
     </form>
   </section>
 
-  <script src="records.js?v=1"></script>
+  <script src="records.js?v=2"></script>
 </body>
 </html>

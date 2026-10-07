@@ -6,7 +6,7 @@ const apiHeaders = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY
 const $ = (selector) => document.querySelector(selector);
 const backdrop = $('#records-backdrop');
 const status = $('#records-status');
-const modalIds = ['records-post-modal', 'records-comment-modal', 'records-admin-modal', 'records-notice-modal'];
+const modalIds = ['records-post-modal', 'records-comment-modal', 'records-notice-modal'];
 let posts = [];
 let notices = [];
 let adminPassword = '';
@@ -153,24 +153,17 @@ $('#records-comment-form').addEventListener('submit', async (event) => {
   } catch (error) { setFormStatus('records-comment-form-status', error.message); }
 });
 
-$('#records-admin-button').addEventListener('click', () => {
-  $('#records-admin-form').reset();
-  setFormStatus('records-admin-form-status', '');
-  openModal('records-admin-modal');
-});
-
-$('#records-admin-form').addEventListener('submit', (event) => {
-  event.preventDefault();
-  adminPassword = $('#records-admin-password').value;
+$('#records-notice-button').addEventListener('click', () => {
+  const password = prompt('공지 작성은 관리자만 가능합니다. 관리자 비밀번호를 입력하세요.');
+  if (password === null) return;
+  adminPassword = password;
   $('#records-notice-form').reset();
   $('#records-notice-id').value = '';
   setFormStatus('records-notice-form-status', '');
-  renderNotices();
+  $('#records-notice-title').textContent = '공지 작성';
   openModal('records-notice-modal');
-  status.textContent = '관리자 모드가 활성화되었습니다.';
 });
 
-$('#records-admin-exit').addEventListener('click', () => { adminPassword = ''; closeModals(); renderNotices(); });
 $('#records-notice-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   try {
@@ -185,7 +178,6 @@ document.addEventListener('click', async (event) => {
   const button = event.target.closest('button');
   if (!button) return;
   if (button.hasAttribute('data-close-modal') || event.target === backdrop) closeModals();
-  if (button.id === 'records-admin-button') return;
   const post = posts.find((item) => item.id === button.closest('[data-post-id]')?.dataset.postId);
   try {
     if (button.dataset.vote && post) {
@@ -211,8 +203,12 @@ document.addEventListener('click', async (event) => {
         await rpc('record_delete_post', { p_id: post.id, p_password_hash: await hashPassword(password), p_admin_password: password }); await loadBoard();
       }
     } else if (button.dataset.noticeDelete) {
-      if (confirm('공지를 삭제할까요?')) { await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: adminPassword }); await loadBoard(); }
+      const password = prompt('공지 삭제를 위해 관리자 비밀번호를 입력하세요.');
+      if (password === '8170' && confirm('공지를 삭제할까요?')) { await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: password }); await loadBoard(); }
     } else if (button.dataset.noticeEdit) {
+      const password = prompt('공지 수정을 위해 관리자 비밀번호를 입력하세요.');
+      if (password !== '8170') throw new Error('관리자 비밀번호가 올바르지 않습니다.');
+      adminPassword = password;
       const notice = notices.find((item) => item.id === button.dataset.noticeEdit);
       $('#records-notice-id').value = notice.id; $('#records-notice-subject').value = notice.title; $('#records-notice-body').value = notice.body; openModal('records-notice-modal');
     } else if (button.dataset.commentEdit) {
