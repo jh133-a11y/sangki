@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>상점 — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=46">
+  <link rel="stylesheet" href="style.css?v=52">
 </head>
 <body class="shop-page">
   <main class="shop-shell">
@@ -19,18 +19,6 @@
     <section class="shop-products" aria-label="판매 상품">
       <article class="shop-card">
         <div>
-          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="하급 미사일 아이콘" role="img">
-            <path d="M17 71 48 40l12 12-31 31H17V71Z" fill="#d9ff36" stroke="#171717" stroke-width="4"/>
-            <path d="m55 47 10-10 12 12-10 10M68 34l10-10 12 12-10 10" fill="none" stroke="#171717" stroke-width="5"/>
-            <path d="m24 82-8 8M34 82l-8 8" stroke="#ff5b36" stroke-width="5"/>
-          </svg>
-          <h2>하급 미사일</h2>
-          <p>선택한 유저의 자산을 20% 확률로 20% 감소시킵니다.</p>
-        </div>
-        <div><span class="shop-price">₩20,000,000</span><button class="shop-buy" data-item="low_missile" type="button">구매하기</button></div>
-      </article>
-      <article class="shop-card">
-        <div>
           <svg class="shop-icon" viewBox="0 0 100 100" aria-label="닉네임 변경권 아이콘" role="img">
             <path d="M14 22h72v56H14z" fill="#d9ff36" stroke="#171717" stroke-width="4"/>
             <path d="M30 22v56M70 22v56" stroke="#171717" stroke-width="3" stroke-dasharray="7 6"/>
@@ -40,6 +28,18 @@
           <p>가방에서 사용하면 투자 닉네임을 한 번 변경할 수 있습니다.</p>
         </div>
         <div><span class="shop-price">₩5,000,000,000</span><button class="shop-buy" data-item="nickname_ticket" type="button">구매하기</button></div>
+      </article>
+      <article class="shop-card">
+        <div>
+          <svg class="shop-icon" viewBox="0 0 100 100" aria-label="하급 미사일 아이콘" role="img">
+            <path d="M17 71 48 40l12 12-31 31H17V71Z" fill="#d9ff36" stroke="#171717" stroke-width="4"/>
+            <path d="m55 47 10-10 12 12-10 10M68 34l10-10 12 12-10 10" fill="none" stroke="#171717" stroke-width="5"/>
+            <path d="m24 82-8 8M34 82l-8 8" stroke="#ff5b36" stroke-width="5"/>
+          </svg>
+          <h2>하급 미사일</h2>
+          <p>선택한 유저의 자산을 20% 확률로 20% 감소시킵니다.</p>
+        </div>
+        <div><span class="shop-price">₩20,000,000</span><button class="shop-buy" data-item="low_missile" type="button">구매하기</button></div>
       </article>
       <article class="shop-card">
         <div>
@@ -68,6 +68,6 @@
     </section>
     <p class="shop-status" id="shop-status" role="status"></p>
   </main>
-  <script src="shop.js?v=5"></script>
+  <script src="shop.js?v=6"></script>
 </body>
 </html>
