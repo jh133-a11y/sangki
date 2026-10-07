@@ -441,6 +441,8 @@ const bagClose = document.querySelector('#bag-close');
 const bagCash = document.querySelector('#bag-cash');
 const bagItems = document.querySelector('#bag-items');
 const bagTarget = document.querySelector('#bag-target');
+const bagNicknameLabel = document.querySelector('#bag-nickname-label');
+const bagNewNickname = document.querySelector('#bag-new-nickname');
 const bagStatus = document.querySelector('#bag-status');
 const bagUsePanel = document.querySelector('#bag-use-panel');
 const bagUseIcon = document.querySelector('#bag-use-icon');
@@ -478,11 +480,13 @@ const shopItemIcons = {
   low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
+  ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>'
 };
 const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
   mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
   high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
+  ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.'
 };
 
 const selectShopItem = (item) => {
@@ -491,7 +495,12 @@ const selectShopItem = (item) => {
   bagUseIcon.innerHTML = shopItemIcons[item.item_type] || '◆';
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
-  bagStatus.textContent = '공격 대상을 선택한 뒤 사용하기를 누르세요.';
+  const isNicknameTicket = item.item_type === 'nickname_ticket';
+  document.querySelector('.bag-target-label').hidden = isNicknameTicket;
+  bagNicknameLabel.hidden = !isNicknameTicket;
+  bagStatus.textContent = isNicknameTicket
+    ? '새 닉네임을 입력한 뒤 사용하기를 누르세요.'
+    : '공격 대상을 선택한 뒤 사용하기를 누르세요.';
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
 };
 
@@ -533,11 +542,43 @@ const loadBag = async () => {
     } else {
       selectedShopItem = null;
       bagUsePanel.hidden = true;
-    }
+        bagNicknameLabel.hidden = true;
+        document.querySelector('.bag-target-label').hidden = false;
+      }
   }
 };
 
 const useShopItem = async (itemType) => {
+  if (itemType === 'nickname_ticket') {
+    const nickname = bagNewNickname.value.trim();
+    if (!nickname) {
+      bagStatus.textContent = '새 닉네임을 입력하세요.';
+      return;
+    }
+    if (!window.confirm(`닉네임을 "${nickname}"(으)로 정말 변경하시겠습니까?`)) {
+      bagStatus.textContent = '닉네임 변경을 취소했습니다.';
+      return;
+    }
+    bagStatus.textContent = '닉네임 변경 중...';
+    try {
+      const result = await callInvestmentRpc('shop_change_nickname', {
+        p_client_id: await resolveShopClientId(),
+        p_new_nickname: nickname
+      });
+      bagStatus.textContent = result.message;
+      window.alert(result.message);
+      localStorage.setItem('sangki-investor-nickname', nickname);
+      if (accountSession?.account_id) {
+        localStorage.setItem(`sangki-account-nickname-${accountSession.account_id}`, nickname);
+      }
+      await loadBag();
+      await loadInvestmentState(nickname);
+    } catch (error) {
+      bagStatus.textContent = error.message;
+      window.alert(`닉네임 변경 실패: ${error.message}`);
+    }
+    return;
+  }
   if (!bagTarget.value) {
     bagStatus.textContent = '공격 대상을 선택하세요.';
     return;
