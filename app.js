@@ -504,6 +504,7 @@ const shopItemDescriptions = {
 const resetBagSelection = () => {
   selectedShopItem = null;
   bagUsePanel.hidden = true;
+  bagUsePanel.style.display = 'none';
   bagNicknameLabel.hidden = true;
   document.querySelector('#bag-letter-label').hidden = true;
   document.querySelector('.bag-target-label').hidden = true;
@@ -517,6 +518,7 @@ const resetBagSelection = () => {
 const selectShopItem = (item) => {
   selectedShopItem = item;
   bagUsePanel.hidden = false;
+  bagUsePanel.style.display = 'grid';
   bagUseIcon.innerHTML = shopItemIcons[item.item_type] || '◆';
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';

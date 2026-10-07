@@ -99,6 +99,7 @@ nav a:hover { opacity: .5; }
 .bag-letter-label { display: grid; gap: 6px; grid-column: 1 / -1; font: 10px var(--mono); }
 .bag-letter-label textarea { border: 1px solid var(--ink); padding: 8px; background: #fff; color: var(--ink); font: 11px/1.5 var(--mono); resize: vertical; }
 .bag-use-panel { display: grid; grid-template-columns: 64px 1fr; gap: 12px; margin-top: 28px; padding: 14px; border: 2px solid var(--ink); background: #fff; }
+.bag-use-panel[hidden] { display: none !important; }
 .bag-use-icon { width: 64px; height: 64px; display: grid; place-items: center; border: 2px solid #777; background: #999; }
 .bag-use-icon svg { width: 48px; height: 48px; }
 .bag-use-copy strong { font-size: 16px; }
