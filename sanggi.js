@@ -179,31 +179,28 @@
     });
   };
 
-  const stopCharacterDrag = (event) => {
+  const stopCharacterDrag = (event, cancelled = false) => {
     if (!dragState) return;
     if (dragState.frame) {
       window.cancelAnimationFrame(dragState.frame);
       dragState.frame = 0;
     }
-    moveCharacter(event);
-    if (dragState.frame) {
-      window.cancelAnimationFrame(dragState.frame);
-      dragState.frame = 0;
+    if (!cancelled && event) {
+      const finalLeft = Math.max(0, Math.min(
+        dragState.maxLeft,
+        event.clientX - dragState.mainLeft - dragState.offsetX
+      ));
+      const finalTop = Math.max(0, Math.min(
+        dragState.maxTop,
+        event.clientY - dragState.mainTop - dragState.offsetY
+      ));
+      character.style.left = `${finalLeft}px`;
+      character.style.top = `${finalTop}px`;
+      dragState.moved = dragState.moved
+        || Math.abs(finalLeft - dragState.startLeft) > 5
+        || Math.abs(finalTop - dragState.startTop) > 5;
     }
-    const finalLeft = Math.max(0, Math.min(
-      dragState.maxLeft,
-      event.clientX - dragState.mainLeft - dragState.offsetX
-    ));
-    const finalTop = Math.max(0, Math.min(
-      dragState.maxTop,
-      event.clientY - dragState.mainTop - dragState.offsetY
-    ));
-    character.style.left = `${finalLeft}px`;
-    character.style.top = `${finalTop}px`;
-    dragState.moved = dragState.moved
-      || Math.abs(finalLeft - dragState.startLeft) > 5
-      || Math.abs(finalTop - dragState.startTop) > 5;
-    character.releasePointerCapture?.(event.pointerId);
+    if (event?.pointerId !== undefined) character.releasePointerCapture?.(event.pointerId);
     const wasMoved = dragState.moved;
     dragState = null;
     character.classList.remove('is-dragging');
@@ -255,7 +252,21 @@
     });
     character.addEventListener('pointermove', moveCharacter);
     character.addEventListener('pointerup', stopCharacterDrag);
-    character.addEventListener('pointercancel', stopCharacterDrag);
+    character.addEventListener('pointercancel', (event) => {
+      if (event.pointerType !== 'touch') stopCharacterDrag(null, true);
+    });
+    character.addEventListener('touchmove', (event) => {
+      if (!dragState || !event.touches[0]) return;
+      event.preventDefault();
+      moveCharacter(event.touches[0]);
+    }, { passive: false });
+    character.addEventListener('touchend', (event) => {
+      const touch = event.changedTouches[0];
+      if (dragState && touch) stopCharacterDrag(touch);
+    }, { passive: false });
+    character.addEventListener('touchcancel', () => {
+      if (dragState) stopCharacterDrag(null, true);
+    });
       window.addEventListener('pointermove', (event) => {
         if (!dragState) return;
         event.preventDefault();
@@ -265,7 +276,19 @@
         if (dragState) stopCharacterDrag(event);
       });
       window.addEventListener('pointercancel', (event) => {
-        if (dragState) stopCharacterDrag(event);
+        if (dragState && event.pointerType !== 'touch') stopCharacterDrag(null, true);
+      });
+      window.addEventListener('touchmove', (event) => {
+        if (!dragState || !event.touches[0]) return;
+        event.preventDefault();
+        moveCharacter(event.touches[0]);
+      }, { passive: false });
+      window.addEventListener('touchend', (event) => {
+        const touch = event.changedTouches[0];
+        if (dragState && touch) stopCharacterDrag(touch);
+      }, { passive: false });
+      window.addEventListener('touchcancel', () => {
+        if (dragState) stopCharacterDrag(null, true);
       });
     }
 
