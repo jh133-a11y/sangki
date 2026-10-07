@@ -693,6 +693,63 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-character.is-dragging {
   cursor: grabbing;
 }
+.sanggi-companion {
+  position: absolute;
+  left: 58%;
+  top: 10%;
+  z-index: 2;
+  width: auto;
+  height: min(55vh, 440px);
+  max-width: 40vw;
+  object-fit: contain;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  will-change: left, top;
+}
+.sanggi-companion.is-dragging { cursor: grabbing; }
+.sanggi-companion-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(42, 39, 48, .5);
+}
+.sanggi-companion-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 31;
+  width: min(620px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  overflow: auto;
+  padding: 28px;
+  transform: translate(-50%, -50%);
+  background: #fff7dc;
+  color: #2a2730;
+  box-shadow: 8px 8px 0 #2a2730;
+}
+.sanggi-companion-preview {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 18px;
+  align-items: center;
+  border: 2px solid #2a2730;
+  padding: 14px;
+  background: #fff;
+}
+.sanggi-companion-preview img {
+  width: 150px;
+  height: 180px;
+  object-fit: cover;
+  object-position: center top;
+  background: #171717;
+}
+.sanggi-companion-preview h3 { margin: 0; font-size: 28px; }
+.sanggi-companion-preview p { margin: 8px 0 12px; font: 11px/1.6 var(--mono); }
+.sanggi-companion-preview strong { color: #ff5b36; font: 11px var(--mono); }
+.sanggi-companion-modal > .sanggi-upgrade-button { width: 100%; margin-top: 14px; }
 .sanggi-action-bar {
   position: absolute;
   left: 50%;
@@ -745,6 +802,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
     height: min(42vh, 315px);
     max-width: 55vw;
   }
+  .sanggi-companion {
+    left: 42%;
+    top: 16%;
+    height: min(42vh, 315px);
+    max-width: 55vw;
+  }
   .sanggi-action-bar {
     bottom: 70px;
     grid-template-columns: repeat(2, 1fr);
@@ -758,6 +821,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .sanggi-ability-modal { padding: 22px 16px; }
   .sanggi-ability-card { grid-template-columns: 1fr; }
   .sanggi-upgrade-button { width: 100%; }
+  .sanggi-companion-modal { padding: 22px 16px; }
+  .sanggi-companion-preview { grid-template-columns: 105px 1fr; gap: 12px; }
+  .sanggi-companion-preview img { width: 105px; height: 140px; }
 }
 
 .speed-game { background: var(--orange); }

@@ -2581,19 +2581,39 @@ create table if not exists public.sanggi_game_states (
   auto_level integer not null default 1 check (auto_level between 1 and 50),
   character_x numeric not null default 0.09 check (character_x between 0 and 1),
   character_y numeric not null default 0.07 check (character_y between 0 and 1),
+  companion_unlocked boolean not null default false,
+  companion_summoned boolean not null default false,
+  companion_x numeric not null default 0.58 check (companion_x between 0 and 1),
+  companion_y numeric not null default 0.1 check (companion_y between 0 and 1),
   updated_at timestamptz not null default now()
 );
 
 alter table public.sanggi_game_states enable row level security;
 revoke all on table public.sanggi_game_states from anon, authenticated;
+alter table public.sanggi_game_states
+  add column if not exists companion_unlocked boolean not null default false,
+  add column if not exists companion_summoned boolean not null default false,
+  add column if not exists companion_x numeric not null default 0.58,
+  add column if not exists companion_y numeric not null default 0.1;
+alter table public.sanggi_game_states
+  drop constraint if exists sanggi_game_states_companion_x_check,
+  drop constraint if exists sanggi_game_states_companion_y_check;
+alter table public.sanggi_game_states
+  add constraint sanggi_game_states_companion_x_check check (companion_x between 0 and 1),
+  add constraint sanggi_game_states_companion_y_check check (companion_y between 0 and 1);
 
+drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric);
 create or replace function public.sanggi_sync_state(
   p_session_token uuid,
   p_guest_coins bigint default 0,
   p_guest_breath_level integer default 1,
   p_guest_auto_level integer default 1,
   p_guest_character_x numeric default 0.09,
-  p_guest_character_y numeric default 0.07
+  p_guest_character_y numeric default 0.07,
+  p_guest_companion_unlocked boolean default false,
+  p_guest_companion_summoned boolean default false,
+  p_guest_companion_x numeric default 0.58,
+  p_guest_companion_y numeric default 0.1
 )
 returns jsonb
 language plpgsql
@@ -2622,7 +2642,8 @@ begin
 
   if v_state.account_id is null then
     insert into public.sanggi_game_states (
-      account_id, coins, breath_level, auto_level, character_x, character_y
+      account_id, coins, breath_level, auto_level, character_x, character_y,
+      companion_unlocked, companion_summoned, companion_x, companion_y
     )
     values (
       v_account_id,
@@ -2630,7 +2651,11 @@ begin
       greatest(1, least(3000, coalesce(p_guest_breath_level, 1))),
       greatest(1, least(50, coalesce(p_guest_auto_level, 1))),
       greatest(0, least(1, coalesce(p_guest_character_x, 0.09))),
-      greatest(0, least(1, coalesce(p_guest_character_y, 0.07)))
+      greatest(0, least(1, coalesce(p_guest_character_y, 0.07))),
+      coalesce(p_guest_companion_unlocked, false),
+      coalesce(p_guest_companion_summoned, false) and coalesce(p_guest_companion_unlocked, false),
+      greatest(0, least(1, coalesce(p_guest_companion_x, 0.58))),
+      greatest(0, least(1, coalesce(p_guest_companion_y, 0.1)))
     )
     returning * into v_state;
   end if;
@@ -2640,18 +2665,27 @@ begin
     'breath_level', v_state.breath_level,
     'auto_level', v_state.auto_level,
     'character_x', v_state.character_x,
-    'character_y', v_state.character_y
+    'character_y', v_state.character_y,
+    'companion_unlocked', v_state.companion_unlocked,
+    'companion_summoned', v_state.companion_summoned,
+    'companion_x', v_state.companion_x,
+    'companion_y', v_state.companion_y
   );
 end;
 $$;
 
+drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric);
 create or replace function public.sanggi_save_state(
   p_session_token uuid,
   p_coins bigint,
   p_breath_level integer,
   p_auto_level integer,
   p_character_x numeric,
-  p_character_y numeric
+  p_character_y numeric,
+  p_companion_unlocked boolean,
+  p_companion_summoned boolean,
+  p_companion_x numeric,
+  p_companion_y numeric
 )
 returns jsonb
 language plpgsql
@@ -2672,7 +2706,8 @@ begin
   end if;
 
   insert into public.sanggi_game_states (
-    account_id, coins, breath_level, auto_level, character_x, character_y, updated_at
+    account_id, coins, breath_level, auto_level, character_x, character_y,
+    companion_unlocked, companion_summoned, companion_x, companion_y, updated_at
   )
   values (
     v_account_id,
@@ -2681,6 +2716,10 @@ begin
     greatest(1, least(50, p_auto_level)),
     greatest(0, least(1, p_character_x)),
     greatest(0, least(1, p_character_y)),
+    coalesce(p_companion_unlocked, false),
+    coalesce(p_companion_summoned, false) and coalesce(p_companion_unlocked, false),
+    greatest(0, least(1, p_companion_x)),
+    greatest(0, least(1, p_companion_y)),
     now()
   )
   on conflict (account_id) do update set
@@ -2689,16 +2728,66 @@ begin
     auto_level = excluded.auto_level,
     character_x = excluded.character_x,
     character_y = excluded.character_y,
+    companion_unlocked = excluded.companion_unlocked,
+    companion_summoned = excluded.companion_summoned,
+    companion_x = excluded.companion_x,
+    companion_y = excluded.companion_y,
     updated_at = now();
 
   return jsonb_build_object('saved', true);
 end;
 $$;
 
-revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric) from public;
-revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric) from public;
-grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric) to anon, authenticated;
-grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric) to anon, authenticated;
+create or replace function public.sanggi_unlock_companion(p_session_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_state public.sanggi_game_states%rowtype;
+begin
+  select account_id into v_account_id
+  from public.site_account_sessions
+  where token = p_session_token and expires_at > now();
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  select * into v_state
+  from public.sanggi_game_states
+  where account_id = v_account_id
+  for update;
+  if v_state.account_id is null then
+    raise exception '상기 키우기 정보를 먼저 동기화하세요.';
+  end if;
+  if not v_state.companion_unlocked then
+    if v_state.coins < 50000 then
+      raise exception '코인이 부족합니다. 필요한 비용은 50,000원입니다.';
+    end if;
+    update public.sanggi_game_states
+    set coins = coins - 50000,
+        companion_unlocked = true,
+        companion_summoned = true,
+        updated_at = now()
+    where account_id = v_account_id
+    returning * into v_state;
+  end if;
+  return jsonb_build_object(
+    'coins', v_state.coins::text,
+    'companion_unlocked', v_state.companion_unlocked,
+    'companion_summoned', v_state.companion_summoned
+  );
+end;
+$$;
+
+revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) from public;
+revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) from public;
+revoke all on function public.sanggi_unlock_companion(uuid) from public;
+grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) to anon, authenticated;
+grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric) to anon, authenticated;
+grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;

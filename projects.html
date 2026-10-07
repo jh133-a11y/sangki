@@ -38,12 +38,13 @@
     <div class="sanggi-lamp sanggi-lamp-left"></div>
     <div class="sanggi-lamp sanggi-lamp-right"></div>
     <img class="sanggi-character" src="sanggi-character.png" alt="Sanggi character" draggable="false">
+    <img class="sanggi-companion" id="sanggi-companion" src="juseong-character.png" alt="동료 주성" draggable="false" hidden>
     <nav class="sanggi-action-bar" aria-label="상기 키우기 메뉴">
       <button type="button" class="sanggi-action-button" id="sanggi-ability-button">
         <span class="sanggi-action-icon">★</span>
         <span>상기 능력</span>
       </button>
-      <button type="button" class="sanggi-action-button">
+      <button type="button" class="sanggi-action-button" id="sanggi-companion-button">
         <span class="sanggi-action-icon">+</span>
         <span>동료 소환</span>
       </button>
@@ -79,7 +80,23 @@
       </div>
       <p class="sanggi-ability-status" id="sanggi-ability-status" role="status"></p>
     </section>
+    <div class="sanggi-companion-backdrop" id="sanggi-companion-backdrop" hidden></div>
+    <section class="sanggi-companion-modal" id="sanggi-companion-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-companion-title" hidden>
+      <button class="sanggi-ability-close" id="sanggi-companion-close" type="button" aria-label="닫기">×</button>
+      <p class="sanggi-ability-eyebrow">COMPANION</p>
+      <h2 id="sanggi-companion-title">동료 소환</h2>
+      <div class="sanggi-companion-preview">
+        <img src="juseong-character.png" alt="주성 캐릭터 미리보기">
+        <div>
+          <h3>주성</h3>
+          <p>주성을 잠금 해제하면 원하는 때에 소환하거나 해제할 수 있습니다. 소환된 주성도 기존 캐릭터처럼 드래그할 수 있습니다.</p>
+          <strong id="sanggi-companion-price">잠금 해제 비용 50,000원</strong>
+        </div>
+      </div>
+      <button class="sanggi-upgrade-button" id="sanggi-companion-action" type="button">50,000원으로 잠금 해제</button>
+      <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
+    </section>
   </main>
-  <script src="sanggi.js?v=16"></script>
+  <script src="sanggi.js?v=17"></script>
 </body>
 </html>
