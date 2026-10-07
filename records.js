@@ -272,7 +272,15 @@ $('#records-post-form').addEventListener('submit', async (event) => {
         p_title: payload.p_title,
         p_body: payload.p_body
       };
-    await rpc('record_create_post', createPayload);
+    try {
+      await rpc('record_create_post', createPayload);
+    } catch (error) {
+      const missingPollFunction = payload.p_poll_question
+        && error.message.includes('Could not find the function public.record_create_post');
+      if (!missingPollFunction) throw error;
+      setStatus('records-post-form-status', '투표 기능 SQL이 아직 적용되지 않았습니다. Supabase SQL을 먼저 실행하세요.');
+      return;
+    }
     closeModals();
     await loadBoard();
   } catch (error) {
