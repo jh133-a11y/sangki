@@ -1463,3 +1463,55 @@ from public;
 
 grant execute on function public.investment_link_account(uuid, uuid)
 to anon, authenticated;
+
+drop function if exists public.site_account_delete(uuid, text);
+
+create or replace function public.site_account_delete(
+  p_session_token uuid,
+  p_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_account_id uuid;
+  v_password_hash text;
+begin
+  select s.account_id, a.password_hash
+  into v_account_id, v_password_hash
+  from public.site_account_sessions s
+  join public.site_accounts a
+    on a.id = s.account_id
+  where s.token = p_session_token
+    and s.expires_at > now()
+  for update of a;
+
+  if v_account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+
+  if p_password is null
+     or v_password_hash <> crypt(p_password, v_password_hash) then
+    raise exception '비밀번호가 올바르지 않습니다.';
+  end if;
+
+  delete from public.investment_holdings
+  where client_id = v_account_id;
+
+  delete from public.investment_users
+  where client_id = v_account_id;
+
+  delete from public.site_accounts
+  where id = v_account_id;
+
+  return true;
+end;
+$$;
+
+revoke all on function public.site_account_delete(uuid, text)
+from public;
+
+grant execute on function public.site_account_delete(uuid, text)
+to anon, authenticated;

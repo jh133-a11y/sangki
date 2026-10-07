@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=33">
+  <link rel="stylesheet" href="style.css?v=34">
 </head>
 <body>
   <div class="noise"></div>
@@ -48,7 +48,17 @@
     <a href="projects.html" target="_blank" rel="noopener">PROJECTS <span>↗</span></a>
     <a href="playground.html" target="_blank" rel="noopener">PLAYGROUND <span>↗</span></a>
     <a href="archive.html" target="_blank" rel="noopener">ARCHIVE <span>↗</span></a>
+    <button class="side-menu-settings" id="settings-open" type="button">설정 <span>⚙</span></button>
   </aside>
+  <div class="settings-backdrop" id="settings-backdrop" hidden></div>
+  <section class="settings-modal" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <button class="account-close" id="settings-close" type="button" aria-label="설정 닫기">×</button>
+    <h2 id="settings-title">설정</h2>
+    <p id="settings-account-status">로그인하면 계정 설정을 사용할 수 있습니다.</p>
+    <button class="settings-action" id="settings-logout" type="button">로그아웃</button>
+    <button class="settings-action settings-danger" id="settings-delete-account" type="button">아이디 삭제</button>
+    <p class="settings-status" id="settings-status" role="status"></p>
+  </section>
 
   <main>
     <section class="hero">
@@ -220,6 +230,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=46"></script>
+  <script src="app.js?v=47"></script>
 </body>
 </html>
