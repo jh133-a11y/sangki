@@ -1117,7 +1117,12 @@ const renderInvestmentState = (state) => {
   investmentRankingList.replaceChildren(...(rankingPage.length ? rankingPage.map((entry) => {
     const item = document.createElement('li');
     const name = document.createElement('span');
-    name.textContent = entry.nickname;
+    name.className = 'investment-ranking-name';
+    const level = document.createElement('small');
+    level.textContent = String(Math.max(0, Number(entry.player_level) || 0));
+    const nickname = document.createElement('span');
+    nickname.textContent = entry.nickname;
+    name.append(level, nickname);
     const total = document.createElement('span');
     total.className = 'ranking-value';
     total.textContent = formatWon(entry.total_asset);

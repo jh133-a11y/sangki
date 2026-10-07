@@ -567,15 +567,23 @@ as $$
     ), '[]'::jsonb),
     'holdings', coalesce((select jsonb_agg(to_jsonb(h) order by h.symbol) from public.investment_holdings h where h.client_id = u.client_id), '[]'::jsonb),
     'ranking', coalesce((
-      select jsonb_agg(jsonb_build_object('client_id', r.client_id, 'nickname', r.nickname, 'total_asset', r.total_asset) order by r.total_asset desc)
+      select jsonb_agg(jsonb_build_object(
+        'client_id', r.client_id,
+        'nickname', r.nickname,
+        'player_level', r.player_level,
+        'total_asset', r.total_asset
+      ) order by r.total_asset desc)
       from (
-        select iu.client_id, iu.nickname, iu.cash + coalesce((
+        select iu.client_id, iu.nickname, coalesce(sgs.player_level, 0) as player_level,
+          iu.cash + coalesce((
           select sum(ih.quantity * ia.current_price)
           from public.investment_holdings ih
           join public.investment_assets ia on ia.symbol = ih.symbol
           where ih.client_id = iu.client_id and ia.listed
         ), 0) as total_asset
         from public.investment_users iu
+        left join public.sanggi_game_states sgs
+          on sgs.account_id = iu.client_id
       ) r
     ), '[]'::jsonb)
   )

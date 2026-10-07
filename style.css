@@ -279,6 +279,8 @@ section { padding: 120px 0; }
 .investment-ranking ol { min-height: 285px; margin: 22px 0 0; padding: 0; list-style: none; counter-reset: ranking; }
 .investment-ranking li { counter-increment: ranking; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; padding: 13px 0; border-top: 1px solid rgba(23,23,23,.25); font-size: 13px; }
 .investment-ranking li:before { content: counter(ranking, decimal-leading-zero); font: 11px var(--mono); }
+.investment-ranking-name { display: flex; align-items: baseline; gap: 6px; }
+.investment-ranking-name small { color: rgba(23,23,23,.6); font: 10px var(--mono); }
 .investment-ranking .ranking-value { font: 11px var(--mono); }
 .investment-admin-button { width: 100%; margin-top: 18px; border: 1px solid var(--ink); padding: 9px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
 .investment-admin-button:hover { background: var(--ink); color: var(--acid); }
