@@ -83,72 +83,6 @@ const authenticateAccount = async (username, password) => {
   localStorage.setItem(investmentClientKey, accountSession.account_id);
   updateAccountButton();
 
-  const closeSettings = () => {
-    settingsModal.hidden = true;
-    settingsBackdrop.hidden = true;
-  };
-  const logoutAccount = () => {
-    accountSession = null;
-    localStorage.removeItem(accountStorageKey);
-    updateAccountButton();
-    closeSettings();
-    investorStatus.textContent = '로그아웃되었습니다.';
-  };
-  settingsOpen.addEventListener('click', () => {
-    settingsAccountStatus.textContent = accountSession?.username
-      ? `현재 로그인: ${accountSession.username}`
-      : '로그인하면 계정 설정을 사용할 수 있습니다.';
-    settingsStatus.textContent = '';
-    settingsModal.hidden = false;
-    settingsBackdrop.hidden = false;
-  });
-  settingsClose.addEventListener('click', closeSettings);
-  settingsBackdrop.addEventListener('click', closeSettings);
-  settingsLogout.addEventListener('click', () => {
-    if (!accountSession) {
-      settingsStatus.textContent = '로그인된 계정이 없습니다.';
-      return;
-    }
-    logoutAccount();
-  });
-  settingsDeleteAccount.addEventListener('click', async () => {
-    if (!accountSession) {
-      settingsStatus.textContent = '로그인된 계정이 없습니다.';
-      return;
-    }
-    if (!window.confirm('아이디와 연결된 투자 정보, 세션을 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
-    const password = window.prompt('삭제를 확인하려면 현재 비밀번호를 입력하세요.');
-    if (password === null) return;
-    settingsDeleteAccount.disabled = true;
-    settingsStatus.textContent = '삭제 중...';
-    try {
-      const response = await fetch(`${rpcEndpoint}/site_account_delete`, {
-        method: 'POST',
-        headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          p_session_token: accountSession.session_token,
-          p_password: password
-        })
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || result.details || result.hint || '아이디를 삭제하지 못했습니다.');
-      localStorage.removeItem(accountStorageKey);
-      localStorage.removeItem(legacyInvestmentClientKey);
-      localStorage.removeItem('sangki-investor-nickname');
-      accountSession = null;
-      localStorage.removeItem(investmentClientKey);
-      updateAccountButton();
-      closeSettings();
-      investorStatus.textContent = '아이디가 삭제되었습니다.';
-      investorForm.reset();
-      portfolioSummary.hidden = true;
-      investmentHoldings.hidden = true;
-    } catch (error) {
-      settingsStatus.textContent = error.message;
-    } finally {
-      settingsDeleteAccount.disabled = false;
-    }
-  });
 };
 accountButton.addEventListener('click', () => {
   if (accountSession) {
@@ -195,6 +129,73 @@ if (accountSession?.account_id) {
   localStorage.setItem(investmentClientKey, accountSession.account_id);
 }
 updateAccountButton();
+
+const closeSettings = () => {
+  settingsModal.hidden = true;
+  settingsBackdrop.hidden = true;
+};
+const logoutAccount = () => {
+  accountSession = null;
+  localStorage.removeItem(accountStorageKey);
+  updateAccountButton();
+  closeSettings();
+  investorStatus.textContent = '로그아웃되었습니다.';
+};
+settingsOpen.addEventListener('click', () => {
+  settingsAccountStatus.textContent = accountSession?.username
+    ? `현재 로그인: ${accountSession.username}`
+    : '로그인하면 계정 설정을 사용할 수 있습니다.';
+  settingsStatus.textContent = '';
+  settingsModal.hidden = false;
+  settingsBackdrop.hidden = false;
+});
+settingsClose.addEventListener('click', closeSettings);
+settingsBackdrop.addEventListener('click', closeSettings);
+settingsLogout.addEventListener('click', () => {
+  if (!accountSession) {
+    settingsStatus.textContent = '로그인된 계정이 없습니다.';
+    return;
+  }
+  logoutAccount();
+});
+settingsDeleteAccount.addEventListener('click', async () => {
+  if (!accountSession) {
+    settingsStatus.textContent = '로그인된 계정이 없습니다.';
+    return;
+  }
+  if (!window.confirm('아이디와 연결된 투자 정보, 세션을 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.')) return;
+  const password = window.prompt('삭제를 확인하려면 현재 비밀번호를 입력하세요.');
+  if (password === null) return;
+  settingsDeleteAccount.disabled = true;
+  settingsStatus.textContent = '삭제 중...';
+  try {
+    const response = await fetch(`${rpcEndpoint}/site_account_delete`, {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_session_token: accountSession.session_token,
+        p_password: password
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || result.details || result.hint || '아이디를 삭제하지 못했습니다.');
+    localStorage.removeItem(accountStorageKey);
+    localStorage.removeItem(legacyInvestmentClientKey);
+    localStorage.removeItem('sangki-investor-nickname');
+    accountSession = null;
+    localStorage.removeItem(investmentClientKey);
+    updateAccountButton();
+    closeSettings();
+    investorStatus.textContent = '아이디가 삭제되었습니다.';
+    investorForm.reset();
+    portfolioSummary.hidden = true;
+    investmentHoldings.hidden = true;
+  } catch (error) {
+    settingsStatus.textContent = error.message;
+  } finally {
+    settingsDeleteAccount.disabled = false;
+  }
+});
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener('click', (event) => {
