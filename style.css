@@ -95,6 +95,7 @@ nav a:hover { opacity: .5; }
 .bag-target-label select { border: 1px solid var(--ink); padding: 7px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
 .bag-target-label { display: grid; gap: 6px; font: 10px var(--mono); }
 .bag-nickname-label { display: grid; gap: 6px; grid-column: 1 / -1; font: 10px var(--mono); }
+.bag-nickname-label[hidden], .bag-letter-label[hidden] { display: none !important; }
 .bag-nickname-label input { border: 1px solid var(--ink); padding: 8px; background: #fff; color: var(--ink); font: 11px var(--mono); }
 .bag-letter-label { display: grid; gap: 6px; grid-column: 1 / -1; font: 10px var(--mono); }
 .bag-letter-label textarea { border: 1px solid var(--ink); padding: 8px; background: #fff; color: var(--ink); font: 11px/1.5 var(--mono); resize: vertical; }
