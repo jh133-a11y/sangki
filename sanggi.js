@@ -25,7 +25,7 @@
     oscillator.frequency.setValueAtTime(880, now);
     oscillator.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
@@ -44,6 +44,15 @@
     localStorage.setItem(storageKey, String(coins));
     renderBalance();
     playCoinSound();
+
+    const popup = document.createElement('span');
+    const bounds = main.getBoundingClientRect();
+    popup.className = 'sanggi-coin-popup';
+    popup.textContent = '+1원';
+    popup.style.left = `${event.clientX - bounds.left}px`;
+    popup.style.top = `${event.clientY - bounds.top}px`;
+    main.appendChild(popup);
+    popup.addEventListener('animationend', () => popup.remove(), { once: true });
   });
 
   renderBalance();
