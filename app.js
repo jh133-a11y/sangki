@@ -642,6 +642,7 @@ const shopItemIcons = {
   ,missile_shield: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 40 10v12c0 10-6 17-16 22C14 39 8 32 8 22V10l16-6Z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m15 24 6 6 12-13" fill="none" stroke="#d9ff36" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
   letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>',
+  megaphone: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m8 25 24-9v16L8 23Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="M32 16h7v16h-7M13 24l3 15h6l-3-14M39 20c4 2 4 7 0 9" fill="none" stroke="#171717" stroke-width="2.5" stroke-linejoin="round"/></svg>',
   normal_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#e8f7ff" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#398fe5"/></svg>',
   advanced_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#fff8d0" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#e6a62f"/></svg>',
   legendary_potion: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M18 5h12M20 5v9L10 25v14a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4V25L28 14V5" fill="#f3e7ff" stroke="#171717" stroke-width="2.5"/><path d="M10 29h28v10a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4Z" fill="#8b3fd6"/></svg>',
@@ -660,6 +661,7 @@ const shopItemDescriptions = {
   ,missile_shield: '다른 유저의 미사일을 막을 수 있습니다. 하급 미사일을 막는 데에는 1개, 중급 미사일에는 3개, 고급 미사일에는 5개, 핵 미사일에는 미사일 방어막 10개가 필요합니다. 미사일에 피격되면 자동으로 소모됩니다.'
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.',
+  megaphone: '모든 유저의 메시지함에 최대 500자의 메시지를 보냅니다. 사용하면 1개가 소모됩니다.',
   normal_potion: '10초 동안 획득 코인이 2배가 됩니다.',
   advanced_potion: '10초 동안 획득 코인이 10배가 됩니다.',
   legendary_potion: '10초 동안 획득 코인이 100배가 됩니다.',
@@ -678,6 +680,7 @@ const shopItemNames = {
   missile_shield: '미사일 방어막',
   nickname_ticket: '닉네임 변경권',
   letter: '편지',
+  megaphone: '확성기',
   normal_potion: '일반 물약',
   advanced_potion: '고급 물약',
   legendary_potion: '전설 물약',
@@ -740,7 +743,8 @@ const selectShopItem = (item) => {
     'juseong_hanbok', 'juseong_spacesuit'
   ].includes(item.item_type);
   const targetLabel = document.querySelector('.bag-target-label');
-  targetLabel.hidden = isShield || (!isCashBox && !isNicknameTicket && !isLetter
+  const isMegaphone = item.item_type === 'megaphone';
+  targetLabel.hidden = isShield || isMegaphone || (!isCashBox && !isNicknameTicket && !isLetter
     && !['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type));
   bagTarget.disabled = isShield;
   if (isShield) bagTarget.value = '';
@@ -748,6 +752,8 @@ const selectShopItem = (item) => {
   bagDiscardQuantity.closest('.bag-discard-label').hidden = isOutfit;
   targetLabel.firstChild.textContent = isCashBox
     ? '선물할 유저 선택 (선택하지 않으면 개봉)'
+    : isMegaphone
+    ? '모든 유저에게 보낼 메시지를 입력한 뒤 사용하기를 누르세요.'
     : isNicknameTicket
     ? '닉네임 변경 대상 선택'
     : isLetter ? '편지 받을 유저 선택' : '공격 대상 선택';
@@ -758,7 +764,12 @@ const selectShopItem = (item) => {
       target.client_id
     )));
   bagNicknameLabel.hidden = !isNicknameTicket;
-  document.querySelector('#bag-letter-label').hidden = !isLetter;
+  const letterLabel = document.querySelector('#bag-letter-label');
+  letterLabel.hidden = !(isLetter || isMegaphone);
+  letterLabel.firstChild.textContent = isMegaphone ? '확성기 메시지' : '편지 내용';
+  letterLabel.querySelector('textarea').placeholder = isMegaphone
+    ? '모든 유저에게 보낼 메시지를 입력하세요'
+    : '전하고 싶은 메시지를 입력하세요';
   bagUseButton.disabled = isShield;
   bagUseButton.textContent = isShield
     ? '자동 방어 아이템'
@@ -767,6 +778,8 @@ const selectShopItem = (item) => {
     ? '다른 유저의 미사일이 명중하면 필요한 수량이 자동으로 소모되어 방어합니다.'
     : isCashBox
     ? '유저를 선택하면 상자를 선물하고, 선택하지 않으면 내 계정에서 바로 개봉합니다.'
+    : isMegaphone
+    ? '모든 유저에게 보낼 메시지를 입력한 뒤 사용하기를 누르세요.'
     : isNicknameTicket
     ? '대상을 선택하고 새 닉네임을 입력한 뒤 사용하기를 누르세요.'
     : isLetter
@@ -883,6 +896,30 @@ const useShopItem = async (itemType) => {
     } catch (error) {
       bagStatus.textContent = error.message;
       window.alert(`상자 처리 실패: ${error.message}`);
+    }
+    return;
+  }
+  if (itemType === 'megaphone') {
+    const message = document.querySelector('#bag-letter-message').value.trim();
+    if (!message) {
+      bagStatus.textContent = '확성기 메시지를 입력하세요.';
+      return;
+    }
+    if (!await siteConfirm('모든 유저에게 확성기 메시지를 보내시겠습니까?')) return;
+    bagStatus.textContent = '확성기 메시지를 보내는 중...';
+    try {
+      await callInvestmentRpc('shop_use_megaphone', {
+        p_client_id: await resolveShopClientId(),
+        p_message: message
+      });
+      bagStatus.textContent = '모든 유저에게 메시지를 보냈습니다.';
+      window.alert('모든 유저에게 메시지를 보냈습니다.');
+      document.querySelector('#bag-letter-message').value = '';
+      await loadMessageCount();
+      await loadBag();
+    } catch (error) {
+      bagStatus.textContent = error.message;
+      window.alert(`확성기 사용 실패: ${error.message}`);
     }
     return;
   }
@@ -1052,7 +1089,13 @@ const renderMessages = () => {
     ? pageItems.map((message) => {
       const card = document.createElement('article');
       card.className = 'message-card';
-      card.textContent = message.message;
+      const sender = document.createElement('strong');
+      sender.className = 'message-sender';
+      sender.textContent = message.sender_name || '시스템';
+      const body = document.createElement('p');
+      body.className = 'message-body';
+      body.textContent = message.message || message.content || '';
+      card.append(sender, body);
       const time = document.createElement('time');
       time.textContent = new Date(message.created_at).toLocaleString('ko-KR');
       card.append(time);

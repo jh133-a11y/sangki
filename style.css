@@ -71,6 +71,8 @@ nav a:hover { opacity: .5; }
 .message-subtitle { margin: 0 0 18px; color: #666; font: 10px var(--mono); letter-spacing: .08em; }
 .message-list { display: grid; gap: 8px; }
 .message-card { border: 1px solid var(--ink); padding: 12px; background: #fff; font: 11px/1.55 var(--mono); }
+.message-sender { display: block; color: var(--orange); font-weight: 700; }
+.message-body { margin: 4px 0 0; white-space: pre-wrap; }
 .message-card time { display: block; margin-top: 7px; color: #777; font-size: 9px; }
 .message-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; }
 .message-page-button { border: 1px solid var(--ink); padding: 6px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 9px var(--mono); }

@@ -813,9 +813,14 @@ begin
     raise exception '지급할 투자자를 찾을 수 없습니다.';
   end if;
 
-  insert into public.investment_shop_messages(client_id, message)
+  insert into public.investment_shop_messages(
+    client_id, sender_name, message_body, message
+  )
   values (
     p_target_client_id,
+    '관리자',
+    to_char(p_amount, 'FM999,999,999,999,999,999,999')
+      || '원을 지급했습니다.',
     '관리자가 ' || to_char(p_amount, 'FM999,999,999,999,999,999,999')
       || '원을 지급했습니다.'
   );
@@ -854,7 +859,7 @@ begin
     raise exception '메시지는 500자 이하로 입력하세요.';
   end if;
 
-  v_message := '관리자가 모든 유저에게 '
+  v_message := '모든 유저에게 '
     || to_char(p_amount, 'FM999,999,999,999,999,999,999')
     || '원을 지급했습니다.' || E'\n' || trim(p_message);
 
@@ -864,8 +869,8 @@ begin
 
   get diagnostics v_user_count = row_count;
 
-  insert into public.investment_shop_messages(client_id, message)
-  select client_id, v_message
+  insert into public.investment_shop_messages(client_id, sender_name, message_body, message)
+  select client_id, '관리자', v_message, '관리자가 ' || v_message
   from public.investment_users;
 
   return jsonb_build_object(
@@ -925,6 +930,7 @@ begin
   if p_item_type not in (
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
     'missile_shield', 'nickname_ticket', 'letter',
+    'megaphone',
     'normal_potion', 'advanced_potion', 'legendary_potion',
     'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
     'juseong_spacesuit', 'cash_box', 'weird_cash_box'
@@ -952,6 +958,7 @@ begin
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
+    when 'megaphone' then '확성기'
     when 'normal_potion' then '일반 물약'
     when 'advanced_potion' then '고급 물약'
     when 'legendary_potion' then '전설 물약'
@@ -981,11 +988,11 @@ begin
 
   get diagnostics v_user_count = row_count;
 
-  v_message := '관리자가 ' || v_item_name || ' ' || p_quantity
+  v_message := v_item_name || ' ' || p_quantity
     || '개를 지급했습니다.' || E'\n' || trim(p_message);
 
-  insert into public.investment_shop_messages(client_id, message)
-  select u.client_id, v_message
+  insert into public.investment_shop_messages(client_id, sender_name, message_body, message)
+  select u.client_id, '관리자', v_message, '관리자가 ' || v_message
   from public.investment_users u
   where p_target_client_id is null or u.client_id = p_target_client_id;
 
@@ -1030,6 +1037,7 @@ begin
   if p_item_type not in (
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
     'missile_shield', 'nickname_ticket', 'letter',
+    'megaphone',
     'normal_potion', 'advanced_potion', 'legendary_potion',
     'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
     'juseong_spacesuit', 'cash_box', 'weird_cash_box'
@@ -1057,6 +1065,7 @@ begin
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
+    when 'megaphone' then '확성기'
     when 'normal_potion' then '일반 물약'
     when 'advanced_potion' then '고급 물약'
     when 'legendary_potion' then '전설 물약'
@@ -1099,11 +1108,11 @@ begin
     and quantity <= 0
     and (p_target_client_id is null or client_id = p_target_client_id);
 
-  v_message := '관리자가 ' || v_item_name || ' ' || p_quantity
+  v_message := v_item_name || ' ' || p_quantity
     || '개를 차감했습니다.' || E'\n' || trim(p_message);
 
-  insert into public.investment_shop_messages(client_id, message)
-  select client_id, v_message
+  insert into public.investment_shop_messages(client_id, sender_name, message_body, message)
+  select client_id, '관리자', v_message, '관리자가 ' || v_message
   from public.investment_users
   where p_target_client_id is null or client_id = p_target_client_id;
 
@@ -2355,6 +2364,7 @@ alter table public.investment_shop_items
     'missile_shield',
     'nickname_ticket',
     'letter',
+    'megaphone',
     'normal_potion',
     'advanced_potion',
     'legendary_potion',
@@ -2373,6 +2383,11 @@ create table if not exists public.investment_shop_messages (
   created_at timestamptz not null default now(),
   read_at timestamptz
 );
+
+alter table public.investment_shop_messages
+  add column if not exists sender_name text;
+alter table public.investment_shop_messages
+  add column if not exists message_body text;
 
 alter table public.investment_shop_messages enable row level security;
 revoke all on table public.investment_shop_messages from anon, authenticated;
@@ -2461,7 +2476,8 @@ begin
     jsonb_agg(
       jsonb_build_object(
         'id', id,
-        'message', message,
+        'sender_name', coalesce(sender_name, '시스템'),
+        'message', coalesce(message_body, message),
         'created_at', created_at
       )
       order by created_at desc
@@ -2511,6 +2527,8 @@ begin
           when 'nuclear_missile' then '핵 미사일'
           when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
+          when 'letter' then '편지'
+          when 'megaphone' then '확성기'
           when 'normal_potion' then '일반 물약'
           when 'advanced_potion' then '고급 물약'
           when 'legendary_potion' then '전설 물약'
@@ -2586,6 +2604,8 @@ begin
           when 'nuclear_missile' then '핵 미사일'
           when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
+          when 'letter' then '편지'
+          when 'megaphone' then '확성기'
           when 'normal_potion' then '일반 물약'
           when 'advanced_potion' then '고급 물약'
           when 'legendary_potion' then '전설 물약'
@@ -2645,6 +2665,7 @@ begin
     ('nuclear_missile', 10000000000::bigint, '핵 미사일'),
     ('missile_shield', 10000000::bigint, '미사일 방어막'),
     ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
+    ('megaphone', 50000::bigint, '확성기'),
     ('normal_potion', 10000000::bigint, '일반 물약'),
     ('advanced_potion', 100000000::bigint, '고급 물약'),
     ('legendary_potion', 1000000000::bigint, '전설 물약'),
@@ -2734,6 +2755,68 @@ security definer
 set search_path = public
 as $$
   select public.shop_purchase(p_client_id, p_item_type, 1::bigint);
+$$;
+
+create or replace function public.shop_use_megaphone(
+  p_client_id uuid,
+  p_message text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quantity bigint;
+  v_nickname text;
+  v_message text := trim(p_message);
+  v_user_count integer;
+begin
+  if v_message is null or char_length(v_message) < 1 then
+    raise exception '전달할 메시지를 입력하세요.';
+  end if;
+  if char_length(v_message) > 500 then
+    raise exception '메시지는 500자 이하로 입력하세요.';
+  end if;
+
+  select nickname into v_nickname
+  from public.investment_users
+  where client_id = p_client_id
+  for update;
+  if v_nickname is null then
+    raise exception '먼저 투자 닉네임을 설정하세요.';
+  end if;
+
+  select quantity into v_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'megaphone'
+  for update;
+  if coalesce(v_quantity, 0) < 1 then
+    raise exception '가방에 확성기가 없습니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - 1
+  where client_id = p_client_id
+    and item_type = 'megaphone';
+  delete from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'megaphone'
+    and quantity <= 0;
+
+  insert into public.investment_shop_messages(
+    client_id, sender_name, message_body, message
+  )
+  select client_id, v_nickname, v_message, v_nickname || ': ' || v_message
+  from public.investment_users;
+  get diagnostics v_user_count = row_count;
+
+  return jsonb_build_object(
+    'user_count', v_user_count,
+    'message', v_message
+  );
+end;
 $$;
 
 create or replace function public.shop_purchase_coin_box(
@@ -2879,8 +2962,15 @@ begin
     on conflict (client_id, item_type)
     do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
     if v_sender_name is not null then
-      insert into public.investment_shop_messages(client_id, message)
-      values (p_target_client_id, v_sender_name || '님이 ' || case p_item_type
+      insert into public.investment_shop_messages(
+        client_id, sender_name, message_body, message
+      )
+      values (p_target_client_id, v_sender_name,
+        case p_item_type
+        when 'cash_box' then '랜덤 현금 박스'
+        else '이상한 랜덤 현금 박스'
+      end || '를 선물했습니다.',
+        v_sender_name || '님이 ' || case p_item_type
         when 'cash_box' then '랜덤 현금 박스'
         else '이상한 랜덤 현금 박스'
       end || '를 선물했습니다.');
@@ -3074,9 +3164,13 @@ begin
     and item_type = 'letter'
     and quantity <= 0;
 
-  insert into public.investment_shop_messages(client_id, message)
+  insert into public.investment_shop_messages(
+    client_id, sender_name, message_body, message
+  )
   values (
     p_target_client_id,
+    v_sender_name,
+    v_message,
     v_sender_name || '님이 보낸 편지: ' || v_message
   );
 
@@ -3346,6 +3440,8 @@ begin
     when 'nuclear_missile' then '핵 미사일'
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
+    when 'letter' then '편지'
+    when 'megaphone' then '확성기'
     when 'normal_potion' then '일반 물약'
     when 'advanced_potion' then '고급 물약'
     when 'legendary_potion' then '전설 물약'
@@ -3355,7 +3451,6 @@ begin
     when 'juseong_spacesuit' then '주성 우주복'
     when 'cash_box' then '랜덤 현금 박스'
     when 'weird_cash_box' then '이상한 랜덤 현금 박스'
-    when 'letter' then '편지'
     else null
   end;
 
@@ -3522,6 +3617,7 @@ revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
 revoke all on function public.shop_discard_item(uuid, text, bigint) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
 revoke all on function public.shop_change_nickname(uuid, uuid, text) from public;
+revoke all on function public.shop_use_megaphone(uuid, text) from public;
 revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
 grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
@@ -3531,6 +3627,8 @@ grant execute on function public.shop_purchase(uuid, text, bigint) to anon, auth
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
 grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
+grant execute on function public.shop_use_megaphone(uuid, text) to anon, authenticated;
+grant execute on function public.shop_use_megaphone(uuid, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
 
