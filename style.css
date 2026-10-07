@@ -1063,7 +1063,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   }
   .sanggi-potion-bar {
     right: 10px;
-    bottom: 198px;
+    bottom: 224px;
     width: 118px;
     gap: 5px;
   }
