@@ -55,7 +55,6 @@ nav a:hover { opacity: .5; }
 .notification-toggle:hover { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-enabled { background: var(--ink); color: var(--acid); }
 .notification-toggle.is-blocked { opacity: .55; }
-.side-menu-notification { width: 100%; margin: 16px 0 0; text-align: left; }
 .account-button { display: inline-grid; min-width: 72px; border: 1px solid var(--ink); padding: 4px 7px; background: transparent; color: var(--ink); cursor: pointer; font: 10px/1.2 var(--mono); white-space: nowrap; }
 .account-name, .account-logout { display: block; overflow: hidden; text-overflow: ellipsis; }
 .account-logout { margin-top: 2px; color: var(--orange); font-size: 9px; }
@@ -394,9 +393,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   header { min-height: 62px; padding: 18px 0; }
   .brand { display: none; }
   .eyebrow { position: relative; min-height: 26px; }
-  #site-nav { position: absolute; top: 0; right: 240px; gap: 0; }
+  #site-nav { position: absolute; top: 0; right: 216px; gap: 0; }
   #site-nav a { display: none; }
-  #site-nav .notification-toggle { display: none; }
+  #site-nav .notification-toggle { display: inline-block; }
   .account-button,
   .bag-button,
   .message-button { position: absolute; top: 0; z-index: 1; }
@@ -474,7 +473,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .bag-button,
   .message-button,
   .notification-toggle { padding-left: 4px; padding-right: 4px; font-size: 8px; }
-  #site-nav { right: 222px; }
+  #site-nav { right: 206px; }
   .message-button { right: 136px; }
   .bag-button { right: 68px; }
 }
