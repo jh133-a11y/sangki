@@ -143,6 +143,7 @@ const settingsBackdrop = document.querySelector('#settings-backdrop');
 const settingsClose = document.querySelector('#settings-close');
 const settingsLogout = document.querySelector('#settings-logout');
 const settingsDeleteAccount = document.querySelector('#settings-delete-account');
+const settingsAdmin = document.querySelector('#settings-admin');
 const settingsAccountStatus = document.querySelector('#settings-account-status');
 const settingsStatus = document.querySelector('#settings-status');
 const onlineUsersList = document.querySelector('#online-users-list');
@@ -431,6 +432,15 @@ settingsDeleteAccount.addEventListener('click', async () => {
   } finally {
     settingsDeleteAccount.disabled = false;
   }
+});
+settingsAdmin.addEventListener('click', () => {
+  const password = window.prompt('관리자 비밀번호를 입력하세요.');
+  if (password === null) return;
+  if (password !== '8170') {
+    settingsStatus.textContent = '관리자 비밀번호가 틀렸습니다.';
+    return;
+  }
+  window.location.href = 'admin.html';
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
