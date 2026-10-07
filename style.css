@@ -341,13 +341,100 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .placeholder-page h1 { margin: 20vh 0 18px; font-size: clamp(56px, 12vw, 150px); line-height: .85; letter-spacing: -.08em; }
 .placeholder-page p:not(.eyebrow) { margin-bottom: 30px; font-size: 16px; }
 .placeholder-page a { text-decoration: underline; text-underline-offset: 4px; font: 11px var(--mono); }
-.sanggi-page { background: #fff; }
-.sanggi-page main { position: relative; }
+.sanggi-page {
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+  background: #9ddcf2;
+}
+.sanggi-page main {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 620px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, #82cbed 0%, #c4eff7 48%, #f8d39c 49%, #efb16f 100%);
+}
+.sanggi-sky,
+.sanggi-buildings,
+.sanggi-sidewalk,
+.sanggi-road,
+.sanggi-road-lines {
+  position: absolute;
+  pointer-events: none;
+}
+.sanggi-sky {
+  inset: 0 0 45% 0;
+  z-index: -5;
+  background:
+    radial-gradient(ellipse at 16% 25%, rgba(255, 255, 255, .9) 0 4%, transparent 4.5%),
+    radial-gradient(ellipse at 20% 26%, rgba(255, 255, 255, .82) 0 3%, transparent 3.5%),
+    radial-gradient(ellipse at 76% 18%, rgba(255, 255, 255, .75) 0 5%, transparent 5.5%),
+    linear-gradient(180deg, #68bdea 0%, #b8ecf4 100%);
+}
+.sanggi-buildings {
+  left: 0;
+  right: 0;
+  bottom: 43%;
+  height: 27%;
+  z-index: -4;
+  background:
+    linear-gradient(90deg, transparent 0 3%, #ef9c63 3% 12%, transparent 12% 14%, #e66e59 14% 25%, transparent 25% 27%, #f6b66c 27% 39%, transparent 39% 42%, #d66d66 42% 53%, transparent 53% 56%, #eda474 56% 69%, transparent 69% 72%, #d36b5d 72% 85%, transparent 85% 87%, #f2b073 87% 100%);
+  clip-path: polygon(0 28%, 4% 28%, 4% 8%, 13% 8%, 13% 34%, 18% 34%, 18% 0, 28% 0, 28% 23%, 34% 23%, 34% 12%, 45% 12%, 45% 35%, 51% 35%, 51% 4%, 62% 4%, 62% 27%, 68% 27%, 68% 10%, 79% 10%, 79% 30%, 86% 30%, 86% 2%, 96% 2%, 96% 24%, 100% 24%, 100% 100%, 0 100%);
+  filter: saturate(.9);
+}
+.sanggi-buildings::after {
+  content: "";
+  position: absolute;
+  inset: 12% 0 8%;
+  opacity: .65;
+  background: repeating-linear-gradient(90deg, transparent 0 3.4%, rgba(255, 241, 182, .9) 3.4% 4.5%, transparent 4.5% 7%);
+  clip-path: polygon(0 20%, 13% 20%, 13% 0, 28% 0, 28% 25%, 45% 25%, 45% 10%, 62% 10%, 62% 22%, 79% 22%, 79% 5%, 96% 5%, 96% 18%, 100% 18%, 100% 100%, 0 100%);
+}
+.sanggi-sidewalk {
+  bottom: 0;
+  height: 52%;
+  z-index: -2;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.18) 0 3px, transparent 3px 38px), #d7a06f;
+}
+.sanggi-sidewalk-left {
+  left: 0;
+  width: 25%;
+  clip-path: polygon(0 0, 100% 27%, 100% 100%, 0 100%);
+}
+.sanggi-sidewalk-right {
+  right: 0;
+  width: 25%;
+  clip-path: polygon(0 27%, 100% 0, 100% 100%, 0 100%);
+}
+.sanggi-road {
+  left: 15%;
+  right: 15%;
+  bottom: 0;
+  height: 53%;
+  z-index: -3;
+  background: linear-gradient(100deg, #535968, #343944 48%, #555965);
+  clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%);
+}
+.sanggi-road-lines {
+  left: 50%;
+  bottom: -2%;
+  width: 10px;
+  height: 52%;
+  z-index: -1;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(180deg, #ffe4a4 0 48px, transparent 48px 92px);
+  clip-path: polygon(35% 0, 65% 0, 100% 100%, 0 100%);
+}
 .sanggi-character {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 2;
   display: block;
-  width: min(230px, 25vw);
+  width: min(270px, 27vw);
   height: auto;
-  margin: 0 0 0 0;
   object-fit: contain;
 }
 
