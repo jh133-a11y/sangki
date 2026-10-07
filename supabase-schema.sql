@@ -1933,8 +1933,11 @@ begin
 end;
 $$;
 
+drop function if exists public.shop_change_nickname(uuid, text);
+
 create or replace function public.shop_change_nickname(
   p_client_id uuid,
+  p_target_client_id uuid,
   p_new_nickname text
 )
 returns jsonb
@@ -1956,7 +1959,7 @@ begin
     select 1
     from public.investment_users
     where nickname = v_new_nickname
-      and client_id <> p_client_id
+      and client_id <> p_target_client_id
   ) then
     raise exception '이미 사용 중인 닉네임입니다.';
   end if;
@@ -1975,7 +1978,7 @@ begin
   select nickname
   into v_old_nickname
   from public.investment_users
-  where client_id = p_client_id
+  where client_id = p_target_client_id
   for update;
 
   if v_old_nickname is null then
@@ -1984,7 +1987,7 @@ begin
 
   update public.investment_users
   set nickname = v_new_nickname
-  where client_id = p_client_id;
+  where client_id = p_target_client_id;
 
   update public.investment_shop_items
   set quantity = quantity - 1
@@ -1998,14 +2001,23 @@ begin
 
   insert into public.investment_shop_messages(client_id, message)
   values (
-    p_client_id,
-    '닉네임이 "' || v_old_nickname || '"에서 "'
-      || v_new_nickname || '"(으)로 변경되었습니다.'
+    p_target_client_id,
+    '닉네임이 "' || v_old_nickname || '"에서 "' || v_new_nickname
+      || '"(으)로 변경되었습니다.'
   );
+  if p_target_client_id <> p_client_id then
+    insert into public.investment_shop_messages(client_id, message)
+    values (
+      p_client_id,
+      v_old_nickname || '의 닉네임을 "' || v_new_nickname
+        || '"(으)로 변경했습니다.'
+    );
+  end if;
 
   return jsonb_build_object(
     'message',
-    '닉네임이 "' || v_new_nickname || '"(으)로 변경되었습니다.'
+    v_old_nickname || '의 닉네임이 "' || v_new_nickname
+      || '"(으)로 변경되었습니다.'
   );
 end;
 $$;
@@ -2300,7 +2312,7 @@ revoke all on function public.shop_get_unread_count(uuid) from public;
 revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
-revoke all on function public.shop_change_nickname(uuid, text) from public;
+revoke all on function public.shop_change_nickname(uuid, uuid, text) from public;
 revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
 grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
@@ -2308,7 +2320,7 @@ grant execute on function public.shop_get_unread_count(uuid) to anon, authentica
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
 grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, authenticated;
-grant execute on function public.shop_change_nickname(uuid, text) to anon, authenticated;
+grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
 
 drop function if exists public.site_account_delete(uuid, text);

@@ -450,6 +450,7 @@ const bagUseName = document.querySelector('#bag-use-name');
 const bagUseDescription = document.querySelector('#bag-use-description');
 const bagUseButton = document.querySelector('#bag-use-button');
 let selectedShopItem = null;
+let bagTargets = [];
 const messageButton = document.querySelector('#message-button');
 const messageCount = document.querySelector('#message-count');
 const messageModal = document.querySelector('#message-modal');
@@ -496,10 +497,18 @@ const selectShopItem = (item) => {
   bagUseName.textContent = `${item.name} · ${item.quantity}개`;
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
   const isNicknameTicket = item.item_type === 'nickname_ticket';
-  document.querySelector('.bag-target-label').hidden = isNicknameTicket;
-  bagNicknameLabel.hidden = !isNicknameTicket;
+  const targetLabel = document.querySelector('.bag-target-label');
+  targetLabel.hidden = false;
+  targetLabel.firstChild.textContent = isNicknameTicket ? '닉네임 변경 대상 선택' : '공격 대상 선택';
+  bagTarget.replaceChildren(...bagTargets
+    .filter((target) => isNicknameTicket || target.client_id !== activeShopClientId)
+    .map((target) => new Option(
+      `${target.nickname}${target.client_id === activeShopClientId ? ' (나)' : ''} · ${formatWon(target.total_asset)}`,
+      target.client_id
+    )));
+  bagNicknameLabel.hidden = false;
   bagStatus.textContent = isNicknameTicket
-    ? '새 닉네임을 입력한 뒤 사용하기를 누르세요.'
+    ? '대상을 선택하고 새 닉네임을 입력한 뒤 사용하기를 누르세요.'
     : '공격 대상을 선택한 뒤 사용하기를 누르세요.';
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
 };
@@ -532,9 +541,8 @@ const loadBag = async () => {
   }
   bagItems.replaceChildren(...slots);
   bagCount.textContent = state.items.reduce((sum, item) => sum + Number(item.quantity), 0);
-  bagTarget.replaceChildren(...state.targets
-    .filter((target) => target.client_id !== activeShopClientId)
-    .map((target) => new Option(`${target.nickname} · ${formatWon(target.total_asset)}`, target.client_id)));
+  bagTargets = state.targets;
+  bagTarget.replaceChildren();
   if (selectedShopItem) {
     const refreshedItem = state.items.find((item) => item.item_type === selectedShopItem.item_type);
     if (refreshedItem?.quantity > 0) {
@@ -542,20 +550,25 @@ const loadBag = async () => {
     } else {
       selectedShopItem = null;
       bagUsePanel.hidden = true;
-        bagNicknameLabel.hidden = true;
-        document.querySelector('.bag-target-label').hidden = false;
+      bagNicknameLabel.hidden = true;
+      document.querySelector('.bag-target-label').hidden = true;
       }
   }
 };
 
 const useShopItem = async (itemType) => {
   if (itemType === 'nickname_ticket') {
+    if (!bagTarget.value) {
+      bagStatus.textContent = '닉네임 변경 대상을 선택하세요.';
+      return;
+    }
     const nickname = bagNewNickname.value.trim();
     if (!nickname) {
       bagStatus.textContent = '새 닉네임을 입력하세요.';
       return;
     }
-    if (!window.confirm(`닉네임을 "${nickname}"(으)로 정말 변경하시겠습니까?`)) {
+    const targetName = bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저';
+    if (!window.confirm(`${targetName}의 닉네임을 "${nickname}"(으)로 정말 변경하시겠습니까?`)) {
       bagStatus.textContent = '닉네임 변경을 취소했습니다.';
       return;
     }
@@ -563,12 +576,15 @@ const useShopItem = async (itemType) => {
     try {
       const result = await callInvestmentRpc('shop_change_nickname', {
         p_client_id: await resolveShopClientId(),
+        p_target_client_id: bagTarget.value,
         p_new_nickname: nickname
       });
       bagStatus.textContent = result.message;
       window.alert(result.message);
-      localStorage.setItem('sangki-investor-nickname', nickname);
-      if (accountSession?.account_id) {
+      if (bagTarget.value === (await resolveShopClientId())) {
+        localStorage.setItem('sangki-investor-nickname', nickname);
+      }
+      if (accountSession?.account_id && bagTarget.value === accountSession.account_id) {
         localStorage.setItem(`sangki-account-nickname-${accountSession.account_id}`, nickname);
       }
       await loadBag();
