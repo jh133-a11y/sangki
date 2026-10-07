@@ -21,6 +21,7 @@ const confirmOk = document.querySelector('#shop-confirm-ok');
 const confirmCancel = document.querySelector('#shop-confirm-cancel');
 let confirmResolve = null;
 let currentCashExact = '0';
+let currentItems = [];
 
 const siteConfirm = (message) => new Promise((resolve) => {
   confirmResolve = resolve;
@@ -34,7 +35,7 @@ const siteConfirm = (message) => new Promise((resolve) => {
   confirmModal.hidden = false;
   confirmBackdrop.hidden = false;
 });
-const chooseQuantity = (itemName, itemPrice, price, cash) => new Promise((resolve) => {
+const chooseQuantity = (itemName, itemPrice, price, cash, ownedQuantity = 0n) => new Promise((resolve) => {
   confirmResolve = resolve;
   confirmTitle.textContent = `${itemName} 구매`;
   confirmMessage.textContent = `${itemPrice}\n구매할 수량을 선택하세요.`;
@@ -42,7 +43,10 @@ const chooseQuantity = (itemName, itemPrice, price, cash) => new Promise((resolv
   maxQuantityButton.hidden = false;
   quantityInput.value = '1';
   maxQuantityButton.onclick = () => {
-    quantityInput.value = String(price > 0n ? BigInt(cash) / price : 0n);
+    const affordable = price > 0n ? BigInt(cash) / price : 0n;
+    quantityInput.value = String(affordable < 100n - ownedQuantity
+      ? affordable
+      : 100n - ownedQuantity);
   };
   confirmOk.textContent = '다음';
   confirmCancel.hidden = false;
@@ -145,6 +149,7 @@ const refreshShop = async () => {
   }
   const cashExact = String(state.cash_exact || state.cash || '0');
   currentCashExact = cashExact;
+  currentItems = state.items || [];
   balance.textContent = `보유 현금 ${won(cashExact)}`;
 };
 document.querySelectorAll('.shop-buy').forEach((button) => {
@@ -152,7 +157,20 @@ document.querySelectorAll('.shop-buy').forEach((button) => {
     const itemName = button.closest('.shop-card')?.querySelector('h2')?.textContent || '상품';
     const itemPrice = button.closest('.shop-card')?.querySelector('.shop-price')?.textContent || '';
     const price = BigInt(itemPrice.replace(/[^\d]/g, '') || '0');
-    const quantityText = await chooseQuantity(itemName, itemPrice, price, currentCashExact);
+    const ownedQuantity = BigInt(String(
+      currentItems.find((item) => item.item_type === button.dataset.item)?.quantity || 0
+    ));
+    if (ownedQuantity >= 100n) {
+      status.textContent = '이 아이템은 이미 최대 보유 수량인 100개입니다.';
+      return;
+    }
+    const quantityText = await chooseQuantity(
+      itemName,
+      itemPrice,
+      price,
+      currentCashExact,
+      ownedQuantity
+    );
     if (!quantityText) {
       status.textContent = '구매를 취소했습니다.';
       return;

@@ -2134,6 +2134,7 @@ declare
   v_price bigint;
   v_name text;
   v_cash bigint;
+  v_owned_quantity bigint;
 begin
   select price, name into v_price, v_name
   from (values
@@ -2152,6 +2153,17 @@ begin
   end if;
   if p_quantity is null or p_quantity < 1 then
     raise exception '구매 수량은 1개 이상이어야 합니다.';
+  end if;
+
+  select quantity
+  into v_owned_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = p_item_type
+  for update;
+
+  if coalesce(v_owned_quantity, 0) + p_quantity > 100 then
+    raise exception '아이템은 한 종류당 최대 100개까지 보유할 수 있습니다.';
   end if;
 
   select cash into v_cash
