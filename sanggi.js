@@ -27,8 +27,8 @@
 
   const formatCoins = (value) => value.toLocaleString('ko-KR');
   const clickReward = () => 1n + BigInt((breathLevel - 1) * 10);
-  const autoReward = () => 1n;
-  const autoIntervalMs = () => Math.max(100, 10000 - (autoLevel - 1) * 100);
+  const autoReward = () => clickReward();
+  const autoIntervalMs = () => Math.max(5000, 10000 - (autoLevel - 1) * 100);
   const upgradeCost = (level) => {
     const exponent = Math.min(10, level) + Math.floor(Math.max(0, level - 11) / 10);
     return 2n ** BigInt(exponent);
