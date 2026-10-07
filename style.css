@@ -512,12 +512,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-lamp-right { right: 14%; transform: rotate(-5deg); }
 .sanggi-character {
   position: absolute;
-  left: 50%;
-  bottom: 0;
+  left: 46%;
+  bottom: 3%;
   z-index: 2;
   display: block;
   width: auto;
-  height: min(84vh, 690px);
+  height: min(76vh, 620px);
   max-width: 82vw;
   transform: translateX(-50%);
   object-fit: contain;
