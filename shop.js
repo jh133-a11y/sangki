@@ -7,6 +7,7 @@ const shopSessionKey = 'sangki-auth-session';
 const shopTabSessionKey = 'sangki-auth-session-tab';
 const shopKeepKey = 'sangki-keep-login';
 const shopLegacyInvestmentKey = 'sangki-legacy-investment-client-id';
+const shopNicknameKey = 'sangki-investor-nickname';
 const balance = document.querySelector('#shop-balance');
 const status = document.querySelector('#shop-status');
 
@@ -68,14 +69,13 @@ const rpc = async (name, payload) => {
 };
 const refreshShop = async () => {
   const clientId = await resolveShopClientId();
-  let state;
-  try {
-    state = await rpc('shop_get_state', { p_client_id: clientId });
-  } catch (error) {
-    const legacyId = localStorage.getItem(shopLegacyInvestmentKey);
-    if (!legacyId || legacyId === clientId) throw error;
-    activeShopClientId = legacyId;
-    state = await rpc('shop_get_state', { p_client_id: legacyId });
+  const state = await rpc('shop_get_state', {
+    p_client_id: clientId,
+    p_nickname: localStorage.getItem(shopNicknameKey) || null
+  });
+  if (state.client_id) {
+    activeShopClientId = state.client_id;
+    localStorage.setItem(shopInvestmentKey, state.client_id);
   }
   balance.textContent = `보유 현금 ${won(state.cash)}`;
 };

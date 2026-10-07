@@ -1718,6 +1718,68 @@ begin
 end;
 $$;
 
+create or replace function public.shop_get_state(
+  p_client_id uuid,
+  p_nickname text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_client_id uuid := p_client_id;
+  v_cash bigint;
+begin
+  select client_id, cash
+  into v_client_id, v_cash
+  from public.investment_users
+  where client_id = p_client_id;
+
+  if v_cash is null and nullif(trim(p_nickname), '') is not null then
+    select client_id, cash
+    into v_client_id, v_cash
+    from public.investment_users
+    where nickname = trim(p_nickname);
+  end if;
+
+  if v_cash is null then
+    raise exception '저장된 투자 정보를 찾을 수 없습니다. 홈 화면에서 투자 닉네임을 먼저 확인하세요.';
+  end if;
+
+  return jsonb_build_object(
+    'client_id', v_client_id,
+    'cash', v_cash,
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'item_type', item_type,
+        'name', case item_type
+          when 'low_missile' then '하급 미사일'
+          when 'mid_missile' then '중급 미사일'
+          else '고급 미사일'
+        end,
+        'quantity', quantity
+      ) order by item_type)
+      from public.investment_shop_items
+      where client_id = v_client_id
+    ), '[]'::jsonb),
+    'targets', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'client_id', u.client_id,
+        'nickname', u.nickname,
+        'total_asset', u.cash + coalesce((
+          select sum(h.quantity * a.current_price)
+          from public.investment_holdings h
+          join public.investment_assets a on a.symbol = h.symbol
+          where h.client_id = u.client_id and a.listed
+        ), 0)
+      ) order by u.nickname)
+      from public.investment_users u
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
 create or replace function public.shop_purchase(
   p_client_id uuid,
   p_item_type text
@@ -1936,6 +1998,7 @@ revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
+grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
 grant execute on function public.shop_get_unread_count(uuid) to anon, authenticated;
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;

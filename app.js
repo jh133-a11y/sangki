@@ -447,10 +447,24 @@ const messageModal = document.querySelector('#message-modal');
 const messageBackdrop = document.querySelector('#message-backdrop');
 const messageClose = document.querySelector('#message-close');
 const messageList = document.querySelector('#message-list');
+let activeShopClientId = null;
 
 const getShopClientId = () => {
+  if (activeShopClientId) return activeShopClientId;
   if (accountSession?.account_id) return accountSession.account_id;
   return getInvestmentClientId();
+};
+
+const resolveShopClientId = async () => {
+  if (activeShopClientId) return activeShopClientId;
+  const state = await callInvestmentRpc('shop_get_state', {
+    p_client_id: accountSession?.account_id || getInvestmentClientId(),
+    p_nickname: investorNickname.value.trim()
+      || localStorage.getItem('sangki-investor-nickname')
+      || null
+  });
+  activeShopClientId = state.client_id || getShopClientId();
+  return activeShopClientId;
 };
 
 const shopItemIcons = {
@@ -476,8 +490,12 @@ const selectShopItem = (item) => {
 
 const loadBag = async () => {
   const state = await callInvestmentRpc('shop_get_state', {
-    p_client_id: getShopClientId()
+    p_client_id: accountSession?.account_id || getInvestmentClientId(),
+    p_nickname: investorNickname.value.trim()
+      || localStorage.getItem('sangki-investor-nickname')
+      || null
   });
+  activeShopClientId = state.client_id || getShopClientId();
   bagCash.textContent = `보유 현금 ${formatWon(state.cash)}`;
   const slots = [];
   for (let index = 0; index < 27; index += 1) {
@@ -499,7 +517,7 @@ const loadBag = async () => {
   bagItems.replaceChildren(...slots);
   bagCount.textContent = state.items.reduce((sum, item) => sum + Number(item.quantity), 0);
   bagTarget.replaceChildren(...state.targets
-    .filter((target) => target.client_id !== getShopClientId())
+    .filter((target) => target.client_id !== activeShopClientId)
     .map((target) => new Option(`${target.nickname} · ${formatWon(target.total_asset)}`, target.client_id)));
   if (selectedShopItem) {
     const refreshedItem = state.items.find((item) => item.item_type === selectedShopItem.item_type);
@@ -525,7 +543,7 @@ const useShopItem = async (itemType) => {
   bagStatus.textContent = '아이템 사용 중...';
   try {
     const result = await callInvestmentRpc('shop_use_missile', {
-      p_client_id: getShopClientId(),
+      p_client_id: await resolveShopClientId(),
       p_item_type: itemType,
       p_target_client_id: bagTarget.value
     });
@@ -543,7 +561,7 @@ const useShopItem = async (itemType) => {
 const loadMessageCount = async () => {
   try {
     const result = await callInvestmentRpc('shop_get_unread_count', {
-      p_client_id: getShopClientId()
+      p_client_id: await resolveShopClientId()
     });
     messageCount.textContent = result.count || 0;
   } catch {
@@ -553,7 +571,7 @@ const loadMessageCount = async () => {
 
 const loadMessages = async () => {
   const result = await callInvestmentRpc('shop_get_messages', {
-    p_client_id: getShopClientId()
+    p_client_id: await resolveShopClientId()
   });
   messageList.replaceChildren(...(result.messages.length
     ? result.messages.map((message) => {
