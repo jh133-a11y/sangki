@@ -77,6 +77,15 @@ nav a:hover { opacity: .5; }
 .bag-item-empty { grid-column: 1 / -1; padding: 18px; text-align: center; font: 10px var(--mono); }
 .bag-target-label select { border: 1px solid var(--ink); padding: 7px; background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); }
 .bag-target-label { display: grid; gap: 6px; font: 10px var(--mono); }
+.bag-use-panel { display: grid; grid-template-columns: 64px 1fr; gap: 12px; margin-top: 28px; padding: 14px; border: 2px solid var(--ink); background: #fff; }
+.bag-use-icon { width: 64px; height: 64px; display: grid; place-items: center; border: 2px solid #777; background: #999; }
+.bag-use-icon svg { width: 48px; height: 48px; }
+.bag-use-copy strong { font-size: 16px; }
+.bag-use-copy p { margin: 6px 0 0; font: 10px/1.5 var(--mono); }
+.bag-use-panel .bag-target-label { grid-column: 1 / -1; }
+.bag-use-button { grid-column: 1 / -1; border: 1px solid var(--ink); padding: 10px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
+.bag-use-button:hover { background: var(--orange); color: var(--ink); }
+.bag-use-button:disabled { cursor: wait; opacity: .5; }
 .bag-status { min-height: 18px; color: var(--orange); }
 .shop-page { min-height: 100vh; padding: 38px 24px 70px; background: #fff; color: var(--ink); }
 .shop-shell { width: min(1120px, 100%); margin: 0 auto; }

@@ -434,6 +434,12 @@ const bagCash = document.querySelector('#bag-cash');
 const bagItems = document.querySelector('#bag-items');
 const bagTarget = document.querySelector('#bag-target');
 const bagStatus = document.querySelector('#bag-status');
+const bagUsePanel = document.querySelector('#bag-use-panel');
+const bagUseIcon = document.querySelector('#bag-use-icon');
+const bagUseName = document.querySelector('#bag-use-name');
+const bagUseDescription = document.querySelector('#bag-use-description');
+const bagUseButton = document.querySelector('#bag-use-button');
+let selectedShopItem = null;
 
 const getShopClientId = () => {
   if (accountSession?.account_id) return accountSession.account_id;
@@ -444,6 +450,21 @@ const shopItemIcons = {
   low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
+};
+const shopItemDescriptions = {
+  low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
+  mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
+  high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
+};
+
+const selectShopItem = (item) => {
+  selectedShopItem = item;
+  bagUsePanel.hidden = false;
+  bagUseIcon.innerHTML = shopItemIcons[item.item_type] || '◆';
+  bagUseName.textContent = `${item.name} · ${item.quantity}개`;
+  bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
+  bagStatus.textContent = '공격 대상을 선택한 뒤 사용하기를 누르세요.';
+  document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
 };
 
 const loadBag = async () => {
@@ -462,9 +483,8 @@ const loadBag = async () => {
       slot.title = `${item.name} ${item.quantity}개`;
       slot.innerHTML = `<span class="bag-slot-icon">${shopItemIcons[item.item_type] || '◆'}</span><span class="bag-slot-count">${item.quantity}</span><span class="bag-slot-name">${item.name}</span>`;
       slot.addEventListener('click', () => {
-        document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => selected.classList.remove('is-selected'));
+        selectShopItem(item);
         slot.classList.add('is-selected');
-        useShopItem(item.item_type);
       });
     }
     slots.push(slot);
@@ -474,6 +494,15 @@ const loadBag = async () => {
   bagTarget.replaceChildren(...state.targets
     .filter((target) => target.client_id !== getShopClientId())
     .map((target) => new Option(`${target.nickname} · ${formatWon(target.total_asset)}`, target.client_id)));
+  if (selectedShopItem) {
+    const refreshedItem = state.items.find((item) => item.item_type === selectedShopItem.item_type);
+    if (refreshedItem?.quantity > 0) {
+      selectShopItem(refreshedItem);
+    } else {
+      selectedShopItem = null;
+      bagUsePanel.hidden = true;
+    }
+  }
 };
 
 const useShopItem = async (itemType) => {
@@ -495,6 +524,16 @@ const useShopItem = async (itemType) => {
     bagStatus.textContent = error.message;
   }
 };
+
+bagUseButton.addEventListener('click', async () => {
+  if (!selectedShopItem) {
+    bagStatus.textContent = '먼저 사용할 아이템을 선택하세요.';
+    return;
+  }
+  bagUseButton.disabled = true;
+  await useShopItem(selectedShopItem.item_type);
+  bagUseButton.disabled = false;
+});
 
 bagButton.addEventListener('click', async () => {
   bagModal.hidden = false;
