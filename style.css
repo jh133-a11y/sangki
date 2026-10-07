@@ -423,6 +423,37 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-coin-balance strong {
   font: 700 17px var(--sans);
 }
+.sanggi-player-button {
+  position: absolute;
+  top: 78px;
+  left: 24px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 112px;
+  padding: 8px 10px;
+  border: 2px solid #302a35;
+  border-radius: 12px;
+  background: rgba(255, 247, 220, .94);
+  box-shadow: 0 4px 0 rgba(20, 20, 30, .3);
+  color: #2a2730;
+  cursor: pointer;
+  font: 700 11px var(--sans);
+}
+.sanggi-player-button:hover {
+  background: #ffd45c;
+}
+.sanggi-player-button .sanggi-action-icon {
+  flex: 0 0 auto;
+  width: 23px;
+  height: 23px;
+  font-size: 13px;
+}
+.sanggi-player-button strong {
+  margin-left: auto;
+  font: 700 10px var(--mono);
+}
 .sanggi-coin-popup {
   position: absolute;
   z-index: 20;
@@ -782,7 +813,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   bottom: 82px;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 12px;
   width: min(760px, calc(100% - 40px));
   transform: translateX(-50%);
@@ -886,13 +917,17 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   }
   .sanggi-action-bar {
     bottom: 70px;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     width: calc(100% - 24px);
   }
   .sanggi-action-button {
     min-height: 58px;
     font-size: 12px;
+  }
+  .sanggi-player-button {
+    top: 76px;
+    left: 18px;
   }
   .sanggi-ability-modal { padding: 22px 16px; }
   .sanggi-ability-card { grid-template-columns: 1fr; }
