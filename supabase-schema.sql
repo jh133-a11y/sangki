@@ -215,6 +215,11 @@ as $$
 declare
   kst_now timestamp := now() at time zone 'Asia/Seoul';
   today date := kst_now::date;
+  current_bucket timestamptz :=
+    date_trunc('hour', now())
+    + make_interval(
+        mins => (floor(extract(minute from now()) / 30) * 30)::integer
+      );
   direction_date_value date;
   direction_state_value jsonb;
   asset record;
@@ -291,11 +296,10 @@ begin
 
   if not new_direction_day
      and (
-       (select last_price_update from public.investment_market where id = 1)
-       is not null
-       and now() < (select last_price_update from public.investment_market where id = 1)
-         + interval '30 minutes'
-     ) then
+       select last_price_update
+       from public.investment_market
+       where id = 1
+     ) is not distinct from current_bucket then
     return today;
   end if;
 
@@ -468,7 +472,7 @@ begin
 
   update public.investment_market
   set last_market_date = today,
-      last_price_update = now()
+      last_price_update = current_bucket
   where id = 1;
   return today;
 end;
