@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
+﻿const SUPABASE_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
 const commentsEndpoint = `${SUPABASE_URL}/rest/v1/comments`;
 const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
@@ -23,16 +23,10 @@ const accountSubmit = document.querySelector('#account-submit');
 const accountSwitch = document.querySelector('#account-switch');
 const accountStatus = document.querySelector('#account-status');
 
-const accountEmail = (username) => `${username.trim().toLowerCase()}@users.sangki.com`;
-const accountHeaders = () => ({
-  ...apiHeaders,
-  ...(accountSession?.access_token ? { Authorization: `Bearer ${accountSession.access_token}` } : {})
-});
+const accountHeaders = () => apiHeaders;
 const setAccountStatus = (message) => { accountStatus.textContent = message; };
 const updateAccountButton = () => {
-  accountButton.textContent = accountSession?.user?.user_metadata?.username
-    ? `${accountSession.user.user_metadata.username} · 로그아웃`
-    : '로그인';
+  accountButton.textContent = accountSession?.username ? `${accountSession.username} - Logout` : 'Login';
 };
 const closeAccountModal = () => {
   accountModal.hidden = true;
@@ -43,29 +37,23 @@ const authenticateAccount = async (username, password) => {
   if (!/^[a-z0-9_]{3,24}$/.test(normalizedUsername)) {
     throw new Error('아이디는 영문 소문자, 숫자, 밑줄(_)만 사용해 3~24자로 입력하세요.');
   }
-  const endpoint = accountMode === 'signup'
-    ? `${SUPABASE_URL}/auth/v1/signup`
-    : `${SUPABASE_URL}/auth/v1/token?grant_type=password`;
-  const response = await fetch(endpoint, {
+  const rpcName = accountMode === 'signup' ? 'site_account_signup' : 'site_account_login';
+  const response = await fetch(`${rpcEndpoint}/${rpcName}`, {
     method: 'POST',
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify(accountMode === 'signup'
-      ? { email: accountEmail(normalizedUsername), password, data: { username: normalizedUsername } }
-      : { email: accountEmail(normalizedUsername), password })
+    body: JSON.stringify({ p_username: normalizedUsername, p_password: password })
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.msg || result.error_description || result.message || '계정 요청에 실패했습니다.');
-  if (!result.access_token) throw new Error('회원가입은 완료됐지만 이메일 확인이 필요한 설정입니다.');
+  if (!response.ok) throw new Error(result.message || result.hint || '계정 요청에 실패했습니다.');
   accountSession = result;
   localStorage.setItem(accountStorageKey, JSON.stringify(result));
   const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
     method: 'POST',
-    headers: { ...accountHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_old_client_id: getInvestmentClientId() })
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_session_token: accountSession.session_token, p_old_client_id: getInvestmentClientId() })
   });
   if (!linkResponse.ok) throw new Error('기존 투자 정보를 계정에 연결하지 못했습니다.');
-  localStorage.setItem(investmentClientKey, accountSession.user.id);
-  updateAccountButton();
+  localStorage.setItem(investmentClientKey, accountSession.account_id);
 };
 accountButton.addEventListener('click', () => {
   if (accountSession) {
@@ -82,15 +70,13 @@ accountClose.addEventListener('click', closeAccountModal);
 accountBackdrop.addEventListener('click', closeAccountModal);
 accountSwitch.addEventListener('click', () => {
   accountMode = accountMode === 'login' ? 'signup' : 'login';
-  accountSubmit.textContent = accountMode === 'login' ? '로그인' : '회원가입';
-  accountSwitch.textContent = accountMode === 'login' ? '회원가입으로 전환' : '로그인으로 전환';
-  accountPassword.autocomplete = accountMode === 'login' ? 'current-password' : 'new-password';
-  setAccountStatus('');
+  accountSubmit.textContent = accountMode === 'login' ? 'Login' : 'Sign up';
+  accountSwitch.textContent = accountMode === 'login' ? 'Switch to sign up' : 'Switch to login';
 });
 accountForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   accountSubmit.disabled = true;
-  setAccountStatus('처리 중...');
+  setAccountStatus('Processing...');
   try {
     await authenticateAccount(accountUsername.value, accountPassword.value);
     closeAccountModal();
@@ -100,14 +86,13 @@ accountForm.addEventListener('submit', async (event) => {
   } finally {
     accountSubmit.disabled = false;
   }
-});
-try {
+});try {
   accountSession = JSON.parse(localStorage.getItem(accountStorageKey) || 'null');
 } catch {
   accountSession = null;
 }
-if (accountSession?.user?.id) {
-  localStorage.setItem(investmentClientKey, accountSession.user.id);
+if (accountSession?.account_id) {
+  localStorage.setItem(investmentClientKey, accountSession.account_id);
 }
 updateAccountButton();
 
@@ -131,7 +116,7 @@ const closeSideMenu = () => {
   sideMenu.classList.remove('is-open');
   sideMenuBackdrop.classList.remove('is-open');
   menuToggle.setAttribute('aria-expanded', 'false');
-  menuToggle.setAttribute('aria-label', '사이드바 열기');
+  menuToggle.setAttribute('aria-label', '?ъ씠?쒕컮 ?닿린');
   sideMenu.setAttribute('aria-hidden', 'true');
 };
 
@@ -139,7 +124,7 @@ menuToggle.addEventListener('click', () => {
   const isOpen = sideMenu.classList.toggle('is-open');
   sideMenuBackdrop.classList.toggle('is-open', isOpen);
   menuToggle.setAttribute('aria-expanded', String(isOpen));
-  menuToggle.setAttribute('aria-label', isOpen ? '사이드바 닫기' : '사이드바 열기');
+  menuToggle.setAttribute('aria-label', isOpen ? '?ъ씠?쒕컮 ?リ린' : '?ъ씠?쒕컮 ?닿린');
   sideMenu.setAttribute('aria-hidden', String(!isOpen));
 });
 
@@ -181,7 +166,7 @@ const getInvestmentClientId = () => {
   return id;
 };
 
-const formatWon = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
+const formatWon = (value) => `??{Number(value || 0).toLocaleString('ko-KR')}`;
 
 const callInvestmentRpc = async (name, payload) => {
   const response = await fetch(`${rpcEndpoint}/${name}`, {
@@ -197,7 +182,7 @@ const callInvestmentRpc = async (name, payload) => {
     } catch {
       detail = '';
     }
-    throw new Error(detail || '투자장 요청에 실패했습니다.');
+    throw new Error(detail || '?ъ옄???붿껌???ㅽ뙣?덉뒿?덈떎.');
   }
   return response.json();
 };
@@ -212,7 +197,7 @@ const renderInvestmentState = (state) => {
   portfolioNickname.textContent = state.nickname;
   portfolioCash.textContent = formatWon(state.cash);
   portfolioTotal.textContent = formatWon(state.total_asset);
-  marketUpdated.textContent = `${state.market_date} · 5분마다 갱신`;
+  marketUpdated.textContent = `${state.market_date} 쨌 5遺꾨쭏??媛깆떊`;
 
   investmentProducts.replaceChildren(...state.assets.map((asset) => {
     const row = document.createElement('article');
@@ -220,19 +205,19 @@ const renderInvestmentState = (state) => {
     const name = document.createElement('div');
     name.innerHTML = `<strong class="investment-product-name"></strong><span class="investment-product-symbol"></span><small class="investment-product-notices"></small>`;
     name.querySelector('strong').textContent = asset.name;
-    name.querySelector('span').textContent = asset.listed ? asset.symbol : '상장폐지 · 다음 갱신 시 재상장';
+    name.querySelector('span').textContent = asset.listed ? asset.symbol : '?곸옣?먯? 쨌 ?ㅼ쓬 媛깆떊 ???ъ긽??;
     const notices = [];
-    if (asset.split_notice) notices.push('주식 분할 된 상품입니다');
-    if (asset.was_delisted && asset.listed) notices.push('이전에 상장폐지 되었던 상품입니다');
-    name.querySelector('.investment-product-notices').textContent = notices.join(' · ');
+    if (asset.split_notice) notices.push('二쇱떇 遺꾪븷 ???곹뭹?낅땲??);
+    if (asset.was_delisted && asset.listed) notices.push('?댁쟾???곸옣?먯? ?섏뿀???곹뭹?낅땲??);
+    name.querySelector('.investment-product-notices').textContent = notices.join(' 쨌 ');
     const price = document.createElement('strong');
     price.className = 'investment-price';
-    price.textContent = asset.listed ? formatWon(asset.current_price) : '—';
+    price.textContent = asset.listed ? formatWon(asset.current_price) : '??;
     const change = document.createElement('span');
     change.className = 'investment-change';
     if (!asset.listed) {
       change.classList.add('flat');
-      change.textContent = '상장폐지';
+      change.textContent = '?곸옣?먯?';
     } else {
       const pct = Number(asset.change_pct);
       change.classList.add(pct > 0 ? 'positive' : pct < 0 ? 'negative' : 'flat');
@@ -248,24 +233,24 @@ const renderInvestmentState = (state) => {
     quantity.disabled = !asset.listed;
     const buy = document.createElement('button');
     buy.type = 'button';
-    buy.textContent = '매수';
+    buy.textContent = '留ㅼ닔';
     buy.disabled = !asset.listed;
     buy.addEventListener('click', () => tradeInvestment(asset.symbol, 'buy', quantity));
     const sell = document.createElement('button');
     sell.type = 'button';
-    sell.textContent = '매도';
+    sell.textContent = '留ㅻ룄';
     sell.disabled = !asset.listed;
     sell.addEventListener('click', () => tradeInvestment(asset.symbol, 'sell', quantity));
     const maxBuy = document.createElement('button');
     maxBuy.type = 'button';
-    maxBuy.textContent = '최대 매수';
+    maxBuy.textContent = '理쒕? 留ㅼ닔';
     maxBuy.disabled = !asset.listed;
     maxBuy.addEventListener('click', () => {
       quantity.value = String(Math.floor(state.cash / asset.current_price));
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
-    maxSell.textContent = '최대 매도';
+    maxSell.textContent = '理쒕? 留ㅻ룄';
     maxSell.disabled = !asset.listed;
     maxSell.addEventListener('click', () => {
       const holding = state.holdings.find((item) => item.symbol === asset.symbol);
@@ -294,18 +279,18 @@ const renderInvestmentState = (state) => {
     name.className = 'holding-name';
     name.innerHTML = '<strong></strong><small></small>';
     name.querySelector('strong').textContent = asset ? asset.name : holding.symbol;
-    name.querySelector('small').textContent = `${holding.quantity}주 보유`;
+    name.querySelector('small').textContent = `${holding.quantity}二?蹂댁쑀`;
     const change = document.createElement('span');
     const changePct = asset ? Number(asset.change_pct) : 0;
     change.className = `holding-change ${changePct > 0 ? 'positive' : changePct < 0 ? 'negative' : 'flat'}`;
     change.textContent = asset && asset.listed
       ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%`
-      : '상장폐지';
+      : '?곸옣?먯?';
     const total = document.createElement('strong');
     total.className = 'holding-value';
     total.innerHTML = '<span></span><small></small>';
     total.querySelector('span').textContent = formatWon(value);
-    total.querySelector('small').textContent = `투자금액 ${formatWon(invested)}`;
+    total.querySelector('small').textContent = `?ъ옄湲덉븸 ${formatWon(invested)}`;
     const trade = document.createElement('div');
     trade.className = 'holding-trade';
     const quantity = document.createElement('input');
@@ -316,24 +301,24 @@ const renderInvestmentState = (state) => {
     quantity.disabled = !asset || !asset.listed;
     const buy = document.createElement('button');
     buy.type = 'button';
-    buy.textContent = '매수';
+    buy.textContent = '留ㅼ닔';
     buy.disabled = !asset || !asset.listed;
     buy.addEventListener('click', () => tradeInvestment(holding.symbol, 'buy', quantity));
     const sell = document.createElement('button');
     sell.type = 'button';
-    sell.textContent = '매도';
+    sell.textContent = '留ㅻ룄';
     sell.disabled = !asset || !asset.listed;
     sell.addEventListener('click', () => tradeInvestment(holding.symbol, 'sell', quantity));
     const maxBuy = document.createElement('button');
     maxBuy.type = 'button';
-    maxBuy.textContent = '최대 매수';
+    maxBuy.textContent = '理쒕? 留ㅼ닔';
     maxBuy.disabled = !asset || !asset.listed;
     maxBuy.addEventListener('click', () => {
       quantity.value = String(Math.floor(state.cash / asset.current_price));
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
-    maxSell.textContent = '최대 매도';
+    maxSell.textContent = '理쒕? 留ㅻ룄';
     maxSell.disabled = !asset || !asset.listed;
     maxSell.addEventListener('click', () => {
       quantity.value = String(holding.quantity);
@@ -342,12 +327,12 @@ const renderInvestmentState = (state) => {
     total.dataset.return = returnPct;
     const returnValue = document.createElement('span');
     returnValue.className = `holding-return ${returnPct > 0 ? 'positive' : returnPct < 0 ? 'negative' : 'flat'}`;
-    returnValue.textContent = `수익률 ${returnPct > 0 ? '+' : ''}${returnPct.toFixed(2)}%`;
+    returnValue.textContent = `?섏씡瑜?${returnPct > 0 ? '+' : ''}${returnPct.toFixed(2)}%`;
     row.append(name, total, returnValue, change, trade);
     return row;
   }) : [Object.assign(document.createElement('p'), {
     className: 'investment-empty',
-    textContent: '아직 보유한 종목이 없습니다.'
+    textContent: '?꾩쭅 蹂댁쑀??醫낅ぉ???놁뒿?덈떎.'
   })]));
 
   const rankingTotalPages = Math.max(1, Math.ceil(state.ranking.length / INVESTMENT_RANKING_PER_PAGE));
@@ -369,14 +354,14 @@ const renderInvestmentState = (state) => {
       amount.type = 'number';
       amount.min = '1';
       amount.step = '1000';
-      amount.placeholder = '지급액';
+      amount.placeholder = '吏湲됱븸';
       const grantButton = document.createElement('button');
       grantButton.type = 'button';
-      grantButton.textContent = '현금 지급';
+      grantButton.textContent = '?꾧툑 吏湲?;
       grantButton.addEventListener('click', () => grantInvestmentCash(entry.client_id, amount));
       const deductButton = document.createElement('button');
       deductButton.type = 'button';
-      deductButton.textContent = '현금 차감';
+      deductButton.textContent = '?꾧툑 李④컧';
       deductButton.addEventListener('click', () => adjustInvestmentCash(entry.client_id, amount, 'subtract'));
       grant.append(amount, grantButton, deductButton);
       item.append(grant);
@@ -384,12 +369,12 @@ const renderInvestmentState = (state) => {
     return item;
   }) : [Object.assign(document.createElement('li'), {
     className: 'ranking-empty',
-    textContent: '아직 투자자가 없습니다.'
+    textContent: '?꾩쭅 ?ъ옄?먭? ?놁뒿?덈떎.'
   })]));
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'investment-page-button';
-  previous.textContent = '← 이전';
+  previous.textContent = '???댁쟾';
   previous.disabled = investmentRankingPage === 1;
   previous.addEventListener('click', () => {
     investmentRankingPage -= 1;
@@ -401,7 +386,7 @@ const renderInvestmentState = (state) => {
   const next = document.createElement('button');
   next.type = 'button';
   next.className = 'investment-page-button';
-  next.textContent = '다음 →';
+  next.textContent = '?ㅼ쓬 ??;
   next.disabled = investmentRankingPage === rankingTotalPages;
   next.addEventListener('click', () => {
     investmentRankingPage += 1;
@@ -413,10 +398,10 @@ const renderInvestmentState = (state) => {
 const grantInvestmentCash = async (clientId, amountInput) => {
   const amount = Number(amountInput.value);
   if (!Number.isSafeInteger(amount) || amount < 1) {
-    window.alert('지급액은 1원 이상의 정수로 입력하세요.');
+    window.alert('吏湲됱븸? 1???댁긽???뺤닔濡??낅젰?섏꽭??');
     return;
   }
-  if (!window.confirm(`${formatWon(amount)}을 지급할까요?`)) return;
+  if (!window.confirm(`${formatWon(amount)}??吏湲됲븷源뚯슂?`)) return;
   try {
     amountInput.disabled = true;
     await callInvestmentRpc('investment_admin_grant_cash', {
@@ -426,7 +411,7 @@ const grantInvestmentCash = async (clientId, amountInput) => {
     });
     amountInput.value = '';
     await loadInvestmentState();
-    investorStatus.textContent = '현금 지급이 완료되었습니다.';
+    investorStatus.textContent = '?꾧툑 吏湲됱씠 ?꾨즺?섏뿀?듬땲??';
   } catch (error) {
     window.alert(error.message);
   } finally {
@@ -437,10 +422,10 @@ const grantInvestmentCash = async (clientId, amountInput) => {
 const adjustInvestmentCash = async (clientId, amountInput, action) => {
   const amount = Number(amountInput.value);
   if (!Number.isSafeInteger(amount) || amount < 1) {
-    window.alert('차감액은 1원 이상의 정수로 입력하세요.');
+    window.alert('李④컧?≪? 1???댁긽???뺤닔濡??낅젰?섏꽭??');
     return;
   }
-  if (!window.confirm(`${formatWon(amount)}을 차감할까요?`)) return;
+  if (!window.confirm(`${formatWon(amount)}??李④컧?좉퉴??`)) return;
   try {
     amountInput.disabled = true;
     await callInvestmentRpc('investment_admin_adjust_cash', {
@@ -450,7 +435,7 @@ const adjustInvestmentCash = async (clientId, amountInput, action) => {
     });
     amountInput.value = '';
     await loadInvestmentState();
-    investorStatus.textContent = '현금 차감이 완료되었습니다.';
+    investorStatus.textContent = '?꾧툑 李④컧???꾨즺?섏뿀?듬땲??';
   } catch (error) {
     window.alert(error.message);
   } finally {
@@ -462,24 +447,24 @@ investmentAdminButton.addEventListener('click', () => {
   if (investmentAdminMode) {
     investmentAdminMode = false;
     investmentAdminPanel.hidden = true;
-    investmentAdminButton.textContent = '관리자 모드';
+    investmentAdminButton.textContent = '愿由ъ옄 紐⑤뱶';
     if (investmentState) renderInvestmentState(investmentState);
     return;
   }
-  const password = window.prompt('관리자 비밀번호를 입력하세요.');
+  const password = window.prompt('愿由ъ옄 鍮꾨?踰덊샇瑜??낅젰?섏꽭??');
   if (password !== '8170') {
-    if (password !== null) window.alert('관리자 비밀번호가 틀렸습니다.');
+    if (password !== null) window.alert('愿由ъ옄 鍮꾨?踰덊샇媛 ??몄뒿?덈떎.');
     return;
   }
   investmentAdminMode = true;
   investmentAdminPanel.hidden = false;
-  investmentAdminButton.textContent = '관리자 모드 종료';
+  investmentAdminButton.textContent = '愿由ъ옄 紐⑤뱶 醫낅즺';
   if (investmentState) renderInvestmentState(investmentState);
 });
 
 const requireInvestmentAdmin = () => {
   if (!investmentAdminMode) {
-    window.alert('먼저 관리자 모드를 활성화하세요.');
+    window.alert('癒쇱? 愿由ъ옄 紐⑤뱶瑜??쒖꽦?뷀븯?몄슂.');
     return false;
   }
   return true;
@@ -500,16 +485,16 @@ adminResetAsset.addEventListener('click', () => {
   runAdminMarketAction(
     'investment_admin_reset_asset',
     { p_symbol: adminAssetSelect.value },
-    '선택한 종목의 가격과 변동률을 초기화했습니다.'
+    '?좏깮??醫낅ぉ??媛寃⑷낵 蹂?숇쪧??珥덇린?뷀뻽?듬땲??'
   );
 });
 
 adminResetAllAssets.addEventListener('click', () => {
-  if (!window.confirm('모든 종목의 가격과 변동률을 초기화할까요?')) return;
+  if (!window.confirm('紐⑤뱺 醫낅ぉ??媛寃⑷낵 蹂?숇쪧??珥덇린?뷀븷源뚯슂?')) return;
   runAdminMarketAction(
     'investment_admin_reset_all_assets',
     {},
-    '모든 종목의 가격과 변동률을 초기화했습니다.'
+    '紐⑤뱺 醫낅ぉ??媛寃⑷낵 蹂?숇쪧??珥덇린?뷀뻽?듬땲??'
   );
 });
 
@@ -524,13 +509,13 @@ adminSaveVolatility.addEventListener('click', () => {
     p_crash_max: Number(document.querySelector('#admin-crash-max').value)
   };
   if (Object.values(values).some((value) => !Number.isFinite(value))) {
-    adminMarketStatus.textContent = '변동성 값을 숫자로 입력하세요.';
+    adminMarketStatus.textContent = '蹂?숈꽦 媛믪쓣 ?レ옄濡??낅젰?섏꽭??';
     return;
   }
   runAdminMarketAction(
     'investment_admin_set_surge_volatility',
     values,
-    '급등주 변동성을 저장했습니다.'
+    '湲됰벑二?蹂?숈꽦????ν뻽?듬땲??'
   );
 });
 
@@ -545,26 +530,26 @@ const loadInvestmentState = async (nickname = investorNickname.value.trim()) => 
 
 investmentRefresh.addEventListener('click', async () => {
   if (!investmentState) {
-    investorStatus.textContent = '먼저 고유 닉네임을 설정하세요.';
+    investorStatus.textContent = '癒쇱? 怨좎쑀 ?됰꽕?꾩쓣 ?ㅼ젙?섏꽭??';
     return;
   }
   investmentRefresh.disabled = true;
-  investmentRefresh.textContent = '불러오는 중...';
+  investmentRefresh.textContent = '遺덈윭?ㅻ뒗 以?..';
   try {
     await loadInvestmentState();
-    investorStatus.textContent = '투자장 가격과 랭킹을 새로고침했습니다.';
+    investorStatus.textContent = '?ъ옄??媛寃⑷낵 ??궧???덈줈怨좎묠?덉뒿?덈떎.';
   } catch (error) {
     investorStatus.textContent = error.message;
   } finally {
     investmentRefresh.disabled = false;
-    investmentRefresh.textContent = '새로고침 ↻';
+    investmentRefresh.textContent = '?덈줈怨좎묠 ??;
   }
 });
 
 const tradeInvestment = async (symbol, side, quantityInput) => {
   const quantity = Number(quantityInput.value);
   if (!Number.isInteger(quantity) || quantity < 1) {
-    window.alert('수량은 1주 이상 정수로 입력하세요.');
+    window.alert('?섎웾? 1二??댁긽 ?뺤닔濡??낅젰?섏꽭??');
     return;
   }
   try {
@@ -575,7 +560,7 @@ const tradeInvestment = async (symbol, side, quantityInput) => {
       p_side: side,
       p_quantity: quantity
     });
-    investorStatus.textContent = side === 'buy' ? `${quantity}주 매수했습니다.` : `${quantity}주 매도했습니다.`;
+    investorStatus.textContent = side === 'buy' ? `${quantity}二?留ㅼ닔?덉뒿?덈떎.` : `${quantity}二?留ㅻ룄?덉뒿?덈떎.`;
     renderInvestmentState(state);
   } catch (error) {
     window.alert(error.message);
@@ -590,11 +575,11 @@ investorForm.addEventListener('submit', async (event) => {
   const nickname = investorNickname.value.trim();
   if (!nickname) return;
   button.disabled = true;
-  investorStatus.textContent = '투자장을 여는 중...';
+  investorStatus.textContent = '?ъ옄?μ쓣 ?щ뒗 以?..';
   try {
     await loadInvestmentState(nickname);
     localStorage.setItem('sangki-investor-nickname', nickname);
-    investorStatus.textContent = '닉네임은 이 브라우저에서 변경할 수 없습니다.';
+    investorStatus.textContent = '?됰꽕?꾩? ??釉뚮씪?곗??먯꽌 蹂寃쏀븷 ???놁뒿?덈떎.';
   } catch (error) {
     button.disabled = false;
     investorStatus.textContent = error.message;
@@ -664,7 +649,7 @@ const requestNotifications = async () => {
 
 const updateNotificationButton = () => {
   if (!('Notification' in window)) {
-    notificationToggle.textContent = '알림 미지원';
+    notificationToggle.textContent = '?뚮┝ 誘몄???;
     notificationToggle.disabled = true;
     return;
   }
@@ -673,16 +658,16 @@ const updateNotificationButton = () => {
   notificationToggle.classList.toggle('is-enabled', permission === 'granted' && enabled);
   notificationToggle.classList.toggle('is-blocked', permission === 'denied' || !enabled);
   notificationToggle.textContent = permission === 'granted'
-    ? enabled ? '알림 켜짐' : '알림 꺼짐'
+    ? enabled ? '?뚮┝ 耳쒖쭚' : '?뚮┝ 爰쇱쭚'
     : permission === 'denied'
-      ? '알림 차단됨'
-      : '알림 허용';
+      ? '?뚮┝ 李⑤떒??
+      : '?뚮┝ ?덉슜';
 };
 
 notificationToggle.addEventListener('click', async () => {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'denied') {
-    window.alert('브라우저 사이트 설정에서 알림을 허용한 뒤 다시 시도해주세요.');
+    window.alert('釉뚮씪?곗? ?ъ씠???ㅼ젙?먯꽌 ?뚮┝???덉슜?????ㅼ떆 ?쒕룄?댁＜?몄슂.');
     return;
   }
   if (Notification.permission === 'granted') {
@@ -712,9 +697,9 @@ const renderComment = (item, isReply = false) => {
       <time class="comment-date"></time>
       <span class="edited"></span>
       <div class="comment-actions">
-        <button class="comment-action" type="button" data-action="reply">답글</button>
-        <button class="comment-action" type="button" data-action="edit">수정</button>
-        <button class="comment-action" type="button" data-action="delete">삭제</button>
+        <button class="comment-action" type="button" data-action="reply">?듦?</button>
+        <button class="comment-action" type="button" data-action="edit">?섏젙</button>
+        <button class="comment-action" type="button" data-action="delete">??젣</button>
       </div>
     </div>
   `;
@@ -735,7 +720,7 @@ const renderComment = (item, isReply = false) => {
 
 const renderComments = (items) => {
   if (!items.length) {
-    comments.innerHTML = '<p class="comments-empty">아직 남겨진 흔적이 없습니다. 첫 번째 댓글을 남겨보세요.</p>';
+    comments.innerHTML = '<p class="comments-empty">?꾩쭅 ?④꺼吏??붿쟻???놁뒿?덈떎. 泥?踰덉㎏ ?볤????④꺼蹂댁꽭??</p>';
     pagination.replaceChildren();
     return;
   }
@@ -767,7 +752,7 @@ const renderPagination = (totalPages) => {
   const previous = document.createElement('button');
   previous.className = 'comments-page-button';
   previous.type = 'button';
-  previous.textContent = '← 이전';
+  previous.textContent = '???댁쟾';
   previous.disabled = currentPage === 1;
   previous.addEventListener('click', () => {
     currentPage -= 1;
@@ -781,7 +766,7 @@ const renderPagination = (totalPages) => {
   const next = document.createElement('button');
   next.className = 'comments-page-button';
   next.type = 'button';
-  next.textContent = '다음 →';
+  next.textContent = '?ㅼ쓬 ??;
   next.disabled = currentPage === totalPages;
   next.addEventListener('click', () => {
     currentPage += 1;
@@ -796,19 +781,19 @@ const loadComments = async () => {
     const response = await fetch(`${commentsEndpoint}?select=id,nickname,body,created_at,edited_at,parent_id&order=created_at.asc`, {
       headers: apiHeaders
     });
-    if (!response.ok) throw new Error('댓글을 불러오지 못했습니다.');
+    if (!response.ok) throw new Error('?볤???遺덈윭?ㅼ? 紐삵뻽?듬땲??');
     const nextComments = await response.json();
     if (commentsInitialized) {
       const watched = new Set(getWatchedComments());
       const previousById = new Map(allComments.map((item) => [item.id, item]));
       nextComments.forEach((item) => {
         if (item.parent_id && watched.has(item.parent_id) && !previousById.has(item.id)) {
-          showNotification('새 답글이 달렸습니다', `${item.nickname}님이 회원님의 댓글에 답글을 남겼습니다.`, `reply-${item.id}`);
+          showNotification('???듦????щ졇?듬땲??, `${item.nickname}?섏씠 ?뚯썝?섏쓽 ?볤????듦????④꼈?듬땲??`, `reply-${item.id}`);
         }
       });
       allComments.forEach((item) => {
         if (watched.has(item.id) && !nextComments.some((next) => next.id === item.id)) {
-          showNotification('댓글이 삭제되었습니다', '회원님의 댓글이 관리자 또는 작성자에 의해 삭제되었습니다.', `deleted-${item.id}`);
+          showNotification('?볤?????젣?섏뿀?듬땲??, '?뚯썝?섏쓽 ?볤???愿由ъ옄 ?먮뒗 ?묒꽦?먯뿉 ?섑빐 ??젣?섏뿀?듬땲??', `deleted-${item.id}`);
         }
       });
     }
@@ -816,16 +801,16 @@ const loadComments = async () => {
     commentsInitialized = true;
     renderComments(allComments);
   } catch (error) {
-    comments.innerHTML = '<p class="comments-empty">댓글을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>';
+    comments.innerHTML = '<p class="comments-empty">?볤???遺덈윭?ㅼ? 紐삵뻽?듬땲?? ?좎떆 ???ㅼ떆 ?뺤씤?댁＜?몄슂.</p>';
   }
 };
 
 const addReply = async (parentId) => {
-  const nickname = window.prompt('답글 작성자의 닉네임을 입력하세요.');
+  const nickname = window.prompt('?듦? ?묒꽦?먯쓽 ?됰꽕?꾩쓣 ?낅젰?섏꽭??');
   if (nickname === null || !nickname.trim()) return;
   const password = requestPassword();
   if (password === null) return;
-  const body = window.prompt('답글을 입력하세요.');
+  const body = window.prompt('?듦????낅젰?섏꽭??');
   if (body === null || !body.trim()) return;
 
   try {
@@ -839,7 +824,7 @@ const addReply = async (parentId) => {
         parent_id: parentId
       })
     });
-    if (!response.ok) throw new Error('답글 저장에 실패했습니다.');
+    if (!response.ok) throw new Error('?듦? ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     const [createdReply] = await response.json();
     watchComment(parentId);
     if (createdReply) watchComment(createdReply.id);
@@ -850,10 +835,10 @@ const addReply = async (parentId) => {
 };
 
 const requestPassword = () => {
-  const password = window.prompt('댓글의 4자리 비밀번호를 입력하세요.');
+  const password = window.prompt('?볤???4?먮━ 鍮꾨?踰덊샇瑜??낅젰?섏꽭??');
   if (password === null) return null;
   if (!/^\d{4}$/.test(password)) {
-    window.alert('비밀번호는 숫자 4자리여야 합니다.');
+    window.alert('鍮꾨?踰덊샇???レ옄 4?먮━?ъ빞 ?⑸땲??');
     return null;
   }
   return password;
@@ -873,23 +858,23 @@ const callCommentRpc = async (name, payload) => {
     } catch {
       detail = '';
     }
-    throw new Error(detail || 'Supabase 요청에 실패했습니다.');
+    throw new Error(detail || 'Supabase ?붿껌???ㅽ뙣?덉뒿?덈떎.');
   }
   return response.json();
 };
 
 refreshButton.addEventListener('click', async () => {
   refreshButton.disabled = true;
-  refreshButton.textContent = '불러오는 중...';
+  refreshButton.textContent = '遺덈윭?ㅻ뒗 以?..';
   await loadComments();
   refreshButton.disabled = false;
-  refreshButton.textContent = '새로고침 ↻';
+  refreshButton.textContent = '?덈줈怨좎묠 ??;
 });
 
 const editComment = async (item) => {
   const password = requestPassword();
   if (password === null) return;
-  const body = window.prompt('수정할 댓글을 입력하세요.', item.body);
+  const body = window.prompt('?섏젙???볤????낅젰?섏꽭??', item.body);
   if (body === null || !body.trim()) return;
 
   try {
@@ -898,7 +883,7 @@ const editComment = async (item) => {
       p_password_hash: await hashPassword(password),
       p_body: body
     });
-    if (!updated) throw new Error('비밀번호가 틀렸거나 댓글을 수정할 수 없습니다.');
+    if (!updated) throw new Error('鍮꾨?踰덊샇媛 ??멸굅???볤????섏젙?????놁뒿?덈떎.');
     await loadComments();
   } catch (error) {
     window.alert(error.message);
@@ -909,7 +894,7 @@ const deleteComment = async (id) => {
   const password = requestPassword();
   if (password === null) return;
   const isAdmin = password === '8170';
-  if (!window.confirm(isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
+  if (!window.confirm(isAdmin ? '愿由ъ옄 沅뚰븳?쇰줈 ???볤?????젣?좉퉴??' : '???볤?????젣?좉퉴??')) return;
 
   try {
     const deleted = await callCommentRpc('delete_comment', {
@@ -918,7 +903,7 @@ const deleteComment = async (id) => {
       p_admin_password: isAdmin ? password : ''
     });
     if (!deleted) {
-      throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+      throw new Error('鍮꾨?踰덊샇媛 ??멸굅???볤?????젣?????놁뒿?덈떎.');
     }
     await loadComments();
   } catch (error) {
@@ -954,7 +939,7 @@ const createGameQuestion = () => {
   const second = randomInteger(10, 99);
   gameState.first = first;
   gameState.second = second;
-  gameQuestion.textContent = `${first} × ${second}`;
+  gameQuestion.textContent = `${first} 횞 ${second}`;
 };
 
 const endGame = async (message) => {
@@ -963,9 +948,9 @@ const endGame = async (message) => {
   gameAnswer.disabled = true;
   document.querySelector('#game-submit').disabled = true;
   gameStart.disabled = false;
-  gameStart.textContent = '다시 시작';
+  gameStart.textContent = '?ㅼ떆 ?쒖옉';
   const answer = gameState.first * gameState.second;
-  gameMessage.textContent = `${message} 정답은 ${answer}입니다. 총 ${gameState.solved}문제를 풀었습니다.`;
+  gameMessage.textContent = `${message} ?뺣떟? ${answer}?낅땲?? 珥?${gameState.solved}臾몄젣瑜???덉뒿?덈떎.`;
 
   try {
     const response = await fetch(scoresEndpoint, {
@@ -973,7 +958,7 @@ const endGame = async (message) => {
       headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify({ nickname: gameState.nickname, solved_count: gameState.solved })
     });
-    if (!response.ok) throw new Error('랭킹 저장에 실패했습니다.');
+    if (!response.ok) throw new Error('??궧 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     await loadGameRanking();
   } catch (error) {
     gameMessage.textContent += ` ${error.message}`;
@@ -983,20 +968,20 @@ const endGame = async (message) => {
 const tickGame = () => {
   gameState.remaining -= .1;
   gameTime.textContent = Math.max(0, gameState.remaining).toFixed(1);
-  if (gameState.remaining <= 0) endGame('시간이 끝났습니다.');
+  if (gameState.remaining <= 0) endGame('?쒓컙???앸궗?듬땲??');
 };
 
 const startGame = () => {
-  const nickname = window.prompt('닉네임을 입력하세요.');
+  const nickname = window.prompt('?됰꽕?꾩쓣 ?낅젰?섏꽭??');
   if (nickname === null || !nickname.trim()) return;
   gameState = { nickname: nickname.trim().slice(0, 24), questionNumber: 1, solved: 0, remaining: 10 };
-  gamePlayer.textContent = `player — ${gameState.nickname}`;
+  gamePlayer.textContent = `player ??${gameState.nickname}`;
   gameQuestionNumber.textContent = '1';
   gameTime.textContent = '10.0';
   gameAnswer.disabled = false;
   document.querySelector('#game-submit').disabled = false;
   gameStart.disabled = true;
-  gameMessage.textContent = '정답을 입력하고 Enter를 누르세요.';
+  gameMessage.textContent = '?뺣떟???낅젰?섍퀬 Enter瑜??꾨Ⅴ?몄슂.';
   createGameQuestion();
   gameAnswer.value = '';
   gameAnswer.focus();
@@ -1017,10 +1002,10 @@ gameAnswerForm.addEventListener('submit', (event) => {
     createGameQuestion();
     gameAnswer.value = '';
     gameMessage.textContent = gameState.questionNumber >= 10
-      ? '3자리 × 2자리 문제입니다. 계속 빠르게 풀어보세요.'
-      : '정답입니다. 다음 문제!';
+      ? '3?먮━ 횞 2?먮━ 臾몄젣?낅땲?? 怨꾩냽 鍮좊Ⅴ寃???대낫?몄슂.'
+      : '?뺣떟?낅땲?? ?ㅼ쓬 臾몄젣!';
   } else {
-    gameMessage.textContent = '오답입니다. 다시 입력하세요.';
+    gameMessage.textContent = '?ㅻ떟?낅땲?? ?ㅼ떆 ?낅젰?섏꽭??';
     gameAnswer.select();
   }
 });
@@ -1030,10 +1015,10 @@ const loadGameRanking = async () => {
     const response = await fetch(`${scoresEndpoint}?select=id,nickname,solved_count,created_at&order=solved_count.desc,created_at.asc&limit=1000`, {
       headers: apiHeaders
     });
-    if (!response.ok) throw new Error('랭킹을 불러오지 못했습니다.');
+    if (!response.ok) throw new Error('??궧??遺덈윭?ㅼ? 紐삵뻽?듬땲??');
     const scores = await response.json();
     if (!scores.length) {
-      gameRankingList.innerHTML = '<li class="ranking-empty">아직 기록이 없습니다.</li>';
+      gameRankingList.innerHTML = '<li class="ranking-empty">?꾩쭅 湲곕줉???놁뒿?덈떎.</li>';
       gameRankingPagination.replaceChildren();
       return;
     }
@@ -1047,11 +1032,11 @@ const loadGameRanking = async () => {
       name.textContent = score.nickname;
       const value = document.createElement('span');
       value.className = 'ranking-score';
-      value.textContent = `${score.solved_count}문제`;
+      value.textContent = `${score.solved_count}臾몄젣`;
       const deleteButton = document.createElement('button');
       deleteButton.className = 'ranking-delete';
       deleteButton.type = 'button';
-      deleteButton.textContent = '관리자 삭제';
+      deleteButton.textContent = '愿由ъ옄 ??젣';
       deleteButton.addEventListener('click', () => deleteGameScore(score.id));
       item.append(name, value, deleteButton);
       return item;
@@ -1059,7 +1044,7 @@ const loadGameRanking = async () => {
     const previous = document.createElement('button');
     previous.type = 'button';
     previous.className = 'game-page-button';
-    previous.textContent = '← 이전';
+    previous.textContent = '???댁쟾';
     previous.disabled = gameRankingPage === 1;
     previous.addEventListener('click', () => {
       gameRankingPage -= 1;
@@ -1073,7 +1058,7 @@ const loadGameRanking = async () => {
     const next = document.createElement('button');
     next.type = 'button';
     next.className = 'game-page-button';
-    next.textContent = '다음 →';
+    next.textContent = '?ㅼ쓬 ??;
     next.disabled = gameRankingPage === totalPages;
     next.addEventListener('click', () => {
       gameRankingPage += 1;
@@ -1082,14 +1067,14 @@ const loadGameRanking = async () => {
 
     gameRankingPagination.replaceChildren(previous, pageNumber, next);
   } catch {
-    gameRankingList.innerHTML = '<li class="ranking-empty">랭킹을 불러오지 못했습니다.</li>';
+    gameRankingList.innerHTML = '<li class="ranking-empty">??궧??遺덈윭?ㅼ? 紐삵뻽?듬땲??</li>';
     gameRankingPagination.replaceChildren();
   }
 };
 
 const deleteGameScore = async (id) => {
-  const password = window.prompt('관리자 비밀번호를 입력하세요.');
-  if (password === null || !window.confirm('이 랭킹 기록을 삭제할까요?')) return;
+  const password = window.prompt('愿由ъ옄 鍮꾨?踰덊샇瑜??낅젰?섏꽭??');
+  if (password === null || !window.confirm('????궧 湲곕줉????젣?좉퉴??')) return;
 
   try {
     const response = await fetch(`${rpcEndpoint}/delete_speed_game_score`, {
@@ -1098,7 +1083,7 @@ const deleteGameScore = async (id) => {
       body: JSON.stringify({ p_id: id, p_admin_password: password })
     });
     if (!response.ok || !(await response.json())) {
-      throw new Error('관리자 비밀번호가 틀렸거나 삭제할 수 없습니다.');
+      throw new Error('愿由ъ옄 鍮꾨?踰덊샇媛 ??멸굅????젣?????놁뒿?덈떎.');
     }
     await loadGameRanking();
   } catch (error) {
@@ -1114,7 +1099,7 @@ form.addEventListener('submit', async (event) => {
   const formData = new FormData(form);
   const password = formData.get('password');
   submit.disabled = true;
-  status.textContent = '저장하는 중...';
+  status.textContent = '??ν븯??以?..';
 
   try {
     const response = await fetch(commentsEndpoint, {
@@ -1130,11 +1115,11 @@ form.addEventListener('submit', async (event) => {
         password_hash: await hashPassword(password)
       })
     });
-    if (!response.ok) throw new Error('댓글 저장에 실패했습니다.');
+    if (!response.ok) throw new Error('?볤? ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     const [createdComment] = await response.json();
     form.reset();
     if (createdComment) watchComment(createdComment.id);
-    status.textContent = '댓글이 저장되었습니다.';
+    status.textContent = '?볤?????λ릺?덉뒿?덈떎.';
     currentPage = 1;
     await loadComments();
   } catch (error) {

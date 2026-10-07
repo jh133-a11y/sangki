@@ -1103,3 +1103,158 @@ revoke all on function public.investment_link_account(uuid) from public;
 grant execute on function public.investment_link_account(uuid) to authenticated;
 grant execute on function public.investment_relist_delisted_assets() to anon, authenticated;
 grant execute on function public.investment_market_cron_tick() to anon, authenticated;
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.site_accounts (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique check (username ~ '^[a-z0-9_]{3,24}$'),
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.site_account_sessions (
+  token uuid primary key default gen_random_uuid(),
+  account_id uuid not null references public.site_accounts(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '30 days'
+);
+
+alter table public.site_accounts enable row level security;
+alter table public.site_account_sessions enable row level security;
+revoke all on table public.site_accounts, public.site_account_sessions from anon, authenticated;
+
+create or replace function public.site_account_signup(
+  p_username text,
+  p_password text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  account_row public.site_accounts%rowtype;
+  session_token uuid;
+begin
+  if p_username is null or p_username !~ '^[a-z0-9_]{3,24}$' then
+    raise exception '아이디는 영문 소문자, 숫자, 밑줄(_)만 사용해 3~24자로 입력하세요.';
+  end if;
+  if p_password is null or char_length(p_password) < 8 then
+    raise exception '비밀번호는 8자 이상이어야 합니다.';
+  end if;
+  if exists (select 1 from public.site_accounts where username = p_username) then
+    raise exception '이미 사용 중인 아이디입니다.';
+  end if;
+
+  insert into public.site_accounts (username, password_hash)
+  values (p_username, crypt(p_password, gen_salt('bf')))
+  returning * into account_row;
+
+  insert into public.site_account_sessions (account_id)
+  values (account_row.id)
+  returning token into session_token;
+
+  return jsonb_build_object(
+    'account_id', account_row.id,
+    'username', account_row.username,
+    'session_token', session_token
+  );
+end;
+$$;
+
+create or replace function public.site_account_login(
+  p_username text,
+  p_password text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  account_row public.site_accounts%rowtype;
+  session_token uuid;
+begin
+  select * into account_row
+  from public.site_accounts
+  where username = lower(trim(p_username));
+
+  if account_row.id is null
+     or account_row.password_hash <> crypt(p_password, account_row.password_hash) then
+    raise exception '아이디 또는 비밀번호가 올바르지 않습니다.';
+  end if;
+
+  insert into public.site_account_sessions (account_id)
+  values (account_row.id)
+  returning token into session_token;
+
+  return jsonb_build_object(
+    'account_id', account_row.id,
+    'username', account_row.username,
+    'session_token', session_token
+  );
+end;
+$$;
+
+drop function if exists public.investment_link_account(uuid);
+
+create or replace function public.investment_link_account(
+  p_session_token uuid,
+  p_old_client_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  account_id uuid;
+  old_user public.investment_users%rowtype;
+  target_user public.investment_users%rowtype;
+begin
+  select account_id into account_id
+  from public.site_account_sessions
+  where token = p_session_token and expires_at > now();
+  if account_id is null then
+    raise exception '로그인 세션이 만료되었습니다.';
+  end if;
+  if p_old_client_id is null or p_old_client_id = account_id then
+    return true;
+  end if;
+
+  select * into old_user from public.investment_users
+  where client_id = p_old_client_id for update;
+  if old_user.client_id is null then return true; end if;
+
+  select * into target_user from public.investment_users
+  where client_id = account_id for update;
+  if target_user.client_id is null then
+    insert into public.investment_users (client_id, nickname, cash)
+    values (account_id, old_user.nickname, old_user.cash);
+  else
+    update public.investment_users
+    set cash = target_user.cash + old_user.cash
+    where client_id = account_id;
+  end if;
+
+  insert into public.investment_holdings (client_id, symbol, quantity, invested_amount)
+  select account_id, symbol, quantity, invested_amount
+  from public.investment_holdings
+  where client_id = p_old_client_id
+  on conflict (client_id, symbol) do update
+  set quantity = public.investment_holdings.quantity + excluded.quantity,
+      invested_amount = public.investment_holdings.invested_amount + excluded.invested_amount;
+
+  delete from public.investment_holdings where client_id = p_old_client_id;
+  delete from public.investment_users where client_id = p_old_client_id;
+  return true;
+end;
+$$;
+
+revoke all on function public.site_account_signup(text, text) from public;
+revoke all on function public.site_account_login(text, text) from public;
+revoke all on function public.investment_link_account(uuid, uuid) from public;
+grant execute on function public.site_account_signup(text, text) to anon, authenticated;
+grant execute on function public.site_account_login(text, text) to anon, authenticated;
+grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
