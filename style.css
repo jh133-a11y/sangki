@@ -65,6 +65,9 @@ nav a:hover { opacity: .5; }
 .account-modal p { font-size: 12px; line-height: 1.5; }
 .account-modal label { display: grid; gap: 6px; margin-top: 14px; font: 10px var(--mono); }
 .account-modal input { border: 1px solid var(--ink); padding: 10px; background: transparent; color: var(--ink); font: 14px var(--mono); }
+.account-options { display: flex; gap: 16px; margin-top: 14px; }
+.account-options label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 10px; }
+.account-options input { width: 14px; height: 14px; margin: 0; accent-color: var(--ink); }
 .account-modal form button { width: 100%; margin-top: 18px; border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: var(--paper); cursor: pointer; font: 11px var(--mono); }
 .account-switch { margin-top: 12px; border: 0; padding: 0; background: transparent; text-decoration: underline; cursor: pointer; font: 10px var(--mono); }
 .account-status { min-height: 18px; margin-bottom: 0; color: var(--orange); }

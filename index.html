@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
   <div class="noise"></div>
@@ -30,6 +30,10 @@
     <form id="account-form">
       <label>아이디<input id="account-username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocapitalize="none" autocomplete="username" required></label>
       <label>비밀번호<input id="account-password" type="password" minlength="8" autocomplete="current-password" required></label>
+      <div class="account-options">
+        <label><input id="remember-username" type="checkbox"> 아이디 저장</label>
+        <label><input id="keep-login" type="checkbox"> 로그인 유지</label>
+      </div>
       <button type="submit" id="account-submit">로그인</button>
     </form>
     <button class="account-switch" id="account-switch" type="button">회원가입으로 전환</button>
@@ -234,6 +238,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>

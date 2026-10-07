@@ -11,6 +11,9 @@ const apiHeaders = {
 };
 
 const accountStorageKey = 'sangki-auth-session';
+const accountSessionStorageKey = 'sangki-auth-session-tab';
+const rememberedUsernameKey = 'sangki-remembered-username';
+const keepLoginKey = 'sangki-keep-login';
 let accountMode = 'login';
 let accountSession = null;
 const accountButton = document.querySelector('#account-button');
@@ -23,6 +26,8 @@ const accountPassword = document.querySelector('#account-password');
 const accountSubmit = document.querySelector('#account-submit');
 const accountSwitch = document.querySelector('#account-switch');
 const accountStatus = document.querySelector('#account-status');
+const rememberUsername = document.querySelector('#remember-username');
+const keepLogin = document.querySelector('#keep-login');
 const settingsOpen = document.querySelector('#settings-open');
 const settingsModal = document.querySelector('#settings-modal');
 const settingsBackdrop = document.querySelector('#settings-backdrop');
@@ -80,7 +85,20 @@ const authenticateAccount = async (username, password) => {
   }
   const oldClientId = localStorage.getItem(legacyInvestmentClientKey) || previousClientId;
   accountSession = result;
-  localStorage.setItem(accountStorageKey, JSON.stringify(result));
+  if (rememberUsername.checked) {
+    localStorage.setItem(rememberedUsernameKey, normalizedUsername);
+  } else {
+    localStorage.removeItem(rememberedUsernameKey);
+  }
+  if (keepLogin.checked) {
+    localStorage.setItem(keepLoginKey, 'true');
+    localStorage.setItem(accountStorageKey, JSON.stringify(result));
+    sessionStorage.removeItem(accountSessionStorageKey);
+  } else {
+    localStorage.removeItem(keepLoginKey);
+    localStorage.removeItem(accountStorageKey);
+    sessionStorage.setItem(accountSessionStorageKey, JSON.stringify(result));
+  }
   const linkResponse = await fetch(`${rpcEndpoint}/investment_link_account`, {
     method: 'POST',
     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
@@ -115,12 +133,16 @@ accountButton.addEventListener('click', () => {
     if (!window.confirm('정말로 로그아웃하시겠습니까?')) return;
     accountSession = null;
     localStorage.removeItem(accountStorageKey);
+    sessionStorage.removeItem(accountSessionStorageKey);
     clearInvestmentView();
     updateAccountButton();
     return;
   }
   accountModal.hidden = false;
   accountBackdrop.hidden = false;
+  accountUsername.value = localStorage.getItem(rememberedUsernameKey) || '';
+  rememberUsername.checked = Boolean(accountUsername.value);
+  keepLogin.checked = localStorage.getItem(keepLoginKey) === 'true';
   accountUsername.focus();
 });
 accountClose.addEventListener('click', closeAccountModal);
@@ -145,7 +167,10 @@ accountForm.addEventListener('submit', async (event) => {
   }
 });
 try {
-  accountSession = JSON.parse(localStorage.getItem(accountStorageKey) || 'null');
+  const storedSession = localStorage.getItem(keepLoginKey) === 'true'
+    ? localStorage.getItem(accountStorageKey)
+    : sessionStorage.getItem(accountSessionStorageKey);
+  accountSession = JSON.parse(storedSession || 'null');
 } catch {
   accountSession = null;
 }
@@ -165,6 +190,7 @@ const closeSettings = () => {
 const logoutAccount = () => {
   accountSession = null;
   localStorage.removeItem(accountStorageKey);
+  sessionStorage.removeItem(accountSessionStorageKey);
   clearInvestmentView();
   updateAccountButton();
   closeSettings();
@@ -209,6 +235,7 @@ settingsDeleteAccount.addEventListener('click', async () => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || result.details || result.hint || '아이디를 삭제하지 못했습니다.');
     localStorage.removeItem(accountStorageKey);
+    sessionStorage.removeItem(accountSessionStorageKey);
     localStorage.removeItem(legacyInvestmentClientKey);
     localStorage.removeItem('sangki-investor-nickname');
     accountSession = null;
