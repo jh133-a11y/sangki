@@ -1142,7 +1142,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .comment { position: relative; display: grid; grid-template-columns: minmax(125px, 1fr) minmax(0, 3fr) 190px; gap: 22px; padding: 20px 0; border-bottom: 1px solid rgba(23, 23, 23, .3); }
 .comment-reply { margin-left: 3%; padding-left: 18px; border-bottom-color: rgba(23, 23, 23, .18); }
 .comment-reply:before { content: "↳"; position: absolute; margin-left: -18px; font: 14px var(--mono); }
-.comment-author { font-weight: 600; }
+.comment-author { display: flex; align-items: baseline; gap: 8px; font-weight: 600; }
+.comment-author .investment-level { font: 8px var(--mono); }
 .comment-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.5; }
 .comment-date { font: 10px var(--mono); opacity: .65; white-space: nowrap; }
 .comment-meta { display: flex; flex-direction: column; gap: 8px; align-items: end; }

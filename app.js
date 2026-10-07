@@ -1793,11 +1793,21 @@ const escapeDate = (value) => new Intl.DateTimeFormat('ko-KR', {
   timeStyle: 'short'
 }).format(new Date(value));
 
+const getInvestmentLevelClass = (level) => {
+  const playerLevel = Math.max(0, Number(level) || 0);
+  if (playerLevel <= 10) return 'investment-level-gray';
+  if (playerLevel <= 50) return 'investment-level-lime';
+  if (playerLevel <= 100) return 'investment-level-blue';
+  if (playerLevel <= 500) return 'investment-level-red';
+  if (playerLevel <= 1000) return 'investment-level-orange';
+  return 'investment-level-purple';
+};
+
 const renderComment = (item, isReply = false) => {
   const article = document.createElement('article');
   article.className = isReply ? 'comment comment-reply' : 'comment';
   article.innerHTML = `
-    <strong class="comment-author"></strong>
+    <strong class="comment-author"><span class="comment-author-name"></span></strong>
     <p class="comment-body"></p>
     <div class="comment-votes">
       <button class="comment-vote" type="button" data-vote="1">추천 <span></span></button>
@@ -1813,9 +1823,14 @@ const renderComment = (item, isReply = false) => {
       </div>
     </div>
   `;
-  article.querySelector('.comment-author').textContent = item.author_account_id
-    ? `${item.nickname} · LV ${Number(item.investor_level) || 1}`
-    : item.nickname;
+  const author = article.querySelector('.comment-author');
+  if (item.author_account_id) {
+    const level = document.createElement('small');
+    level.className = `investment-level ${getInvestmentLevelClass(item.investor_level)}`;
+    level.textContent = String(Math.max(0, Number(item.investor_level) || 0));
+    author.prepend(level);
+  }
+  author.querySelector('.comment-author-name').textContent = item.nickname;
   article.querySelector('.comment-body').textContent = item.body;
   article.querySelector('[data-vote="1"] span').textContent = Number(item.upvotes) || 0;
   article.querySelector('[data-vote="-1"] span').textContent = Number(item.downvotes) || 0;
