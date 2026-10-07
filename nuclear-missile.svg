@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title>Nuclear missile</title>
+  <rect width="160" height="160" rx="24" fill="#171717"/>
+  <path d="M28 113 91 50l23 23-63 63H28z" fill="#b9c0c8" stroke="#d9ff36" stroke-width="6"/>
+  <path d="m91 50 17-17 23 23-17 17" fill="#ff5b36" stroke="#171717" stroke-width="6"/>
+  <path d="M104 27c12-12 24-16 36-15-2 12-7 24-19 33" fill="#d9ff36" stroke="#171717" stroke-width="6"/>
+  <path d="m42 132-13 15m31-25-13 15" stroke="#ff5b36" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="48" cy="45" r="15" fill="#ffb02e" stroke="#171717" stroke-width="5"/>
+  <path d="M48 35v20M38 45h20" stroke="#171717" stroke-width="4"/>
+</svg>

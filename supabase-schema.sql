@@ -1918,7 +1918,7 @@ to anon, authenticated;
 
 create table if not exists public.investment_shop_items (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
-  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nickname_ticket', 'letter')),
+  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nuclear_missile', 'missile_shield', 'nickname_ticket', 'letter')),
   quantity bigint not null default 0 check (quantity >= 0),
   primary key (client_id, item_type)
 );
@@ -1933,6 +1933,8 @@ alter table public.investment_shop_items
     'low_missile',
     'mid_missile',
     'high_missile',
+    'nuclear_missile',
+    'missile_shield',
     'nickname_ticket',
     'letter'
   ));
@@ -2023,6 +2025,8 @@ begin
           when 'low_missile' then '하급 미사일'
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
+          when 'nuclear_missile' then '핵 미사일'
+          when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
           else '편지'
         end,
@@ -2087,6 +2091,8 @@ begin
           when 'low_missile' then '하급 미사일'
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
+          when 'nuclear_missile' then '핵 미사일'
+          when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
           else '편지'
         end,
@@ -2134,6 +2140,8 @@ begin
     ('low_missile', 20000000::bigint, '하급 미사일'),
     ('mid_missile', 50000000::bigint, '중급 미사일'),
     ('high_missile', 150000000::bigint, '고급 미사일'),
+    ('nuclear_missile', 10000000000::bigint, '핵 미사일'),
+    ('missile_shield', 10000000::bigint, '미사일 방어막'),
     ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
     ('letter', 10000::bigint, '편지')
   ) items(item_type, price, name)
@@ -2382,6 +2390,8 @@ declare
   v_remaining bigint;
   v_old_cash bigint;
   v_cash_loss bigint;
+  v_shield_quantity bigint;
+  v_shield_required bigint;
   holding_row record;
   v_remove_quantity bigint;
   v_removed_value bigint;
@@ -2414,16 +2424,19 @@ begin
       when 'low_missile' then 0.20
       when 'mid_missile' then 0.30
       when 'high_missile' then 0.40
+      when 'nuclear_missile' then 0.80
     end,
     case p_item_type
       when 'low_missile' then 0.20
       when 'mid_missile' then 0.30
       when 'high_missile' then 0.40
+      when 'nuclear_missile' then 0.80
     end,
     case p_item_type
       when 'low_missile' then '하급 미사일'
       when 'mid_missile' then '중급 미사일'
-      else '고급 미사일'
+      when 'high_missile' then '고급 미사일'
+      else '핵 미사일'
     end
   into v_chance, v_damage, v_name;
 
@@ -2453,6 +2466,50 @@ begin
     return jsonb_build_object(
       'success', false,
       'message', v_name || '을(를) 발사했지만 ' || v_target_name || '에게 명중하지 않았습니다.'
+    );
+  end if;
+
+  v_shield_required := case p_item_type
+    when 'low_missile' then 1
+    when 'mid_missile' then 3
+    when 'high_missile' then 5
+    when 'nuclear_missile' then 10
+  end;
+  select quantity into v_shield_quantity
+  from public.investment_shop_items
+  where client_id = p_target_client_id
+    and item_type = 'missile_shield'
+  for update;
+
+  if coalesce(v_shield_quantity, 0) >= v_shield_required then
+    update public.investment_shop_items
+    set quantity = quantity - v_shield_required
+    where client_id = p_target_client_id
+      and item_type = 'missile_shield';
+
+    delete from public.investment_shop_items
+    where client_id = p_target_client_id
+      and item_type = 'missile_shield'
+      and quantity <= 0;
+
+    insert into public.investment_shop_messages(client_id, message)
+    values (
+      p_target_client_id,
+      v_name || ' 공격을 미사일 방어막 '
+        || v_shield_required || '개로 막았습니다. 피해를 받지 않았습니다.'
+    ), (
+      p_client_id,
+      v_name || ' 발사 성공! ' || v_target_name || '에게 명중했지만 '
+        || '미사일 방어막 ' || v_shield_required || '개에 의해 막혔습니다.'
+    );
+
+    return jsonb_build_object(
+      'success', true,
+      'blocked', true,
+      'message', v_name || ' 명중! ' || v_target_name
+        || '에게 공격이 성공했습니다.',
+      'blocked_message', v_name || ' 공격이 '
+        || v_target_name || '의 미사일 방어막에 의해 막혔습니다.'
     );
   end if;
 

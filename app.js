@@ -529,6 +529,8 @@ const shopItemIcons = {
   low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
+  ,nuclear_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 35 27 13l10 10-22 22H5v-10Z" fill="#b9c0c8" stroke="#171717" stroke-width="2.5"/><path d="M29 11c4-5 10-7 15-6-1 5-3 10-8 13" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m9 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>'
+  ,missile_shield: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 40 10v12c0 10-6 17-16 22C14 39 8 32 8 22V10l16-6Z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m15 24 6 6 12-13" fill="none" stroke="#d9ff36" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
   letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>'
 };
@@ -536,6 +538,8 @@ const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
   mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
   high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
+  ,nuclear_missile: '80% 확률로 선택한 유저의 전체 자산 80%를 감소시킵니다.'
+  ,missile_shield: '다른 유저의 미사일을 막습니다. 하급 1개, 중급 3개, 고급 5개, 핵 미사일 10개가 필요합니다.'
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.'
 };
@@ -563,8 +567,9 @@ const selectShopItem = (item) => {
   bagUseDescription.textContent = shopItemDescriptions[item.item_type] || '선택한 아이템을 사용할 수 있습니다.';
   const isNicknameTicket = item.item_type === 'nickname_ticket';
   const isLetter = item.item_type === 'letter';
+  const isShield = item.item_type === 'missile_shield';
   const targetLabel = document.querySelector('.bag-target-label');
-  targetLabel.hidden = false;
+  targetLabel.hidden = isShield;
   targetLabel.firstChild.textContent = isNicknameTicket
     ? '닉네임 변경 대상 선택'
     : isLetter ? '편지 받을 유저 선택' : '공격 대상 선택';
@@ -576,7 +581,11 @@ const selectShopItem = (item) => {
     )));
   bagNicknameLabel.hidden = !isNicknameTicket;
   document.querySelector('#bag-letter-label').hidden = !isLetter;
-  bagStatus.textContent = isNicknameTicket
+  bagUseButton.disabled = isShield;
+  bagUseButton.textContent = isShield ? '자동 방어 아이템' : '사용하기';
+  bagStatus.textContent = isShield
+    ? '다른 유저의 미사일이 명중하면 필요한 수량이 자동으로 소모되어 방어합니다.'
+    : isNicknameTicket
     ? '대상을 선택하고 새 닉네임을 입력한 뒤 사용하기를 누르세요.'
     : isLetter
       ? '받는 유저와 편지 내용을 입력한 뒤 사용하기를 누르세요.'
@@ -629,6 +638,10 @@ const loadBag = async () => {
 };
 
 const useShopItem = async (itemType) => {
+  if (itemType === 'missile_shield') {
+    bagStatus.textContent = '미사일 방어막은 다른 유저의 미사일이 명중할 때 자동으로 사용됩니다.';
+    return;
+  }
   if (itemType === 'letter') {
     if (!bagTarget.value) {
       bagStatus.textContent = '편지를 받을 유저를 선택하세요.';
@@ -720,6 +733,9 @@ const useShopItem = async (itemType) => {
     });
     bagStatus.textContent = result.message;
     window.alert(result.message);
+    if (result.blocked && result.blocked_message) {
+      window.alert(result.blocked_message);
+    }
     await loadMessageCount();
     await loadBag();
     if (investmentState) await loadInvestmentState();

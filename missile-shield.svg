@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title>Missile shield</title>
+  <rect width="160" height="160" rx="24" fill="#171717"/>
+  <path d="M80 20 132 40v38c0 31-20 51-52 67C48 129 28 109 28 78V40z" fill="#8ed8d2" stroke="#d9ff36" stroke-width="7"/>
+  <path d="m49 82 20 20 43-48" fill="none" stroke="#171717" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m31 30 22 22M129 30l-22 22" stroke="#ff5b36" stroke-width="7" stroke-linecap="round"/>
+</svg>
