@@ -218,7 +218,7 @@ declare
   current_bucket timestamptz :=
     date_trunc('hour', now())
     + make_interval(
-        mins => (floor(extract(minute from now()) / 30) * 30)::integer
+        mins => (floor(extract(minute from now()) / 5) * 5)::integer
       );
   direction_date_value date;
   direction_state_value jsonb;
