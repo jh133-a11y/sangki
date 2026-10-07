@@ -35,8 +35,8 @@ button { color: inherit; font: inherit; }
   display: flex; justify-content: space-between; align-items: center;
   font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase;
 }
-.header-left { display: flex; align-items: center; gap: 16px; }
 .menu-toggle {
+ position: fixed; top: 23px; left: max(18px, calc((100% - 1340px) / 2)); z-index: 30;
  display: inline-flex; width: 28px; height: 24px; padding: 3px 0;
  flex-direction: column; justify-content: space-between;
  border: 0; background: transparent; cursor: pointer;
@@ -285,8 +285,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 @media (max-width: 720px) {
   .wrap { width: min(100% - 30px, 1240px); }
   header { padding: 18px 0; }
-  .header-left { gap: 11px; }
-  .menu-toggle { width: 24px; height: 21px; }
+  .menu-toggle { top: 18px; left: 15px; width: 24px; height: 21px; }
   nav { gap: 12px; font-size: 9px; }
   nav a[href="#guestbook"] { margin-left: -5px; }
   .notification-toggle { padding: 4px 5px; font-size: 8px; }
