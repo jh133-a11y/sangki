@@ -120,9 +120,13 @@ const authenticateAccount = async (username, password) => {
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || result.hint || '계정 요청에 실패했습니다.');
   const currentClientId = localStorage.getItem(investmentClientKey);
-  const previousClientId = accountMode === 'signup'
+  const storedGuestClientId = localStorage.getItem(legacyInvestmentClientKey);
+  const previousClientId = !accountSession?.account_id && currentClientId
     ? currentClientId
-    : (localStorage.getItem(legacyInvestmentClientKey) || currentClientId);
+    : (storedGuestClientId || currentClientId);
+  if (!accountSession?.account_id && currentClientId && currentClientId !== result.account_id) {
+    localStorage.setItem(legacyInvestmentClientKey, currentClientId);
+  }
   const previousNickname = localStorage.getItem('sangki-investor-nickname');
   const oldClientId = previousClientId && previousClientId !== result.account_id
     ? previousClientId
