@@ -637,7 +637,9 @@ const shopItemIcons = {
   sanggi_hanbok: '<img src="sanggi-hanbok.png" alt="" aria-hidden="true">',
   sanggi_spacesuit: '<img src="sanggi-spacesuit.png" alt="" aria-hidden="true">',
   juseong_hanbok: '<img src="juseong-hanbok.png" alt="" aria-hidden="true">',
-  juseong_spacesuit: '<img src="juseong-spacesuit.png" alt="" aria-hidden="true">'
+  juseong_spacesuit: '<img src="juseong-spacesuit.png" alt="" aria-hidden="true">',
+  cash_box: '<span class="bag-cash-box-icon">₩</span>',
+  weird_cash_box: '<span class="bag-cash-box-icon bag-cash-box-weird">?</span>'
 };
 const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
@@ -653,7 +655,9 @@ const shopItemDescriptions = {
   sanggi_hanbok: '상기가 착용할 수 있는 한복입니다.',
   sanggi_spacesuit: '상기가 착용할 수 있는 우주복입니다.',
   juseong_hanbok: '주성이 착용할 수 있는 한복입니다.',
-  juseong_spacesuit: '주성이 착용할 수 있는 우주복입니다.'
+  juseong_spacesuit: '주성이 착용할 수 있는 우주복입니다.',
+  cash_box: '가방에서 바로 개봉하면 투자 현금 1,000,000원~1,000,000,000원을 무작위로 받습니다. 유저를 선택하면 선물할 수 있습니다.',
+  weird_cash_box: '가방에서 바로 개봉하거나 유저에게 선물할 수 있습니다. 개봉하면 대상의 총자산이 -30%~+30% 범위에서 무작위로 변합니다.'
 };
 const shopItemNames = {
   low_missile: '하급 미사일',
@@ -669,7 +673,9 @@ const shopItemNames = {
   sanggi_hanbok: '상기 한복',
   sanggi_spacesuit: '상기 우주복',
   juseong_hanbok: '주성 한복',
-  juseong_spacesuit: '주성 우주복'
+  juseong_spacesuit: '주성 우주복',
+  cash_box: '랜덤 현금 박스',
+  weird_cash_box: '이상한 랜덤 현금 박스'
 };
 const validShopItemTypes = new Set(Object.keys(shopItemNames));
 const normalizeShopItem = (item) => ({
@@ -705,14 +711,18 @@ const selectShopItem = (item) => {
   const isNicknameTicket = item.item_type === 'nickname_ticket';
   const isLetter = item.item_type === 'letter';
   const isShield = item.item_type === 'missile_shield';
+  const isCashBox = item.item_type === 'cash_box' || item.item_type === 'weird_cash_box';
   const targetLabel = document.querySelector('.bag-target-label');
-  targetLabel.hidden = isShield;
+  targetLabel.hidden = isShield || (!isCashBox && !isNicknameTicket && !isLetter
+    && !['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type));
   bagTarget.disabled = isShield;
   if (isShield) bagTarget.value = '';
-  targetLabel.firstChild.textContent = isNicknameTicket
+  targetLabel.firstChild.textContent = isCashBox
+    ? '선물할 유저 선택 (선택하지 않으면 개봉)'
+    : isNicknameTicket
     ? '닉네임 변경 대상 선택'
     : isLetter ? '편지 받을 유저 선택' : '공격 대상 선택';
-  bagTarget.replaceChildren(...bagTargets
+  bagTarget.replaceChildren(...(isCashBox ? [new Option('선택하지 않고 개봉', '')] : []), ...bagTargets
     .filter((target) => isNicknameTicket || isLetter || target.client_id !== activeShopClientId)
     .map((target) => new Option(
       `${target.nickname}${target.client_id === activeShopClientId ? ' (나)' : ''} · ${formatWon(target.total_asset)}`,
@@ -721,9 +731,11 @@ const selectShopItem = (item) => {
   bagNicknameLabel.hidden = !isNicknameTicket;
   document.querySelector('#bag-letter-label').hidden = !isLetter;
   bagUseButton.disabled = isShield;
-  bagUseButton.textContent = isShield ? '자동 방어 아이템' : '사용하기';
+  bagUseButton.textContent = isShield ? '자동 방어 아이템' : isCashBox ? '개봉/선물하기' : '사용하기';
   bagStatus.textContent = isShield
     ? '다른 유저의 미사일이 명중하면 필요한 수량이 자동으로 소모되어 방어합니다.'
+    : isCashBox
+    ? '유저를 선택하면 상자를 선물하고, 선택하지 않으면 내 계정에서 바로 개봉합니다.'
     : isNicknameTicket
     ? '대상을 선택하고 새 닉네임을 입력한 뒤 사용하기를 누르세요.'
     : isLetter
@@ -792,6 +804,35 @@ const useShopItem = async (itemType) => {
   if (itemType === 'letter') {
     if (!bagTarget.value) {
       bagStatus.textContent = '편지를 받을 유저를 선택하세요.';
+      return;
+    }
+    if (itemType === 'cash_box' || itemType === 'weird_cash_box') {
+      const targetId = bagTarget.value || null;
+      const targetName = targetId
+        ? bagTarget.options[bagTarget.selectedIndex]?.textContent?.split(' · ')[0] || '선택한 유저'
+        : null;
+      const itemName = selectedShopItem?.name || '현금 박스';
+      const actionText = targetName ? `${targetName}에게 ${itemName}을(를) 선물하시겠습니까?` : `${itemName}을(를) 지금 개봉하시겠습니까?`;
+      if (!await siteConfirm(actionText)) {
+        bagStatus.textContent = targetName ? '선물하기를 취소했습니다.' : '개봉을 취소했습니다.';
+        return;
+      }
+      bagStatus.textContent = targetName ? '상자를 선물하는 중...' : '상자를 개봉하는 중...';
+      try {
+        const result = await callInvestmentRpc('shop_use_cash_box', {
+          p_client_id: await resolveShopClientId(),
+          p_item_type: itemType,
+          p_target_client_id: targetId
+        });
+        bagStatus.textContent = result.message;
+        window.alert(result.message);
+        await loadMessageCount();
+        await loadBag();
+        if (investmentState) await loadInvestmentState();
+      } catch (error) {
+        bagStatus.textContent = error.message;
+        window.alert(`상자 처리 실패: ${error.message}`);
+      }
       return;
     }
     const message = document.querySelector('#bag-letter-message').value.trim();

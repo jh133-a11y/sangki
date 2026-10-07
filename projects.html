@@ -95,9 +95,23 @@
       <p class="sanggi-ability-eyebrow">SANGKI SHOP</p>
       <h2 id="sanggi-shop-title">상기 상점</h2>
       <p class="sanggi-shop-cash" id="sanggi-shop-cash">보유 현금 확인 중...</p>
+      <p class="sanggi-shop-cash" id="sanggi-shop-coin-balance">보유 코인 확인 중...</p>
       <div class="sanggi-shop-tabs" role="tablist" aria-label="상점 분류">
         <button class="sanggi-shop-tab is-active" id="sanggi-shop-items-tab" type="button" role="tab" aria-selected="true" aria-controls="sanggi-shop-items">아이템</button>
         <button class="sanggi-shop-tab" id="sanggi-shop-other-tab" type="button" role="tab" aria-selected="false" aria-controls="sanggi-shop-other">기타</button>
+        <button class="sanggi-shop-tab" id="sanggi-shop-coin-tab" type="button" role="tab" aria-selected="false" aria-controls="sanggi-shop-coin">코인 상점</button>
+      </div>
+      <div class="sanggi-shop-list" id="sanggi-shop-coin" role="tabpanel" aria-labelledby="sanggi-shop-coin-tab" hidden>
+        <article class="sanggi-shop-card">
+          <div class="sanggi-cash-box-icon" aria-hidden="true">₩</div>
+          <div><h3>랜덤 현금 박스</h3><p>개봉하면 투자 현금 1,000,000원~1,000,000,000원이 무작위로 지급됩니다.</p><strong>500,000코인 / 1개</strong></div>
+          <button class="sanggi-shop-buy" id="sanggi-buy-cash-box" type="button">구매하기</button>
+        </article>
+        <article class="sanggi-shop-card">
+          <div class="sanggi-cash-box-icon sanggi-cash-box-weird" aria-hidden="true">?</div>
+          <div><h3>이상한 랜덤 현금 박스</h3><p>개봉하면 선택한 유저의 총자산이 -30%~+30% 범위에서 무작위로 변합니다.</p><strong>100,000코인 / 1개</strong></div>
+          <button class="sanggi-shop-buy" id="sanggi-buy-weird-cash-box" type="button">구매하기</button>
+        </article>
       </div>
       <div class="sanggi-shop-list" id="sanggi-shop-items" role="tabpanel" aria-labelledby="sanggi-shop-items-tab">
         <article class="sanggi-shop-card">
@@ -160,7 +174,7 @@
     </section>
     <div class="site-confirm-backdrop" id="sanggi-shop-confirm-backdrop" hidden></div>
     <section class="site-confirm-modal" id="sanggi-shop-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-confirm-title" hidden>
-      <h2 id="sanggi-shop-confirm-title">물약 구매</h2>
+      <h2 id="sanggi-shop-confirm-title">상품 구매</h2>
       <p id="sanggi-shop-confirm-message"></p>
       <label class="shop-modal-quantity-label" for="sanggi-shop-quantity">구매 수량<input id="sanggi-shop-quantity" type="text" min="1" max="100" value="1" inputmode="numeric"></label>
       <button class="shop-modal-max" id="sanggi-shop-max" type="button">최대 수량</button>
@@ -236,6 +250,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=53"></script>
+  <script src="sanggi.js?v=54"></script>
 </body>
 </html>

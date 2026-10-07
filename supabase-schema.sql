@@ -2113,7 +2113,9 @@ alter table public.investment_shop_items
     'sanggi_hanbok',
     'sanggi_spacesuit',
     'juseong_hanbok',
-    'juseong_spacesuit'
+    'juseong_spacesuit',
+    'cash_box',
+    'weird_cash_box'
   ));
 
 create table if not exists public.investment_shop_messages (
@@ -2212,6 +2214,8 @@ begin
           when 'sanggi_spacesuit' then '상기 우주복'
           when 'juseong_hanbok' then '주성 한복'
           when 'juseong_spacesuit' then '주성 우주복'
+          when 'cash_box' then '랜덤 현금 박스'
+          when 'weird_cash_box' then '이상한 랜덤 현금 박스'
           else '편지'
         end,
         'quantity', quantity
@@ -2285,6 +2289,8 @@ begin
           when 'sanggi_spacesuit' then '상기 우주복'
           when 'juseong_hanbok' then '주성 한복'
           when 'juseong_spacesuit' then '주성 우주복'
+          when 'cash_box' then '랜덤 현금 박스'
+          when 'weird_cash_box' then '이상한 랜덤 현금 박스'
           else '편지'
         end,
         'quantity', quantity
@@ -2424,6 +2430,181 @@ security definer
 set search_path = public
 as $$
   select public.shop_purchase(p_client_id, p_item_type, 1::bigint);
+$$;
+
+create or replace function public.shop_purchase_coin_box(
+  p_client_id uuid,
+  p_item_type text,
+  p_quantity bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_price bigint;
+  v_name text;
+  v_coins bigint;
+  v_owned_quantity bigint;
+begin
+  if p_item_type = 'cash_box' then
+    v_price := 500000;
+    v_name := '랜덤 현금 박스';
+  elsif p_item_type = 'weird_cash_box' then
+    v_price := 100000;
+    v_name := '이상한 랜덤 현금 박스';
+  else
+    raise exception '존재하지 않는 코인 상점 상품입니다.';
+  end if;
+  if p_quantity is null or p_quantity < 1 then
+    raise exception '구매 수량은 1개 이상이어야 합니다.';
+  end if;
+
+  select coins
+    into v_coins
+  from public.sanggi_game_states
+  where account_id = p_client_id
+  for update;
+  if v_coins is null then
+    raise exception '상기 키우기 정보를 먼저 동기화하세요.';
+  end if;
+  select quantity
+    into v_owned_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id and item_type = p_item_type
+  for update;
+  if coalesce(v_owned_quantity, 0) + p_quantity > 100 then
+    raise exception '상자는 한 종류당 최대 100개까지 보유할 수 있습니다.';
+  end if;
+  if v_coins < v_price * p_quantity then
+    raise exception '보유 코인이 부족합니다.';
+  end if;
+
+  update public.sanggi_game_states
+  set coins = coins - v_price * p_quantity,
+      updated_at = now()
+  where account_id = p_client_id
+  returning coins into v_coins;
+
+  insert into public.investment_shop_items(client_id, item_type, quantity)
+  values (p_client_id, p_item_type, p_quantity)
+  on conflict (client_id, item_type)
+  do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
+
+  return jsonb_build_object(
+    'message', v_name || ' ' || p_quantity || '개를 구매했습니다.',
+    'coins', v_coins::text,
+    'quantity', coalesce(v_owned_quantity, 0) + p_quantity
+  );
+end;
+$$;
+
+create or replace function public.shop_use_cash_box(
+  p_client_id uuid,
+  p_item_type text,
+  p_target_client_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quantity bigint;
+  v_target_id uuid := coalesce(p_target_client_id, p_client_id);
+  v_target_name text;
+  v_sender_name text;
+  v_amount bigint;
+  v_factor numeric;
+  v_percent integer;
+  v_new_cash bigint;
+begin
+  if p_item_type not in ('cash_box', 'weird_cash_box') then
+    raise exception '사용할 수 없는 현금 박스입니다.';
+  end if;
+  select quantity into v_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id and item_type = p_item_type
+  for update;
+  if coalesce(v_quantity, 0) < 1 then
+    raise exception '가방에 해당 현금 박스가 없습니다.';
+  end if;
+  if p_target_client_id is not null
+    and p_target_client_id <> p_client_id
+    and exists (
+      select 1
+      from public.investment_shop_items
+      where client_id = p_target_client_id
+        and item_type = p_item_type
+        and quantity >= 100
+    ) then
+    raise exception '선물받는 유저의 상자 보유 한도에 도달했습니다.';
+  end if;
+  select nickname into v_sender_name
+  from public.investment_users
+  where client_id = p_client_id;
+  select nickname into v_target_name
+  from public.investment_users
+  where client_id = v_target_id
+  for update;
+  if v_target_name is null then
+    raise exception '선물할 유저를 찾을 수 없습니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - 1
+  where client_id = p_client_id and item_type = p_item_type;
+  delete from public.investment_shop_items
+  where client_id = p_client_id and item_type = p_item_type and quantity <= 0;
+
+  if p_target_client_id is not null and p_target_client_id <> p_client_id then
+    insert into public.investment_shop_items(client_id, item_type, quantity)
+    values (p_target_client_id, p_item_type, 1)
+    on conflict (client_id, item_type)
+    do update set quantity = public.investment_shop_items.quantity + 1;
+    if v_sender_name is not null then
+      insert into public.investment_shop_messages(client_id, message)
+      values (p_target_client_id, v_sender_name || '님이 ' || case p_item_type
+        when 'cash_box' then '랜덤 현금 박스'
+        else '이상한 랜덤 현금 박스'
+      end || '를 선물했습니다.');
+    end if;
+    return jsonb_build_object(
+      'message', v_target_name || '님에게 상자를 선물했습니다.'
+    );
+  end if;
+
+  if p_item_type = 'cash_box' then
+    v_amount := floor(random() * 1000000001)::bigint + 1000000;
+    update public.investment_users
+    set cash = cash + v_amount
+    where client_id = p_client_id;
+    return jsonb_build_object(
+      'message', '랜덤 현금 박스를 개봉해 ' ||
+        to_char(v_amount, 'FM999,999,999,999,999,999') || '원을 받았습니다.',
+      'amount', v_amount
+    );
+  end if;
+
+  v_factor := 0.70 + random() * 0.60;
+  v_percent := round((v_factor - 1) * 100);
+  update public.investment_users
+  set cash = greatest(0, round(cash * v_factor))
+  where client_id = p_client_id
+  returning cash into v_new_cash;
+  update public.investment_holdings
+  set quantity = greatest(0, floor(quantity * v_factor)),
+      invested_amount = greatest(0, round(invested_amount * v_factor))
+  where client_id = p_client_id;
+  delete from public.investment_holdings
+  where client_id = p_client_id and quantity <= 0;
+  return jsonb_build_object(
+    'message', '이상한 랜덤 현금 박스를 개봉해 자산이 ' ||
+      case when v_percent >= 0 then '+' else '' end || v_percent || '% 변했습니다.',
+    'percent', v_percent
+  );
+end;
 $$;
 
 drop function if exists public.shop_change_nickname(uuid, text);
@@ -2857,6 +3038,8 @@ begin
     when 'sanggi_spacesuit' then '상기 우주복'
     when 'juseong_hanbok' then '주성 한복'
     when 'juseong_spacesuit' then '주성 우주복'
+    when 'cash_box' then '랜덤 현금 박스'
+    when 'weird_cash_box' then '이상한 랜덤 현금 박스'
     when 'letter' then '편지'
     else null
   end;
@@ -3011,6 +3194,8 @@ revoke all on function public.shop_get_unread_count(uuid) from public;
 revoke all on function public.shop_get_messages(uuid) from public;
 revoke all on function public.shop_purchase(uuid, text, bigint) from public;
 revoke all on function public.shop_purchase(uuid, text) from public;
+revoke all on function public.shop_purchase_coin_box(uuid, text, bigint) from public;
+revoke all on function public.shop_use_cash_box(uuid, text, uuid) from public;
 revoke all on function public.shop_use_missile(uuid, text, uuid) from public;
 revoke all on function public.shop_discard_item(uuid, text, bigint) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
@@ -3022,6 +3207,8 @@ grant execute on function public.shop_get_unread_count(uuid) to anon, authentica
 grant execute on function public.shop_get_messages(uuid) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_purchase(uuid, text) to anon, authenticated;
+grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
+grant execute on function public.shop_use_cash_box(uuid, text, uuid) to anon, authenticated;
 
 notify pgrst, 'reload schema';
 
@@ -3629,7 +3816,11 @@ grant execute on function public.shop_use_missile(uuid, text, uuid) to anon, aut
 grant execute on function public.shop_discard_item(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
+grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
+grant execute on function public.shop_use_cash_box(uuid, text, uuid) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
+
+notify pgrst, 'reload schema';
 
 drop function if exists public.site_account_delete(uuid, text);
 

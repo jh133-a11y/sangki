@@ -250,16 +250,20 @@
   const shopConfirmCancel = document.querySelector('#sanggi-shop-confirm-cancel');
   const shopItemsTab = document.querySelector('#sanggi-shop-items-tab');
   const shopOtherTab = document.querySelector('#sanggi-shop-other-tab');
+  const shopCoinTab = document.querySelector('#sanggi-shop-coin-tab');
   const shopItemsPanel = document.querySelector('#sanggi-shop-items');
   const shopOtherPanel = document.querySelector('#sanggi-shop-other');
+  const shopCoinPanel = document.querySelector('#sanggi-shop-coin');
   const shopTitle = document.querySelector('#sanggi-shop-title');
   const ownedOutfits = new Set();
   let shopConfirmResolve = null;
   const shopSession = () => getSession();
+  const shopCoin = document.querySelector('#sanggi-shop-coin-balance');
   const loadShopCash = async () => {
     const session = shopSession();
     if (!session?.account_id) {
       shopCash.textContent = '로그인 후 구매할 수 있습니다.';
+      if (shopCoin) shopCoin.textContent = '보유 코인 확인 중...';
       return;
     }
     const state = await remoteRpc('shop_get_state', {
@@ -267,6 +271,7 @@
       p_nickname: localStorage.getItem(shopNicknameKey) || null
     });
     shopCash.textContent = `보유 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
+    if (shopCoin) shopCoin.textContent = `보유 코인 ${formatCoins(coins)}원`;
     ownedOutfits.clear();
     (Array.isArray(state.items) ? state.items : []).forEach((item) => {
       if (item.quantity > 0
@@ -298,7 +303,7 @@
   };
   const choosePotionQuantity = (potionName, price, maximum) => new Promise((resolve) => {
     shopConfirmResolve = resolve;
-    shopConfirmMessage.textContent = `${potionName} ${price} / 1개\n구매하시겠습니까? 구매할 수량을 선택하세요.`;
+    shopConfirmMessage.textContent = `${potionName} ${price} / 1개\n구매할 수량을 선택하세요.`;
     shopConfirmQuantity.value = '1';
     shopConfirmQuantity.max = String(maximum);
     shopConfirmMax.disabled = maximum < 1;
@@ -317,6 +322,50 @@
     shopConfirmBackdrop.hidden = false;
     shopConfirmQuantity.focus();
   });
+  const buyCoinBox = async (type) => {
+    const session = shopSession();
+    if (!session?.account_id) {
+      shopStatus.textContent = '로그인 후 코인 상점에서 구매할 수 있습니다.';
+      return;
+    }
+    const config = {
+      cash_box: {
+        button: '#sanggi-buy-cash-box',
+        name: '랜덤 현금 박스',
+        price: '500,000코인'
+      },
+      weird_cash_box: {
+        button: '#sanggi-buy-weird-cash-box',
+        name: '이상한 랜덤 현금 박스',
+        price: '100,000코인'
+      }
+    }[type];
+    const button = document.querySelector(config.button);
+    const maximum = 100;
+    const quantity = await choosePotionQuantity(config.name, config.price, maximum);
+    if (!quantity) return;
+    button.disabled = true;
+    shopStatus.textContent = `${config.name} ${quantity}개 구매 확인 중...`;
+    try {
+      const result = await remoteRpc('shop_purchase_coin_box', {
+        p_client_id: session.account_id,
+        p_item_type: type,
+        p_quantity: quantity
+      });
+      coins = BigInt(String(result.coins || coins));
+      saveState();
+      renderBalance();
+      await loadShopCash();
+      shopStatus.textContent = `${config.name}을(를) 구매했습니다.`;
+      shopCompleteMessage.textContent = `${config.name} ${quantity}개 구매가 완료되었습니다.\n현재 보유 수량: ${result.quantity}개`;
+      shopCompleteModal.hidden = false;
+      shopCompleteBackdrop.hidden = false;
+    } catch (error) {
+      shopStatus.textContent = error.message || `${config.name} 구매에 실패했습니다.`;
+    } finally {
+      button.disabled = false;
+    }
+  };
   shopConfirmCancel.addEventListener('click', () => closeShopConfirm(0));
   shopConfirmBackdrop.addEventListener('click', () => closeShopConfirm(0));
   const buyPotion = async (type) => {
@@ -1043,22 +1092,30 @@
   });
   const selectShopTab = (tab) => {
     const showOther = tab === 'other';
-    shopTitle.textContent = showOther ? '상기 상점 · 기타' : '상기 상점 · 아이템';
-    shopItemsTab.classList.toggle('is-active', !showOther);
+    const showCoin = tab === 'coin';
+    shopTitle.textContent = showCoin ? '상기 상점 · 코인 상점' : showOther ? '상기 상점 · 기타' : '상기 상점 · 아이템';
+    shopItemsTab.classList.toggle('is-active', !showOther && !showCoin);
     shopOtherTab.classList.toggle('is-active', showOther);
-    shopItemsTab.setAttribute('aria-selected', String(!showOther));
+    shopCoinTab.classList.toggle('is-active', showCoin);
+    shopItemsTab.setAttribute('aria-selected', String(!showOther && !showCoin));
     shopOtherTab.setAttribute('aria-selected', String(showOther));
-    shopItemsTab.setAttribute('tabindex', showOther ? '-1' : '0');
-    shopOtherTab.setAttribute('tabindex', showOther ? '0' : '-1');
-    shopItemsPanel.hidden = showOther;
+    shopCoinTab.setAttribute('aria-selected', String(showCoin));
+    shopItemsTab.setAttribute('tabindex', showOther || showCoin ? '-1' : '0');
+    shopOtherTab.setAttribute('tabindex', !showOther && !showCoin ? '-1' : '0');
+    shopCoinTab.setAttribute('tabindex', showCoin ? '0' : '-1');
+    shopItemsPanel.hidden = showOther || showCoin;
     shopOtherPanel.hidden = !showOther;
-    shopItemsPanel.setAttribute('aria-hidden', String(showOther));
+    shopCoinPanel.hidden = !showCoin;
+    shopItemsPanel.setAttribute('aria-hidden', String(showOther || showCoin));
     shopOtherPanel.setAttribute('aria-hidden', String(!showOther));
-    shopItemsPanel.style.display = showOther ? 'none' : 'grid';
+    shopCoinPanel.setAttribute('aria-hidden', String(!showCoin));
+    shopItemsPanel.style.display = showOther || showCoin ? 'none' : 'grid';
     shopOtherPanel.style.display = showOther ? 'grid' : 'none';
+    shopCoinPanel.style.display = showCoin ? 'grid' : 'none';
   };
   shopItemsTab?.addEventListener('click', () => selectShopTab('items'));
   shopOtherTab?.addEventListener('click', () => selectShopTab('other'));
+  shopCoinTab?.addEventListener('click', () => selectShopTab('coin'));
   document.querySelector('#sanggi-shop-close')?.addEventListener('click', closeShop);
   shopBackdrop?.addEventListener('click', closeShop);
   const closeShopComplete = () => {
@@ -1070,6 +1127,8 @@
   document.querySelector('#sanggi-buy-normal-potion')?.addEventListener('click', () => buyPotion('normal_potion'));
   document.querySelector('#sanggi-buy-advanced-potion')?.addEventListener('click', () => buyPotion('advanced_potion'));
   document.querySelector('#sanggi-buy-legendary-potion')?.addEventListener('click', () => buyPotion('legendary_potion'));
+  document.querySelector('#sanggi-buy-cash-box')?.addEventListener('click', () => buyCoinBox('cash_box'));
+  document.querySelector('#sanggi-buy-weird-cash-box')?.addEventListener('click', () => buyCoinBox('weird_cash_box'));
   const otherShopItems = {
     sanggi_hanbok: ['상기 한복', '1,000,000원'],
     sanggi_spacesuit: ['상기 우주복', '10,000,000원'],
