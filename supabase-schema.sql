@@ -318,15 +318,7 @@ begin
   from public.investment_market
   where id = 1;
 
-  if not new_direction_day
-     and (
-       select last_price_update
-       from public.investment_market
-       where id = 1
-     ) is not distinct from current_bucket then
-    return today;
-  end if;
-
+  perform set_config('app.investment_admin_reset', 'on', true);
   update public.investment_assets
   set current_price = base_price,
       change_pct = 0,
@@ -338,6 +330,16 @@ begin
       delisted_at is null
       or delisted_at <= now() - interval '5 minutes'
     );
+  perform set_config('app.investment_admin_reset', 'off', true);
+
+  if not new_direction_day
+     and (
+       select last_price_update
+       from public.investment_market
+       where id = 1
+     ) is not distinct from current_bucket then
+    return today;
+  end if;
 
   for asset in select * from public.investment_assets order by symbol for update loop
     if not asset.listed and not new_direction_day then
@@ -1225,6 +1227,7 @@ security definer
 set search_path = public
 as $$
 begin
+  perform set_config('app.investment_admin_reset', 'on', true);
   update public.investment_assets
   set current_price = base_price,
       change_pct = 0,
@@ -1237,6 +1240,7 @@ begin
       or delisted_at <= now() - interval '5 minutes'
     );
 
+  perform set_config('app.investment_admin_reset', 'off', true);
   perform public.investment_apply_stock_splits();
 end;
 $$;
