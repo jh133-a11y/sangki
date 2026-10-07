@@ -33,7 +33,8 @@ const shopCategoryByItem = {
   high_missile: 'shop-missile',
   nuclear_missile: 'shop-missile',
   missile_shield: 'shop-protection',
-  nickname_ticket: 'shop-other'
+  nickname_ticket: 'shop-other',
+  gambling_box: 'shop-items'
 };
 document.querySelectorAll('.shop-buy[data-item]').forEach((button) => {
   const category = shopCategoryByItem[button.dataset.item];

@@ -651,7 +651,8 @@ const shopItemIcons = {
   juseong_hanbok: '<img src="juseong-hanbok.png" alt="" aria-hidden="true">',
   juseong_spacesuit: '<img src="juseong-spacesuit.png" alt="" aria-hidden="true">',
   cash_box: '<span class="bag-cash-box-icon">₩</span>',
-  weird_cash_box: '<span class="bag-cash-box-icon bag-cash-box-weird">?</span>'
+  weird_cash_box: '<span class="bag-cash-box-icon bag-cash-box-weird">?</span>',
+  gambling_box: '<span class="bag-cash-box-icon bag-cash-box-gamble">?</span>'
 };
 const shopItemDescriptions = {
   low_missile: '20% 확률로 선택한 유저의 전체 자산 20%를 감소시킵니다.',
@@ -671,6 +672,7 @@ const shopItemDescriptions = {
   juseong_spacesuit: '주성이 착용할 수 있는 우주복입니다.',
   cash_box: '가방에서 바로 개봉하면 투자 현금 1,000,000원~1,000,000,000원을 무작위로 받습니다. 유저를 선택하면 선물할 수 있습니다.',
   weird_cash_box: '가방에서 바로 개봉하거나 유저에게 선물할 수 있습니다. 개봉하면 대상의 총자산이 -30%~+30% 범위에서 무작위로 변합니다.'
+  ,gambling_box: '개봉하면 50% 확률로 전체 자산이 -50% 또는 +100% 변합니다.'
 };
 const shopItemNames = {
   low_missile: '하급 미사일',
@@ -689,7 +691,8 @@ const shopItemNames = {
   juseong_hanbok: '주성 한복',
   juseong_spacesuit: '주성 우주복',
   cash_box: '랜덤 현금 박스',
-  weird_cash_box: '이상한 랜덤 현금 박스'
+  weird_cash_box: '이상한 랜덤 현금 박스',
+  gambling_box: '도박 중독자 상자'
 };
 const validShopItemTypes = new Set(Object.keys(shopItemNames));
 const nonInteractiveBagItemTypes = new Set([
@@ -864,6 +867,23 @@ const useShopItem = async (itemType) => {
     const quantityText = bagDiscardQuantity.value.trim();
     if (targetId && (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n)) {
       bagStatus.textContent = '선물할 수량은 1개 이상의 정수로 입력하세요.';
+      return;
+    }
+    if (itemType === 'gambling_box') {
+      if (!await siteConfirm('도박 중독자 상자를 개봉하시겠습니까?')) return;
+      bagStatus.textContent = '도박 중독자 상자를 개봉하는 중...';
+      try {
+        const result = await callInvestmentRpc('shop_use_gambling_box', {
+          p_client_id: await resolveShopClientId()
+        });
+        bagStatus.textContent = result.message;
+        window.alert(result.message);
+        await loadBag();
+        if (investmentState) await loadInvestmentState();
+      } catch (error) {
+        bagStatus.textContent = error.message;
+        window.alert(`도박 중독자 상자 사용 실패: ${error.message}`);
+      }
       return;
     }
     const giftQuantity = targetId ? quantityText : '1';

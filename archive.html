@@ -21,6 +21,7 @@
       <button class="shop-tab" type="button" role="tab" aria-selected="false" aria-controls="shop-missile">미사일</button>
       <button class="shop-tab" type="button" role="tab" aria-selected="false" aria-controls="shop-protection">보호</button>
       <button class="shop-tab" type="button" role="tab" aria-selected="false" aria-controls="shop-other">기타</button>
+      <button class="shop-tab" type="button" role="tab" aria-selected="false" aria-controls="shop-items">아이템</button>
     </div>
     <section class="shop-products" id="shop-message" role="tabpanel" aria-label="메세지 상품">
       <article class="shop-card">
@@ -116,6 +117,16 @@
         </div>
         <div><span class="shop-price">₩10,000,000</span><button class="shop-buy" data-item="missile_shield" type="button">구매하기</button></div>
       </article>
+      <article class="shop-card">
+        <div>
+          <div class="shop-box-icon shop-box-icon-gamble" aria-hidden="true">?</div>
+          <h2>도박 중독자 상자</h2>
+          <p>개봉하면 50% 확률로 전체 자산이 -50% 또는 +100% 변합니다.</p>
+        </div>
+        <div><span class="shop-price">₩1</span><button class="shop-buy" data-item="gambling_box" type="button">구매하기</button></div>
+      </article>
+    </section>
+    <section class="shop-products" id="shop-items" role="tabpanel" aria-label="아이템 상품" hidden>
     </section>
     <p class="shop-status" id="shop-status" role="status"></p>
   </main>
@@ -127,6 +138,6 @@
     <button class="shop-modal-max" id="shop-modal-max" type="button">보유 현금으로 최대 구매</button>
     <div><button id="shop-confirm-cancel" type="button">취소</button><button id="shop-confirm-ok" type="button">확인</button></div>
   </section>
-  <script src="shop.js?v=16"></script>
+  <script src="shop.js?v=17"></script>
 </body>
 </html>

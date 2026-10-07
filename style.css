@@ -135,6 +135,9 @@ nav a:hover { opacity: .5; }
 .shop-tab { border: 1px solid var(--ink); padding: 9px 15px; background: #fff; color: var(--ink); cursor: pointer; font: 11px var(--mono); }
 .shop-tab:hover, .shop-tab.is-active { background: var(--ink); color: #fff; }
 .shop-products[hidden] { display: none; }
+.shop-box-icon { display: grid; width: 92px; height: 92px; place-items: center; margin-bottom: 20px; border: 3px solid var(--ink); background: #ff5b36; color: #fff; font: 64px/1 var(--mono); transform: rotate(7deg); }
+.shop-box-icon-gamble { background: #d9ff36; color: var(--ink); }
+.bag-cash-box-gamble { background: #d9ff36; color: var(--ink); }
 .shop-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .shop-card { display: flex; min-height: 300px; flex-direction: column; justify-content: space-between; border: 1px solid var(--ink); padding: 18px; background: #fff; box-shadow: 6px 6px 0 var(--ink); }
 .shop-icon { width: 92px; height: 92px; margin-bottom: 20px; }

@@ -931,6 +931,7 @@ begin
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
     'missile_shield', 'nickname_ticket', 'letter',
     'megaphone',
+    'gambling_box',
     'normal_potion', 'advanced_potion', 'legendary_potion',
     'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
     'juseong_spacesuit', 'cash_box', 'weird_cash_box'
@@ -959,6 +960,8 @@ begin
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
     when 'megaphone' then '확성기'
+    when 'gambling_box' then '도박 중독자 상자'
+    when 'gambling_box' then '도박 중독자 상자'
     when 'normal_potion' then '일반 물약'
     when 'advanced_potion' then '고급 물약'
     when 'legendary_potion' then '전설 물약'
@@ -1038,6 +1041,7 @@ begin
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
     'missile_shield', 'nickname_ticket', 'letter',
     'megaphone',
+    'gambling_box',
     'normal_potion', 'advanced_potion', 'legendary_potion',
     'sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok',
     'juseong_spacesuit', 'cash_box', 'weird_cash_box'
@@ -1066,6 +1070,7 @@ begin
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
     when 'megaphone' then '확성기'
+    when 'gambling_box' then '도박 중독자 상자'
     when 'normal_potion' then '일반 물약'
     when 'advanced_potion' then '고급 물약'
     when 'legendary_potion' then '전설 물약'
@@ -2373,7 +2378,8 @@ alter table public.investment_shop_items
     'juseong_hanbok',
     'juseong_spacesuit',
     'cash_box',
-    'weird_cash_box'
+    'weird_cash_box',
+    'gambling_box'
   ));
 
 create table if not exists public.investment_shop_messages (
@@ -2538,6 +2544,7 @@ begin
           when 'juseong_spacesuit' then '주성 우주복'
           when 'cash_box' then '랜덤 현금 박스'
           when 'weird_cash_box' then '이상한 랜덤 현금 박스'
+          when 'gambling_box' then '도박 중독자 상자'
           else '편지'
         end,
         'quantity', quantity
@@ -2615,6 +2622,7 @@ begin
           when 'juseong_spacesuit' then '주성 우주복'
           when 'cash_box' then '랜덤 현금 박스'
           when 'weird_cash_box' then '이상한 랜덤 현금 박스'
+          when 'gambling_box' then '도박 중독자 상자'
           else '편지'
         end,
         'quantity', quantity
@@ -2674,6 +2682,7 @@ begin
     ('juseong_hanbok', 2000000::bigint, '주성 한복'),
     ('juseong_spacesuit', 20000000::bigint, '주성 우주복'),
     ('letter', 10000::bigint, '편지')
+    ,('gambling_box', 1::bigint, '도박 중독자 상자')
   ) items(item_type, price, name)
   where item_type = p_item_type;
 
@@ -2815,6 +2824,77 @@ begin
   return jsonb_build_object(
     'user_count', v_user_count,
     'message', v_message
+  );
+end;
+$$;
+
+create or replace function public.shop_use_gambling_box(
+  p_client_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_quantity bigint;
+  v_factor numeric;
+  v_percent integer;
+  v_new_cash bigint;
+begin
+  select quantity
+  into v_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'gambling_box'
+  for update;
+
+  if coalesce(v_quantity, 0) < 1 then
+    raise exception '가방에 도박 중독자 상자가 없습니다.';
+  end if;
+
+  update public.investment_shop_items
+  set quantity = quantity - 1
+  where client_id = p_client_id
+    and item_type = 'gambling_box';
+
+  delete from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = 'gambling_box'
+    and quantity <= 0;
+
+  if random() < 0.5 then
+    v_percent := -50;
+  else
+    v_percent := 100;
+  end if;
+
+  v_factor := 1 + v_percent / 100.0;
+
+  update public.investment_users
+  set cash = greatest(0, round(cash * v_factor))
+  where client_id = p_client_id
+  returning cash into v_new_cash;
+
+  if v_new_cash is null then
+    raise exception '투자 유저 정보를 찾을 수 없습니다.';
+  end if;
+
+  update public.investment_holdings
+  set quantity = greatest(0, floor(quantity * v_factor)),
+      invested_amount = greatest(0, round(invested_amount * v_factor))
+  where client_id = p_client_id;
+
+  delete from public.investment_holdings
+  where client_id = p_client_id
+    and quantity <= 0;
+
+  return jsonb_build_object(
+    'percent', v_percent,
+    'message',
+      '도박 중독자 상자를 개봉해 전체 자산이 '
+      || case when v_percent >= 0 then '+' else '' end
+      || v_percent || '% 변했습니다.'
   );
 end;
 $$;
@@ -3618,6 +3698,7 @@ revoke all on function public.shop_discard_item(uuid, text, bigint) from public;
 revoke all on function public.shop_send_letter(uuid, uuid, text) from public;
 revoke all on function public.shop_change_nickname(uuid, uuid, text) from public;
 revoke all on function public.shop_use_megaphone(uuid, text) from public;
+revoke all on function public.shop_use_gambling_box(uuid) from public;
 revoke all on function public.investment_link_account(uuid, uuid) from public;
 grant execute on function public.shop_get_state(uuid) to anon, authenticated;
 grant execute on function public.shop_get_state(uuid, text) to anon, authenticated;
@@ -3628,6 +3709,7 @@ grant execute on function public.shop_purchase(uuid, text) to anon, authenticate
 grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
 grant execute on function public.shop_use_megaphone(uuid, text) to anon, authenticated;
+grant execute on function public.shop_use_gambling_box(uuid) to anon, authenticated;
 grant execute on function public.shop_use_megaphone(uuid, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
@@ -4262,6 +4344,7 @@ grant execute on function public.shop_send_letter(uuid, uuid, text) to anon, aut
 grant execute on function public.shop_change_nickname(uuid, uuid, text) to anon, authenticated;
 grant execute on function public.shop_purchase_coin_box(uuid, text, bigint) to anon, authenticated;
 grant execute on function public.shop_use_cash_box(uuid, text, uuid, bigint) to anon, authenticated;
+grant execute on function public.shop_use_gambling_box(uuid) to anon, authenticated;
 grant execute on function public.investment_link_account(uuid, uuid) to anon, authenticated;
 
 notify pgrst, 'reload schema';

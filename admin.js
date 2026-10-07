@@ -25,6 +25,7 @@ const adminItemIcons = {
   juseong_spacesuit: '<img src="juseong-spacesuit.png" alt="" aria-hidden="true">',
   cash_box: '<span class="bag-cash-box-icon">₩</span>',
   weird_cash_box: '<span class="bag-cash-box-icon bag-cash-box-weird">?</span>'
+  ,gambling_box: '<span class="bag-cash-box-icon bag-cash-box-gamble">?</span>'
 };
 
 const itemDefinitions = [
@@ -32,6 +33,7 @@ const itemDefinitions = [
   ['high_missile', '고급 미사일'], ['nuclear_missile', '핵 미사일'],
   ['missile_shield', '미사일 방어막'], ['nickname_ticket', '닉네임 변경권'],
   ['letter', '편지'], ['normal_potion', '일반 물약'],
+  ['gambling_box', '도박 중독자 상자'],
   ['megaphone', '확성기'],
   ['advanced_potion', '고급 물약'], ['legendary_potion', '전설 물약'],
   ['sanggi_hanbok', '상기 한복'], ['sanggi_spacesuit', '상기 우주복'],
