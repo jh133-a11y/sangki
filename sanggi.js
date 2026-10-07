@@ -570,7 +570,8 @@
         maxTop: Math.max(0, mainBounds.height - character.offsetHeight),
         startLeft: characterBounds.left - mainBounds.left,
         startTop: characterBounds.top - mainBounds.top,
-        moved: false
+        moved: false,
+        movedBeforeLongPress: false
       };
       press.timer = window.setTimeout(() => {
         characterPress = null;
@@ -579,83 +580,48 @@
         character.setPointerCapture?.(event.pointerId);
       }, longPressDelay);
       characterPress = press;
+      character.setPointerCapture?.(event.pointerId);
     });
     character.addEventListener('pointermove', moveCharacter);
-    character.addEventListener('pointerup', stopCharacterDrag);
-    character.addEventListener('pointerup', () => {
-      if (!characterPress) return;
-      clearPress(characterPress);
-      characterPress = null;
-      collectCoin(clickReward());
+    character.addEventListener('pointerup', (event) => {
+      const press = characterPress;
+      if (press) {
+        clearPress(press);
+        characterPress = null;
+        if (!press.movedBeforeLongPress) collectCoin(clickReward());
+      }
+      if (dragState) stopCharacterDrag(event);
     });
     character.addEventListener('pointercancel', (event) => {
       clearPress(characterPress);
       characterPress = null;
-      if (event.pointerType !== 'touch') stopCharacterDrag(null, true);
+      stopCharacterDrag(null, true);
     });
-    character.addEventListener('touchmove', (event) => {
-      if (!dragState || !event.touches[0]) return;
-      event.preventDefault();
-      moveCharacter(event.touches[0]);
-    }, { passive: false });
-    character.addEventListener('touchend', (event) => {
-      const touch = event.changedTouches[0];
-      if (characterPress) {
+    window.addEventListener('pointermove', (event) => {
+      if (characterPress
+        && Math.hypot(event.clientX - characterPress.clientX, event.clientY - characterPress.clientY) > 16) {
         clearPress(characterPress);
-        characterPress = null;
-        collectCoin(clickReward());
+        characterPress.movedBeforeLongPress = true;
       }
-      if (dragState && touch) stopCharacterDrag(touch);
+      if (!dragState) return;
+      event.preventDefault();
+      moveCharacter(event);
     }, { passive: false });
-    character.addEventListener('touchcancel', () => {
+    window.addEventListener('pointerup', (event) => {
+      const press = characterPress;
+      if (press) {
+        clearPress(press);
+        characterPress = null;
+        if (!press.movedBeforeLongPress) collectCoin(clickReward());
+      }
+      if (dragState) stopCharacterDrag(event);
+    });
+    window.addEventListener('pointercancel', () => {
       clearPress(characterPress);
       characterPress = null;
-      if (dragState) stopCharacterDrag(null, true);
+      stopCharacterDrag(null, true);
     });
-      window.addEventListener('pointermove', (event) => {
-        if (characterPress
-          && Math.hypot(event.clientX - characterPress.clientX, event.clientY - characterPress.clientY) > 8) {
-          clearPress(characterPress);
-          characterPress = null;
-        }
-        if (!dragState) return;
-        event.preventDefault();
-        moveCharacter(event);
-      }, { passive: false });
-      window.addEventListener('pointerup', (event) => {
-        clearPress(characterPress);
-        characterPress = null;
-        if (dragState) stopCharacterDrag(event);
-      });
-      window.addEventListener('pointercancel', (event) => {
-        if (dragState && event.pointerType !== 'touch') stopCharacterDrag(null, true);
-      });
-      window.addEventListener('touchmove', (event) => {
-        if (characterPress
-          && event.touches[0]
-          && Math.hypot(event.touches[0].clientX - characterPress.clientX, event.touches[0].clientY - characterPress.clientY) > 8) {
-          clearPress(characterPress);
-          characterPress = null;
-        }
-        if (!dragState || !event.touches[0]) return;
-        event.preventDefault();
-        moveCharacter(event.touches[0]);
-      }, { passive: false });
-      window.addEventListener('touchend', (event) => {
-        const touch = event.changedTouches[0];
-        if (characterPress) {
-          clearPress(characterPress);
-          characterPress = null;
-          collectCoin(clickReward());
-        }
-        if (dragState && touch) stopCharacterDrag(touch);
-      }, { passive: false });
-      window.addEventListener('touchcancel', () => {
-        clearPress(characterPress);
-        characterPress = null;
-        if (dragState) stopCharacterDrag(null, true);
-      });
-    }
+  }
 
   if (companion) {
     disableNativeImageGestures(companion);
@@ -679,7 +645,8 @@
         maxTop: Math.max(0, mainBounds.height - companion.offsetHeight),
         startLeft: bounds.left - mainBounds.left,
         startTop: bounds.top - mainBounds.top,
-        moved: false
+        moved: false,
+        movedBeforeLongPress: false
       };
       press.timer = window.setTimeout(() => {
         companionPress = null;
@@ -688,29 +655,29 @@
         companion.setPointerCapture?.(event.pointerId);
       }, longPressDelay);
       companionPress = press;
+      companion.setPointerCapture?.(event.pointerId);
     });
     companion.addEventListener('pointermove', (event) => {
       if (companionPress) {
         if (Math.hypot(
           event.clientX - companionPress.clientX,
           event.clientY - companionPress.clientY
-        ) > 8) {
+        ) > 16) {
           clearPress(companionPress);
-          companionPress = null;
-          return;
+          companionPress.movedBeforeLongPress = true;
         }
       }
       moveCompanion(event);
     });
     companion.addEventListener('pointerup', (event) => {
-      const wasPressed = Boolean(companionPress);
-      if (companionPress) {
-        clearPress(companionPress);
+      const press = companionPress;
+      if (press) {
+        clearPress(press);
         companionPress = null;
       }
       if (companionDragState) {
         stopCompanionDrag(event);
-      } else if (wasPressed) {
+      } else if (press && !press.movedBeforeLongPress) {
         collectCoin(clickReward());
       }
     });
@@ -724,10 +691,9 @@
         if (Math.hypot(
           event.clientX - companionPress.clientX,
           event.clientY - companionPress.clientY
-        ) > 8) {
+        ) > 16) {
           clearPress(companionPress);
-          companionPress = null;
-          return;
+          companionPress.movedBeforeLongPress = true;
         }
       }
       if (!companionDragState) return;
@@ -735,39 +701,13 @@
       moveCompanion(event);
     }, { passive: false });
     window.addEventListener('pointerup', (event) => {
+      const press = companionPress;
       clearPress(companionPress);
       companionPress = null;
       if (companionDragState) stopCompanionDrag(event);
-    });
-    window.addEventListener('touchmove', (event) => {
-      if (companionPress && event.touches[0]) {
-        if (Math.hypot(
-          event.touches[0].clientX - companionPress.clientX,
-          event.touches[0].clientY - companionPress.clientY
-        ) > 8) {
-          clearPress(companionPress);
-          companionPress = null;
-          return;
-        }
-      }
-      if (!companionDragState || !event.touches[0]) return;
-      event.preventDefault();
-      moveCompanion(event.touches[0]);
-    }, { passive: false });
-    window.addEventListener('touchend', (event) => {
-      const wasPressed = Boolean(companionPress);
-      clearPress(companionPress);
-      companionPress = null;
-      if (companionDragState && event.changedTouches[0]) {
-        stopCompanionDrag(event.changedTouches[0]);
-      } else if (wasPressed) {
+      else if (press && !press.movedBeforeLongPress) {
         collectCoin(clickReward());
       }
-    }, { passive: false });
-    window.addEventListener('touchcancel', () => {
-      clearPress(companionPress);
-      companionPress = null;
-      stopCompanionDrag(null, true);
     });
   }
 
