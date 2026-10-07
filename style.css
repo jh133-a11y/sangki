@@ -1041,9 +1041,22 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
     left: 18px;
   }
   .sanggi-potion-bar {
-    right: 15px;
-    bottom: 184px;
-    width: 142px;
+    right: 10px;
+    bottom: 198px;
+    width: 118px;
+    gap: 5px;
+  }
+  .sanggi-potion-button {
+    gap: 5px;
+    padding: 6px 7px;
+    font-size: 10px;
+  }
+  .sanggi-potion-icon {
+    width: 23px;
+    height: 31px;
+  }
+  .sanggi-potion-button strong {
+    font-size: 9px;
   }
   .sanggi-shop-card { grid-template-columns: 48px 1fr; }
   .sanggi-shop-buy { grid-column: 1 / -1; width: 100%; }
