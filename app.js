@@ -63,7 +63,8 @@ const authenticateAccount = async (username, password) => {
     } catch {
       detail = '';
     }
-    throw new Error(detail || '기존 투자 정보를 계정에 연결하지 못했습니다.');
+    console.error('investment_link_account failed:', detail || linkResponse.status);
+    accountSession.linkError = detail || `연결 요청 실패 (${linkResponse.status})`;
   }
   localStorage.setItem(investmentClientKey, accountSession.account_id);
   updateAccountButton();
