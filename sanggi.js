@@ -17,6 +17,7 @@
   const maxBreathLevel = 3000;
   const maxAutoLevel = 50;
   const maxCompanionLevel = 3000;
+  const shopNicknameKey = 'sangki-investor-nickname';
 
   if (!main || !balance) return;
 
@@ -125,6 +126,57 @@
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || result.hint || '상기 키우기 정보를 저장하지 못했습니다.');
     return result;
+  };
+
+  const shopModal = document.querySelector('#sanggi-shop-modal');
+  const shopBackdrop = document.querySelector('#sanggi-shop-backdrop');
+  const shopCash = document.querySelector('#sanggi-shop-cash');
+  const shopStatus = document.querySelector('#sanggi-shop-status');
+  const shopSession = () => getSession();
+  const loadShopCash = async () => {
+    const session = shopSession();
+    if (!session?.account_id) {
+      shopCash.textContent = '로그인 후 구매할 수 있습니다.';
+      return;
+    }
+    const state = await remoteRpc('shop_get_state', {
+      p_client_id: session.account_id,
+      p_nickname: localStorage.getItem(shopNicknameKey) || null
+    });
+    shopCash.textContent = `투자 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
+  };
+  const closeShop = () => {
+    shopModal.hidden = true;
+    shopBackdrop.hidden = true;
+  };
+  const buyPotion = async (type) => {
+    const session = shopSession();
+    if (!session?.account_id) {
+      shopStatus.textContent = '로그인 후 물약을 구매할 수 있습니다.';
+      return;
+    }
+    const button = document.querySelector(
+      type === 'normal_potion' ? '#sanggi-buy-normal-potion' : '#sanggi-buy-advanced-potion'
+    );
+    button.disabled = true;
+    shopStatus.textContent = '구매 처리 중...';
+    try {
+      await remoteRpc('shop_purchase', {
+        p_client_id: session.account_id,
+        p_item_type: type,
+        p_quantity: 1
+      });
+      if (type === 'normal_potion') normalPotions = Math.min(100, normalPotions + 1);
+      else advancedPotions = Math.min(100, advancedPotions + 1);
+      saveState();
+      renderPotions();
+      await loadShopCash();
+      shopStatus.textContent = '물약을 구매했습니다.';
+    } catch (error) {
+      shopStatus.textContent = error.message || '물약 구매에 실패했습니다.';
+    } finally {
+      button.disabled = false;
+    }
   };
 
   const getLocalPosition = () => {
@@ -671,8 +723,17 @@
   normalPotionButton.addEventListener('click', () => usePotion('normal'));
   advancedPotionButton.addEventListener('click', () => usePotion('advanced'));
   document.querySelector('#sanggi-shop-button')?.addEventListener('click', () => {
-    window.location.href = 'archive.html';
+    shopStatus.textContent = '';
+    shopModal.hidden = false;
+    shopBackdrop.hidden = false;
+    loadShopCash().catch((error) => {
+      shopCash.textContent = error.message || '투자 현금을 불러오지 못했습니다.';
+    });
   });
+  document.querySelector('#sanggi-shop-close')?.addEventListener('click', closeShop);
+  shopBackdrop?.addEventListener('click', closeShop);
+  document.querySelector('#sanggi-buy-normal-potion')?.addEventListener('click', () => buyPotion('normal_potion'));
+  document.querySelector('#sanggi-buy-advanced-potion')?.addEventListener('click', () => buyPotion('advanced_potion'));
 
   if (character) {
     disableNativeImageGestures(character);

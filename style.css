@@ -505,6 +505,52 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-potion-advanced { background: #d9ff36; }
 .sanggi-potion-button:hover { filter: brightness(.94); }
 .sanggi-potion-button:disabled { cursor: not-allowed; opacity: .45; }
+.sanggi-shop-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(42, 39, 48, .5);
+}
+.sanggi-shop-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 31;
+  width: min(620px, calc(100% - 28px));
+  max-height: calc(100% - 28px);
+  overflow: auto;
+  padding: 28px;
+  transform: translate(-50%, -50%);
+  background: #fff7dc;
+  color: #2a2730;
+  box-shadow: 8px 8px 0 #2a2730;
+}
+.sanggi-shop-cash { margin: 12px 0 18px; font: 11px var(--mono); }
+.sanggi-shop-list { display: grid; gap: 12px; }
+.sanggi-shop-card {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #2a2730;
+  background: #fff;
+}
+.sanggi-shop-potion-icon { width: 48px; height: 64px; }
+.sanggi-shop-card h3 { margin: 0 0 4px; font-size: 18px; }
+.sanggi-shop-card p { margin: 0 0 6px; font: 10px/1.4 var(--mono); }
+.sanggi-shop-card strong { font: 11px var(--mono); }
+.sanggi-shop-buy {
+  border: 1px solid #2a2730;
+  padding: 9px 11px;
+  background: #2a2730;
+  color: #fff7dc;
+  cursor: pointer;
+  font: 10px var(--mono);
+}
+.sanggi-shop-buy:hover { background: #ffb02e; color: #2a2730; }
+.sanggi-shop-buy:disabled { cursor: wait; opacity: .45; }
+.sanggi-shop-status { min-height: 16px; margin: 15px 0 0; color: #ff5b36; font: 10px var(--mono); }
 .sanggi-coin-popup {
   position: absolute;
   z-index: 20;
@@ -999,6 +1045,8 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
     bottom: 184px;
     width: 142px;
   }
+  .sanggi-shop-card { grid-template-columns: 48px 1fr; }
+  .sanggi-shop-buy { grid-column: 1 / -1; width: 100%; }
   .sanggi-ability-modal { padding: 22px 16px; }
   .sanggi-ability-card { grid-template-columns: 1fr; }
   .sanggi-upgrade-button { width: 100%; }
