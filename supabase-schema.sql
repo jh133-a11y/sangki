@@ -159,6 +159,30 @@ create table if not exists public.investment_assets (
   listed boolean not null default true
 );
 
+create or replace function public.investment_next_direction(
+  p_previous_pct numeric,
+  p_daily_direction integer
+)
+returns integer
+language plpgsql
+as $$
+begin
+  if p_previous_pct <= -10 and random() < 0.7 then
+    return 1;
+  end if;
+
+  if p_previous_pct = 0 then
+    return p_daily_direction;
+  end if;
+
+  if random() < 0.7 then
+    return sign(p_previous_pct)::integer;
+  end if;
+
+  return -sign(p_previous_pct)::integer;
+end;
+$$;
+
 create table if not exists public.investment_users (
   client_id uuid primary key,
   nickname text not null unique check (char_length(nickname) between 1 and 24),
@@ -331,11 +355,7 @@ begin
         pct := floor(random() * 101) + 100;
         pct_two := floor(random() * 101) + 100;
       else
-        movement_direction := case
-          when previous_pct = 0 then daily_direction
-          when random() < 0.7 then sign(previous_pct)::integer
-          else -sign(previous_pct)::integer
-        end;
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
         step := floor(random() * 5) + 1;
         step_two := floor(random() * 5) + 1;
         pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
@@ -352,11 +372,7 @@ begin
       daily_direction := (direction_state_value->>'SAMSUNG_MICROWAVE')::integer;
       min_pct := -15;
       max_pct := 15;
-      movement_direction := case
-        when previous_pct = 0 then daily_direction
-        when random() < 0.7 then sign(previous_pct)::integer
-        else -sign(previous_pct)::integer
-      end;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
       step := floor(random() * 5) + 1;
       step_two := floor(random() * 5) + 1;
       pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
@@ -374,11 +390,7 @@ begin
          and daily_direction > 0 then
         pct := floor(random() * 501) + 500;
       else
-        movement_direction := case
-          when previous_pct = 0 then daily_direction
-          when random() < 0.7 then sign(previous_pct)::integer
-          else -sign(previous_pct)::integer
-        end;
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
         step := floor(random() * 5) + 1;
         pct := greatest(-30, least(30, previous_pct + movement_direction * step));
         if pct = 0 then pct := movement_direction; end if;
@@ -395,11 +407,7 @@ begin
       if random() < 0.2 then
         pct := floor(random() * 201) + 300;
       else
-        movement_direction := case
-          when previous_pct = 0 then daily_direction
-          when random() < 0.7 then sign(previous_pct)::integer
-          else -sign(previous_pct)::integer
-        end;
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
         step := floor(random() * 100) + 1;
         pct := greatest(-100, least(100, previous_pct + movement_direction * step));
         if pct = 0 then pct := movement_direction; end if;
@@ -407,22 +415,14 @@ begin
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'KOREA_SANGI_INDEX' then
       daily_direction := (direction_state_value->>'KOREA_SANGI_INDEX')::integer;
-      movement_direction := case
-        when previous_pct = 0 then daily_direction
-        when random() < 0.7 then sign(previous_pct)::integer
-        else -sign(previous_pct)::integer
-      end;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
       step := floor(random() * 3) + 1;
       pct := greatest(-1, least(3, previous_pct + movement_direction * step));
       if pct = 0 then pct := movement_direction; end if;
       next_price := round(asset.current_price * (1 + pct / 100));
     elsif asset.symbol = 'SANGI_AI' then
       daily_direction := (direction_state_value->>'SANGI_AI')::integer;
-      movement_direction := case
-        when previous_pct = 0 then daily_direction
-        when random() < 0.7 then sign(previous_pct)::integer
-        else -sign(previous_pct)::integer
-      end;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
       step := floor(random() * 5) + 1;
       pct := greatest(-10, least(20, previous_pct + movement_direction * step));
       if pct = 0 then pct := movement_direction; end if;
@@ -433,11 +433,7 @@ begin
          and daily_direction > 0 then
         pct := floor(random() * 101) + 100;
       else
-        movement_direction := case
-          when previous_pct = 0 then daily_direction
-          when random() < 0.7 then sign(previous_pct)::integer
-          else -sign(previous_pct)::integer
-        end;
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
         step := floor(random() * 5) + 1;
         pct := greatest(-30, least(50, previous_pct + movement_direction * step));
         if pct = 0 then pct := movement_direction; end if;
@@ -850,6 +846,7 @@ begin
       movement_pct := -(floor(random() * (settings.crash_max - settings.crash_min + 1)) + settings.crash_min);
     else
       movement_direction := case
+        when old.change_pct <= -10 and random() < 0.7 then 1
         when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
         when old.change_pct <> 0 then -sign(old.change_pct)::integer
         else case when random() < 0.5 then -1 else 1 end
@@ -875,6 +872,7 @@ begin
   end if;
 
   movement_direction := case
+    when old.change_pct <= -10 and random() < 0.7 then 1
     when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
     when old.change_pct <> 0 then -sign(old.change_pct)::integer
     else case when random() < 0.5 then -1 else 1 end
