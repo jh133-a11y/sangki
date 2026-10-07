@@ -462,6 +462,10 @@ const messageModal = document.querySelector('#message-modal');
 const messageBackdrop = document.querySelector('#message-backdrop');
 const messageClose = document.querySelector('#message-close');
 const messageList = document.querySelector('#message-list');
+const messagePagination = document.querySelector('#message-pagination');
+const MESSAGE_PAGE_SIZE = 5;
+let messageItems = [];
+let messagePage = 1;
 let activeShopClientId = null;
 
 const getShopClientId = () => {
@@ -644,8 +648,19 @@ const loadMessages = async () => {
   const result = await callInvestmentRpc('shop_get_messages', {
     p_client_id: await resolveShopClientId()
   });
-  messageList.replaceChildren(...(result.messages.length
-    ? result.messages.map((message) => {
+  messageItems = result.messages || [];
+  messagePage = 1;
+  renderMessages();
+  messageCount.textContent = '0';
+};
+
+const renderMessages = () => {
+  const totalPages = Math.max(1, Math.ceil(messageItems.length / MESSAGE_PAGE_SIZE));
+  messagePage = Math.min(Math.max(messagePage, 1), totalPages);
+  const start = (messagePage - 1) * MESSAGE_PAGE_SIZE;
+  const pageItems = messageItems.slice(start, start + MESSAGE_PAGE_SIZE);
+  messageList.replaceChildren(...(pageItems.length
+    ? pageItems.map((message) => {
       const card = document.createElement('article');
       card.className = 'message-card';
       card.textContent = message.message;
@@ -657,7 +672,32 @@ const loadMessages = async () => {
     : [Object.assign(document.createElement('p'), {
       textContent: '새 메시지가 없습니다.'
     })]));
-  messageCount.textContent = '0';
+  if (!messageItems.length) {
+    messagePagination.replaceChildren();
+    return;
+  }
+  const previous = document.createElement('button');
+  previous.type = 'button';
+  previous.className = 'message-page-button';
+  previous.textContent = '← 이전';
+  previous.disabled = messagePage === 1;
+  previous.addEventListener('click', () => {
+    messagePage -= 1;
+    renderMessages();
+  });
+  const pageNumber = document.createElement('span');
+  pageNumber.className = 'message-page-number';
+  pageNumber.textContent = `${messagePage} / ${totalPages}`;
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'message-page-button';
+  next.textContent = '다음 →';
+  next.disabled = messagePage === totalPages;
+  next.addEventListener('click', () => {
+    messagePage += 1;
+    renderMessages();
+  });
+  messagePagination.replaceChildren(previous, pageNumber, next);
 };
 
 messageButton.addEventListener('click', async () => {

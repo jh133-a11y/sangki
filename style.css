@@ -72,6 +72,11 @@ nav a:hover { opacity: .5; }
 .message-list { display: grid; gap: 8px; }
 .message-card { border: 1px solid var(--ink); padding: 12px; background: #fff; font: 11px/1.55 var(--mono); }
 .message-card time { display: block; margin-top: 7px; color: #777; font-size: 9px; }
+.message-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; }
+.message-page-button { border: 1px solid var(--ink); padding: 6px 8px; background: transparent; color: var(--ink); cursor: pointer; font: 9px var(--mono); }
+.message-page-button:hover:not(:disabled) { background: var(--ink); color: var(--acid); }
+.message-page-button:disabled { cursor: not-allowed; opacity: .35; }
+.message-page-number { min-width: 32px; text-align: center; font: 10px var(--mono); }
 .bag-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(23,23,23,.35); }
 .bag-modal { position: fixed; top: 50%; left: 50%; z-index: 51; width: min(560px, calc(100% - 30px)); max-height: 85vh; overflow: auto; transform: translate(-50%, -50%); padding: 28px; background: #e6e6e6; box-shadow: 8px 8px 0 var(--ink); }
 .bag-modal h2 { margin: 0 0 8px; font-size: 34px; }
