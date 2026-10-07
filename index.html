@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
   <div class="noise"></div>
@@ -87,6 +87,30 @@
             <button class="investment-admin-button" id="investment-admin-button" type="button">관리자 모드</button>
             <div class="investment-admin-panel" id="investment-admin-panel" hidden>
               <p>랭킹 유저에게 지급할 금액을 입력하세요.</p>
+              <div class="investment-admin-market">
+                <label>종목 초기화
+                  <select id="admin-asset-select"></select>
+                </label>
+                <button id="admin-reset-asset" type="button">개별 가격 초기화</button>
+                <button id="admin-reset-all-assets" type="button">모든 가격 초기화</button>
+                <label>급등주 일반 변동폭
+                  <input id="admin-surge-normal-max" type="number" min="1" max="100" value="30">
+                </label>
+                <label>급등 확률(%)
+                  <input id="admin-surge-chance" type="number" min="0" max="100" value="10">
+                </label>
+                <label>급등 범위(%)
+                  <span><input id="admin-surge-min" type="number" min="1" max="10000" value="200"> ~ <input id="admin-surge-max" type="number" min="1" max="10000" value="2000"></span>
+                </label>
+                <label>급등 후 급락 확률(%)
+                  <input id="admin-crash-chance" type="number" min="0" max="100" value="60">
+                </label>
+                <label>급락 범위(%)
+                  <span><input id="admin-crash-min" type="number" min="1" max="100" value="50"> ~ <input id="admin-crash-max" type="number" min="1" max="100" value="90"></span>
+                </label>
+                <button id="admin-save-volatility" type="button">변동성 저장</button>
+                <p id="admin-market-status" role="status"></p>
+              </div>
               <span class="investment-admin-active">관리자 모드 활성</span>
             </div>
             <ol id="investment-ranking-list"><li class="ranking-empty">아직 투자자가 없습니다.</li></ol>
@@ -182,6 +206,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>

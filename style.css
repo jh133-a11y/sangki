@@ -145,6 +145,14 @@ section { padding: 120px 0; }
 .investment-admin-panel { margin-top: 10px; padding: 9px; background: rgba(23,23,23,.08); font: 10px/1.5 var(--mono); }
 .investment-admin-panel p { margin: 0 0 5px; }
 .investment-admin-active { color: var(--orange); }
+.investment-admin-market { display: grid; gap: 7px; margin: 12px 0; padding-top: 10px; border-top: 1px solid rgba(23,23,23,.2); }
+.investment-admin-market label { display: grid; gap: 4px; }
+.investment-admin-market input, .investment-admin-market select { min-width: 0; border: 1px solid var(--ink); padding: 5px; background: transparent; color: var(--ink); font: 10px var(--mono); }
+.investment-admin-market span { display: flex; align-items: center; gap: 4px; }
+.investment-admin-market span input { width: 70px; }
+.investment-admin-market button { border: 1px solid var(--ink); padding: 7px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
+.investment-admin-market button:hover { background: var(--orange); color: var(--ink); }
+.investment-admin-market [role="status"] { min-height: 16px; color: var(--orange); }
 .investment-ranking li:has(.ranking-grant) { grid-template-columns: 28px 1fr auto; }
 .ranking-grant { grid-column: 2 / -1; display: flex; gap: 5px; }
 .ranking-grant input { min-width: 0; width: 90px; border: 1px solid var(--ink); padding: 6px; background: transparent; color: var(--ink); font: 10px var(--mono); }

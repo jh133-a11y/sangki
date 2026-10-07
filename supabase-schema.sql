@@ -683,6 +683,228 @@ grant execute on function public.investment_trade(uuid, text, text, integer) to 
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_adjust_cash(text, uuid, bigint) to anon;
 
+alter table public.investment_assets
+  add column if not exists surge_spike boolean not null default false;
+alter table public.investment_assets
+  add column if not exists split_notice boolean not null default false;
+alter table public.investment_assets
+  add column if not exists was_delisted boolean not null default false;
+alter table public.investment_assets
+  add column if not exists delisted_at timestamptz;
+
+create table if not exists public.investment_surge_settings (
+  id integer primary key check (id = 1),
+  normal_max numeric not null default 30,
+  spike_chance numeric not null default 10,
+  spike_min numeric not null default 200,
+  spike_max numeric not null default 2000,
+  crash_chance numeric not null default 60,
+  crash_min numeric not null default 50,
+  crash_max numeric not null default 90
+);
+
+insert into public.investment_surge_settings (id)
+values (1)
+on conflict (id) do nothing;
+
+create or replace function public.investment_admin_reset_asset(
+  p_admin_password text,
+  p_symbol text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  perform 1 from public.investment_assets where symbol = p_symbol for update;
+  if not found then
+    raise exception '초기화할 종목을 찾을 수 없습니다.';
+  end if;
+
+  perform set_config('app.investment_admin_reset', 'on', true);
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      surge_spike = false,
+      split_notice = false,
+      was_delisted = false,
+      delisted_at = null
+  where symbol = p_symbol;
+  perform set_config('app.investment_admin_reset', 'off', true);
+  return true;
+end;
+$$;
+
+create or replace function public.investment_admin_reset_all_assets(
+  p_admin_password text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+
+  perform set_config('app.investment_admin_reset', 'on', true);
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      surge_spike = false,
+      split_notice = false,
+      was_delisted = false,
+      delisted_at = null;
+  update public.investment_market
+  set last_price_update =
+        date_trunc('hour', now())
+        + make_interval(mins => (floor(extract(minute from now()) / 5) * 5)::integer)
+  where id = 1;
+  perform set_config('app.investment_admin_reset', 'off', true);
+  return true;
+end;
+$$;
+
+create or replace function public.investment_admin_set_surge_volatility(
+  p_admin_password text,
+  p_normal_max numeric,
+  p_spike_chance numeric,
+  p_spike_min numeric,
+  p_spike_max numeric,
+  p_crash_chance numeric,
+  p_crash_min numeric,
+  p_crash_max numeric
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_admin_password <> '8170' then
+    raise exception '관리자 비밀번호가 틀렸습니다.';
+  end if;
+  if p_normal_max < 1 or p_normal_max > 100
+     or p_spike_chance < 0 or p_spike_chance > 100
+     or p_spike_min < 1 or p_spike_min > p_spike_max
+     or p_crash_chance < 0 or p_crash_chance > 100
+     or p_crash_min < 1 or p_crash_min > p_crash_max
+     or p_crash_max > 100 then
+    raise exception '변동성 값의 범위가 올바르지 않습니다.';
+  end if;
+
+  insert into public.investment_surge_settings (
+    id, normal_max, spike_chance, spike_min, spike_max,
+    crash_chance, crash_min, crash_max
+  )
+  values (
+    1, p_normal_max, p_spike_chance, p_spike_min, p_spike_max,
+    p_crash_chance, p_crash_min, p_crash_max
+  )
+  on conflict (id) do update set
+    normal_max = excluded.normal_max,
+    spike_chance = excluded.spike_chance,
+    spike_min = excluded.spike_min,
+    spike_max = excluded.spike_max,
+    crash_chance = excluded.crash_chance,
+    crash_min = excluded.crash_min,
+    crash_max = excluded.crash_max;
+  return true;
+end;
+$$;
+
+create or replace function public.apply_surge_stock_volatility()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  settings public.investment_surge_settings%rowtype;
+  movement_direction integer;
+  movement_pct numeric;
+  next_price bigint;
+begin
+  if current_setting('app.investment_admin_reset', true) = 'on'
+     or new.symbol not in (
+       'SURGE_STOCK', 'CURRENT_SURGE_STOCK', 'DONGHWA_SURGE_STOCK',
+       'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK'
+     ) then
+    return new;
+  end if;
+
+  select * into settings
+  from public.investment_surge_settings
+  where id = 1;
+
+  if old.surge_spike then
+    if random() < settings.crash_chance / 100 then
+      movement_pct := -(floor(random() * (settings.crash_max - settings.crash_min + 1)) + settings.crash_min);
+    else
+      movement_direction := case
+        when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
+        when old.change_pct <> 0 then -sign(old.change_pct)::integer
+        else case when random() < 0.5 then -1 else 1 end
+      end;
+      movement_pct := movement_direction * (floor(random() * settings.normal_max) + 1);
+    end if;
+    next_price := round(old.current_price * (1 + movement_pct / 100));
+    new.current_price := greatest(next_price, 0);
+    new.change_pct := movement_pct;
+    new.listed := next_price >= 100;
+    new.surge_spike := false;
+    return new;
+  end if;
+
+  if random() < settings.spike_chance / 100 then
+    movement_pct := floor(random() * (settings.spike_max - settings.spike_min + 1)) + settings.spike_min;
+    next_price := round(old.current_price * (1 + movement_pct / 100));
+    new.current_price := next_price;
+    new.change_pct := movement_pct;
+    new.listed := true;
+    new.surge_spike := true;
+    return new;
+  end if;
+
+  movement_direction := case
+    when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
+    when old.change_pct <> 0 then -sign(old.change_pct)::integer
+    else case when random() < 0.5 then -1 else 1 end
+  end;
+  movement_pct := movement_direction * (floor(random() * settings.normal_max) + 1);
+  next_price := round(old.current_price * (1 + movement_pct / 100));
+  new.current_price := greatest(next_price, 0);
+  new.change_pct := movement_pct;
+  new.listed := next_price >= 100;
+  new.surge_spike := false;
+  return new;
+end;
+$$;
+
+drop trigger if exists investment_surge_volatility_trigger
+on public.investment_assets;
+
+create trigger investment_surge_volatility_trigger
+before update of current_price, change_pct, listed
+on public.investment_assets
+for each row
+execute function public.apply_surge_stock_volatility();
+
+revoke all on function public.investment_admin_reset_asset(text, text) from public;
+revoke all on function public.investment_admin_reset_all_assets(text) from public;
+revoke all on function public.investment_admin_set_surge_volatility(text, numeric, numeric, numeric, numeric, numeric, numeric, numeric) from public;
+grant execute on function public.investment_admin_reset_asset(text, text) to anon, authenticated;
+grant execute on function public.investment_admin_reset_all_assets(text) to anon, authenticated;
+grant execute on function public.investment_admin_set_surge_volatility(text, numeric, numeric, numeric, numeric, numeric, numeric, numeric) to anon, authenticated;
+
 -- Stock split and relisting metadata.
 alter table public.investment_assets
   add column if not exists split_notice boolean not null default false;

@@ -60,6 +60,11 @@ const investmentRankingList = document.querySelector('#investment-ranking-list')
 const investmentRankingPagination = document.querySelector('#investment-ranking-pagination');
 const investmentAdminButton = document.querySelector('#investment-admin-button');
 const investmentAdminPanel = document.querySelector('#investment-admin-panel');
+const adminAssetSelect = document.querySelector('#admin-asset-select');
+const adminResetAsset = document.querySelector('#admin-reset-asset');
+const adminResetAllAssets = document.querySelector('#admin-reset-all-assets');
+const adminSaveVolatility = document.querySelector('#admin-save-volatility');
+const adminMarketStatus = document.querySelector('#admin-market-status');
 let investmentState = null;
 let investmentAdminMode = false;
 let investmentRankingPage = 1;
@@ -167,6 +172,12 @@ const renderInvestmentState = (state) => {
     trade.append(quantity, buy, sell, maxBuy, maxSell);
     row.append(name, price, change, trade);
     return row;
+  }));
+  adminAssetSelect.replaceChildren(...state.assets.map((asset) => {
+    const option = document.createElement('option');
+    option.value = asset.symbol;
+    option.textContent = asset.name;
+    return option;
   }));
 
   const holdings = state.holdings.filter((holding) => holding.quantity > 0);
@@ -362,6 +373,63 @@ investmentAdminButton.addEventListener('click', () => {
   investmentAdminPanel.hidden = false;
   investmentAdminButton.textContent = '관리자 모드 종료';
   if (investmentState) renderInvestmentState(investmentState);
+});
+
+const requireInvestmentAdmin = () => {
+  if (!investmentAdminMode) {
+    window.alert('먼저 관리자 모드를 활성화하세요.');
+    return false;
+  }
+  return true;
+};
+
+const runAdminMarketAction = async (rpcName, payload, successMessage) => {
+  if (!requireInvestmentAdmin()) return;
+  try {
+    await callInvestmentRpc(rpcName, { p_admin_password: '8170', ...payload });
+    await loadInvestmentState();
+    adminMarketStatus.textContent = successMessage;
+  } catch (error) {
+    adminMarketStatus.textContent = error.message;
+  }
+};
+
+adminResetAsset.addEventListener('click', () => {
+  runAdminMarketAction(
+    'investment_admin_reset_asset',
+    { p_symbol: adminAssetSelect.value },
+    '선택한 종목의 가격과 변동률을 초기화했습니다.'
+  );
+});
+
+adminResetAllAssets.addEventListener('click', () => {
+  if (!window.confirm('모든 종목의 가격과 변동률을 초기화할까요?')) return;
+  runAdminMarketAction(
+    'investment_admin_reset_all_assets',
+    {},
+    '모든 종목의 가격과 변동률을 초기화했습니다.'
+  );
+});
+
+adminSaveVolatility.addEventListener('click', () => {
+  const values = {
+    p_normal_max: Number(document.querySelector('#admin-surge-normal-max').value),
+    p_spike_chance: Number(document.querySelector('#admin-surge-chance').value),
+    p_spike_min: Number(document.querySelector('#admin-surge-min').value),
+    p_spike_max: Number(document.querySelector('#admin-surge-max').value),
+    p_crash_chance: Number(document.querySelector('#admin-crash-chance').value),
+    p_crash_min: Number(document.querySelector('#admin-crash-min').value),
+    p_crash_max: Number(document.querySelector('#admin-crash-max').value)
+  };
+  if (Object.values(values).some((value) => !Number.isFinite(value))) {
+    adminMarketStatus.textContent = '변동성 값을 숫자로 입력하세요.';
+    return;
+  }
+  runAdminMarketAction(
+    'investment_admin_set_surge_volatility',
+    values,
+    '급등주 변동성을 저장했습니다.'
+  );
 });
 
 const loadInvestmentState = async (nickname = investorNickname.value.trim()) => {
