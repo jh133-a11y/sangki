@@ -208,6 +208,7 @@
   const shopOtherTab = document.querySelector('#sanggi-shop-other-tab');
   const shopItemsPanel = document.querySelector('#sanggi-shop-items');
   const shopOtherPanel = document.querySelector('#sanggi-shop-other');
+  const shopTitle = document.querySelector('#sanggi-shop-title');
   const ownedOutfits = new Set();
   let shopConfirmResolve = null;
   const shopSession = () => getSession();
@@ -378,7 +379,6 @@
       shopCompleteMessage.textContent = `${name} 구매가 완료되었습니다.`;
       shopCompleteModal.hidden = false;
       shopCompleteBackdrop.hidden = false;
-      await loadShopCash();
     } catch (error) {
       shopStatus.textContent = error.message || `${name} 구매에 실패했습니다.`;
     } finally {
@@ -1001,23 +1001,31 @@
   legendaryPotionButton.addEventListener('click', () => usePotion('legendary'));
   document.querySelector('#sanggi-shop-button')?.addEventListener('click', () => {
     shopStatus.textContent = '';
+    selectShopTab('items');
     shopModal.hidden = false;
     shopBackdrop.hidden = false;
     loadShopCash().catch((error) => {
       shopCash.textContent = error.message || '보유 현금을 불러오지 못했습니다.';
     });
-    const selectShopTab = (tab) => {
-      const showOther = tab === 'other';
-      shopItemsTab.classList.toggle('is-active', !showOther);
-      shopOtherTab.classList.toggle('is-active', showOther);
-      shopItemsTab.setAttribute('aria-selected', String(!showOther));
-      shopOtherTab.setAttribute('aria-selected', String(showOther));
-      shopItemsPanel.hidden = showOther;
-      shopOtherPanel.hidden = !showOther;
-    };
-    shopItemsTab?.addEventListener('click', () => selectShopTab('items'));
-    shopOtherTab?.addEventListener('click', () => selectShopTab('other'));
   });
+  const selectShopTab = (tab) => {
+    const showOther = tab === 'other';
+    shopTitle.textContent = showOther ? '상기 상점 · 기타' : '상기 상점 · 아이템';
+    shopItemsTab.classList.toggle('is-active', !showOther);
+    shopOtherTab.classList.toggle('is-active', showOther);
+    shopItemsTab.setAttribute('aria-selected', String(!showOther));
+    shopOtherTab.setAttribute('aria-selected', String(showOther));
+    shopItemsTab.setAttribute('tabindex', showOther ? '-1' : '0');
+    shopOtherTab.setAttribute('tabindex', showOther ? '0' : '-1');
+    shopItemsPanel.hidden = showOther;
+    shopOtherPanel.hidden = !showOther;
+    shopItemsPanel.setAttribute('aria-hidden', String(showOther));
+    shopOtherPanel.setAttribute('aria-hidden', String(!showOther));
+    shopItemsPanel.style.display = showOther ? 'none' : 'grid';
+    shopOtherPanel.style.display = showOther ? 'grid' : 'none';
+  };
+  shopItemsTab?.addEventListener('click', () => selectShopTab('items'));
+  shopOtherTab?.addEventListener('click', () => selectShopTab('other'));
   document.querySelector('#sanggi-shop-close')?.addEventListener('click', closeShop);
   shopBackdrop?.addEventListener('click', closeShop);
   const closeShopComplete = () => {
