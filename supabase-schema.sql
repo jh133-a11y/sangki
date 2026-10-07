@@ -1946,7 +1946,8 @@ alter table public.investment_shop_items
     'nickname_ticket',
     'letter',
     'normal_potion',
-    'advanced_potion'
+    'advanced_potion',
+    'legendary_potion'
   ));
 
 create table if not exists public.investment_shop_messages (
@@ -2158,6 +2159,7 @@ begin
     ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
     ('normal_potion', 10000000::bigint, '일반 물약'),
     ('advanced_potion', 100000000::bigint, '고급 물약'),
+    ('legendary_potion', 1000000000::bigint, '전설 물약'),
     ('letter', 10000::bigint, '편지')
   ) items(item_type, price, name)
   where item_type = p_item_type;
@@ -2212,6 +2214,12 @@ begin
     values (p_client_id, p_quantity)
     on conflict (account_id) do update
       set advanced_potions = least(100, public.sanggi_game_states.advanced_potions + excluded.advanced_potions),
+          updated_at = now();
+  elsif p_item_type = 'legendary_potion' then
+    insert into public.sanggi_game_states (account_id, legendary_potions)
+    values (p_client_id, p_quantity)
+    on conflict (account_id) do update
+      set legendary_potions = least(100, public.sanggi_game_states.legendary_potions + excluded.legendary_potions),
           updated_at = now();
   end if;
 
@@ -2840,6 +2848,7 @@ create table if not exists public.sanggi_game_states (
   companion_y numeric not null default 0.1 check (companion_y between 0 and 1),
   normal_potions integer not null default 0 check (normal_potions >= 0 and normal_potions <= 100),
   advanced_potions integer not null default 0 check (advanced_potions >= 0 and advanced_potions <= 100),
+  legendary_potions integer not null default 0 check (legendary_potions >= 0 and legendary_potions <= 100),
   updated_at timestamptz not null default now()
 );
 
@@ -2853,7 +2862,8 @@ alter table public.sanggi_game_states
   add column if not exists companion_y numeric not null default 0.1,
   add column if not exists player_level integer not null default 1,
   add column if not exists normal_potions integer not null default 0,
-  add column if not exists advanced_potions integer not null default 0;
+  add column if not exists advanced_potions integer not null default 0,
+  add column if not exists legendary_potions integer not null default 0;
 alter table public.sanggi_game_states
   drop constraint if exists sanggi_game_states_player_level_check;
 alter table public.sanggi_game_states
@@ -2873,11 +2883,13 @@ alter table public.sanggi_game_states
   drop constraint if exists sanggi_game_states_advanced_potions_check;
 alter table public.sanggi_game_states
   add constraint sanggi_game_states_normal_potions_check check (normal_potions between 0 and 100),
-  add constraint sanggi_game_states_advanced_potions_check check (advanced_potions between 0 and 100);
+  add constraint sanggi_game_states_advanced_potions_check check (advanced_potions between 0 and 100),
+  add constraint sanggi_game_states_legendary_potions_check check (legendary_potions between 0 and 100);
 
 drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, numeric, numeric, numeric);
 drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric);
 drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer);
+drop function if exists public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer, integer);
 create or replace function public.sanggi_sync_state(
   p_session_token uuid,
   p_guest_coins bigint default 0,
@@ -2892,7 +2904,8 @@ create or replace function public.sanggi_sync_state(
   p_guest_companion_y numeric default 0.1,
   p_guest_player_level integer default 1,
   p_guest_normal_potions integer default 0,
-  p_guest_advanced_potions integer default 0
+  p_guest_advanced_potions integer default 0,
+  p_guest_legendary_potions integer default 0
 )
 returns jsonb
 language plpgsql
@@ -2923,7 +2936,7 @@ begin
     insert into public.sanggi_game_states (
       account_id, coins, breath_level, auto_level, character_x, character_y,
       companion_unlocked, companion_summoned, companion_level, companion_x, companion_y,
-      player_level, normal_potions, advanced_potions
+      player_level, normal_potions, advanced_potions, legendary_potions
     )
     values (
       v_account_id,
@@ -2939,7 +2952,8 @@ begin
       greatest(0, least(1, coalesce(p_guest_companion_y, 0.1))),
       greatest(1, coalesce(p_guest_player_level, 1)),
       greatest(0, least(100, coalesce(p_guest_normal_potions, 0))),
-      greatest(0, least(100, coalesce(p_guest_advanced_potions, 0)))
+      greatest(0, least(100, coalesce(p_guest_advanced_potions, 0))),
+      greatest(0, least(100, coalesce(p_guest_legendary_potions, 0)))
     )
     returning * into v_state;
   end if;
@@ -2957,7 +2971,8 @@ begin
     'companion_y', v_state.companion_y,
     'player_level', v_state.player_level,
     'normal_potions', v_state.normal_potions,
-    'advanced_potions', v_state.advanced_potions
+    'advanced_potions', v_state.advanced_potions,
+    'legendary_potions', v_state.legendary_potions
   );
 end;
 $$;
@@ -2996,12 +3011,17 @@ begin
     if v_state.advanced_potions < 1 then raise exception '고급 물약이 없습니다.'; end if;
     update public.sanggi_game_states set advanced_potions = advanced_potions - 1, updated_at = now()
     where account_id = v_account_id returning * into v_state;
+  elsif p_potion_type = 'legendary' then
+    if v_state.legendary_potions < 1 then raise exception '전설 물약이 없습니다.'; end if;
+    update public.sanggi_game_states set legendary_potions = legendary_potions - 1, updated_at = now()
+    where account_id = v_account_id returning * into v_state;
   else
     raise exception '존재하지 않는 물약입니다.';
   end if;
   return jsonb_build_object(
     'normal_potions', v_state.normal_potions,
-    'advanced_potions', v_state.advanced_potions
+    'advanced_potions', v_state.advanced_potions,
+    'legendary_potions', v_state.legendary_potions
   );
 end;
 $$;
@@ -3097,6 +3117,7 @@ $$;
 drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, numeric, numeric, numeric);
 drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric);
 drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer);
+drop function if exists public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer);
 create or replace function public.sanggi_save_state(
   p_session_token uuid,
   p_coins bigint,
@@ -3110,7 +3131,8 @@ create or replace function public.sanggi_save_state(
   p_companion_x numeric,
   p_companion_y numeric,
   p_normal_potions integer default 0,
-  p_advanced_potions integer default 0
+  p_advanced_potions integer default 0,
+  p_legendary_potions integer default 0
 )
 returns jsonb
 language plpgsql
@@ -3133,7 +3155,7 @@ begin
   insert into public.sanggi_game_states (
     account_id, coins, breath_level, auto_level, character_x, character_y,
     companion_unlocked, companion_summoned, companion_level, companion_x, companion_y,
-    normal_potions, advanced_potions, updated_at
+    normal_potions, advanced_potions, legendary_potions, updated_at
   )
   values (
     v_account_id,
@@ -3149,6 +3171,7 @@ begin
     greatest(0, least(1, p_companion_y)),
     greatest(0, least(100, coalesce(p_normal_potions, 0))),
     greatest(0, least(100, coalesce(p_advanced_potions, 0))),
+    greatest(0, least(100, coalesce(p_legendary_potions, 0))),
     now()
   )
   on conflict (account_id) do update set
@@ -3164,6 +3187,7 @@ begin
     companion_y = excluded.companion_y,
     normal_potions = excluded.normal_potions,
     advanced_potions = excluded.advanced_potions,
+    legendary_potions = excluded.legendary_potions,
     updated_at = now();
 
   return jsonb_build_object('saved', true);
@@ -3215,11 +3239,11 @@ begin
 end;
 $$;
 
-revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer) from public;
-revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer) from public;
+revoke all on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer, integer) from public;
+revoke all on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer) from public;
 revoke all on function public.sanggi_unlock_companion(uuid) from public;
-grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer) to anon, authenticated;
-grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer) to anon, authenticated;
+grant execute on function public.sanggi_sync_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer, integer) to anon, authenticated;
+grant execute on function public.sanggi_save_state(uuid, bigint, integer, integer, numeric, numeric, boolean, boolean, integer, numeric, numeric, integer, integer, integer) to anon, authenticated;
 grant execute on function public.sanggi_unlock_companion(uuid) to anon, authenticated;
 grant execute on function public.sanggi_upgrade_player(uuid) to anon, authenticated;
 grant execute on function public.sanggi_get_player_ranking(uuid) to anon, authenticated;

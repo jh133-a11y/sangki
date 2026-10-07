@@ -58,7 +58,8 @@ const sanggiLocalStateKeys = [
   'sanggi-companion-state',
   'sanggi-player-level',
   'sanggi-normal-potions',
-  'sanggi-advanced-potions'
+  'sanggi-advanced-potions',
+  'sanggi-legendary-potions'
 ];
 const clearSanggiLocalState = () => {
   sanggiLocalStateKeys.forEach((key) => localStorage.removeItem(key));

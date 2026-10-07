@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=82">
+  <link rel="stylesheet" href="style.css?v=83">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -79,6 +79,14 @@
         </svg>
         <strong id="sanggi-advanced-potion-count">0개</strong>
       </button>
+      <button class="sanggi-potion-button sanggi-potion-legendary" id="sanggi-legendary-potion" type="button">
+        <svg class="sanggi-potion-icon" viewBox="0 0 48 64" aria-label="전설 물약" role="img">
+          <path d="M17 5h14M20 5v10L10 29v25a5 5 0 0 0 5 5h18a5 5 0 0 0 5-5V29L28 15V5" fill="#f3e7ff" stroke="#2a2730" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M10 35h28v19a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5Z" fill="#8b3fd6"/>
+          <path d="M15 29h18" stroke="#2a2730" stroke-width="3"/>
+        </svg>
+        <strong id="sanggi-legendary-potion-count">0개</strong>
+      </button>
       <p class="sanggi-potion-effect" id="sanggi-potion-effect" role="status" hidden></p>
     </div>
     <div class="sanggi-shop-backdrop" id="sanggi-shop-backdrop" hidden></div>
@@ -105,6 +113,15 @@
           </svg>
           <div><h3>고급 물약</h3><p>10초 동안 획득 코인 10배</p><strong>100,000,000원 / 1개</strong></div>
           <button class="sanggi-shop-buy" id="sanggi-buy-advanced-potion" type="button">구매하기</button>
+        </article>
+        <article class="sanggi-shop-card">
+          <svg class="sanggi-shop-potion-icon" viewBox="0 0 48 64" aria-label="전설 물약" role="img">
+            <path d="M17 5h14M20 5v10L10 29v25a5 5 0 0 0 5 5h18a5 5 0 0 0 5-5V29L28 15V5" fill="#f3e7ff" stroke="#2a2730" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M10 35h28v19a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5Z" fill="#8b3fd6"/>
+            <path d="M15 29h18" stroke="#2a2730" stroke-width="3"/>
+          </svg>
+          <div><h3>전설 물약</h3><p>10초 동안 획득 코인 100배</p><strong>1,000,000,000원 / 1개</strong></div>
+          <button class="sanggi-shop-buy" id="sanggi-buy-legendary-potion" type="button">구매하기</button>
         </article>
       </div>
       <p class="sanggi-shop-status" id="sanggi-shop-status" role="status"></p>

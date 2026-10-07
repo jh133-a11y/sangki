@@ -503,6 +503,7 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-potion-button strong { font: 10px var(--mono); }
 .sanggi-potion-normal { background: #c9c9c9; }
 .sanggi-potion-advanced { background: #d9ff36; }
+.sanggi-potion-legendary { background: #d9b7ff; }
 .sanggi-potion-button:hover { filter: brightness(.94); }
 .sanggi-potion-button:disabled { cursor: not-allowed; opacity: .45; }
 .sanggi-potion-effect {

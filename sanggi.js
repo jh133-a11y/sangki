@@ -6,6 +6,7 @@
   const playerLevelStorageKey = 'sanggi-player-level';
   const normalPotionStorageKey = 'sanggi-normal-potions';
   const advancedPotionStorageKey = 'sanggi-advanced-potions';
+  const legendaryPotionStorageKey = 'sanggi-legendary-potions';
   const characterPositionKey = 'sanggi-character-position';
   const companionPositionKey = 'sanggi-companion-position';
   const companionStateKey = 'sanggi-companion-state';
@@ -34,6 +35,7 @@
   let playerLevel = Math.max(1, Number(localStorage.getItem(playerLevelStorageKey)) || 1);
   let normalPotions = Math.max(0, Number(localStorage.getItem(normalPotionStorageKey)) || 0);
   let advancedPotions = Math.max(0, Number(localStorage.getItem(advancedPotionStorageKey)) || 0);
+  let legendaryPotions = Math.max(0, Number(localStorage.getItem(legendaryPotionStorageKey)) || 0);
   let potionMultiplier = 1n;
   let potionTimer = null;
   let potionEffectEndsAt = 0;
@@ -96,6 +98,7 @@
     localStorage.setItem(playerLevelStorageKey, String(playerLevel));
     localStorage.setItem(normalPotionStorageKey, String(normalPotions));
     localStorage.setItem(advancedPotionStorageKey, String(advancedPotions));
+    localStorage.setItem(legendaryPotionStorageKey, String(legendaryPotions));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
       summoned: companionSummoned,
@@ -197,12 +200,30 @@
       shopStatus.textContent = '로그인 후 물약을 구매할 수 있습니다.';
       return;
     }
-    const button = document.querySelector(
-      type === 'normal_potion' ? '#sanggi-buy-normal-potion' : '#sanggi-buy-advanced-potion'
-    );
-    const potionName = type === 'normal_potion' ? '일반 물약' : '고급 물약';
-    const price = type === 'normal_potion' ? '10,000,000원' : '100,000,000원';
-    const owned = type === 'normal_potion' ? normalPotions : advancedPotions;
+    const potionConfig = {
+      normal_potion: {
+        button: '#sanggi-buy-normal-potion',
+        name: '일반 물약',
+        price: '10,000,000원',
+        owned: () => normalPotions
+      },
+      advanced_potion: {
+        button: '#sanggi-buy-advanced-potion',
+        name: '고급 물약',
+        price: '100,000,000원',
+        owned: () => advancedPotions
+      },
+      legendary_potion: {
+        button: '#sanggi-buy-legendary-potion',
+        name: '전설 물약',
+        price: '1,000,000,000원',
+        owned: () => legendaryPotions
+      }
+    }[type];
+    const button = document.querySelector(potionConfig.button);
+    const potionName = potionConfig.name;
+    const price = potionConfig.price;
+    const owned = potionConfig.owned();
     const maximum = Math.max(0, 100 - owned);
     if (maximum < 1) {
       shopStatus.textContent = `${potionName}은(는) 최대 100개까지 보유할 수 있습니다.`;
@@ -219,12 +240,16 @@
         p_quantity: quantity
       });
       if (type === 'normal_potion') normalPotions = Math.min(100, normalPotions + quantity);
-      else advancedPotions = Math.min(100, advancedPotions + quantity);
+      else if (type === 'advanced_potion') advancedPotions = Math.min(100, advancedPotions + quantity);
+      else legendaryPotions = Math.min(100, legendaryPotions + quantity);
       saveState();
       renderPotions();
       await loadShopCash();
       shopStatus.textContent = '물약을 구매했습니다.';
-      shopCompleteMessage.textContent = `${potionName} ${quantity}개 구매가 완료되었습니다.\n현재 보유 수량: ${type === 'normal_potion' ? normalPotions : advancedPotions}개`;
+      const currentQuantity = type === 'normal_potion'
+        ? normalPotions
+        : type === 'advanced_potion' ? advancedPotions : legendaryPotions;
+      shopCompleteMessage.textContent = `${potionName} ${quantity}개 구매가 완료되었습니다.\n현재 보유 수량: ${currentQuantity}개`;
       shopCompleteModal.hidden = false;
       shopCompleteBackdrop.hidden = false;
     } catch (error) {
@@ -279,7 +304,8 @@
           p_companion_x: companionPosition.x,
           p_companion_y: companionPosition.y,
           p_normal_potions: normalPotions,
-          p_advanced_potions: advancedPotions
+          p_advanced_potions: advancedPotions,
+          p_legendary_potions: legendaryPotions
         });
       } catch (error) {
         console.warn('Sanggi state save failed:', error.message);
@@ -332,8 +358,10 @@
 
   const normalPotionButton = document.querySelector('#sanggi-normal-potion');
   const advancedPotionButton = document.querySelector('#sanggi-advanced-potion');
+  const legendaryPotionButton = document.querySelector('#sanggi-legendary-potion');
   const normalPotionCount = document.querySelector('#sanggi-normal-potion-count');
   const advancedPotionCount = document.querySelector('#sanggi-advanced-potion-count');
+  const legendaryPotionCount = document.querySelector('#sanggi-legendary-potion-count');
   const potionEffect = document.querySelector('#sanggi-potion-effect');
   const renderPotionEffect = () => {
     if (potionMultiplier === 1n || potionEffectEndsAt <= Date.now()) {
@@ -353,14 +381,17 @@
   const renderPotions = () => {
     normalPotionCount.textContent = `${normalPotions}개`;
     advancedPotionCount.textContent = `${advancedPotions}개`;
+    legendaryPotionCount.textContent = `${legendaryPotions}개`;
     normalPotionButton.disabled = normalPotions < 1 || accountSyncing;
     advancedPotionButton.disabled = advancedPotions < 1 || accountSyncing;
+    legendaryPotionButton.disabled = legendaryPotions < 1 || accountSyncing;
     renderPotionEffect();
   };
   const usePotion = async (type) => {
     if (accountSyncing) return;
+    const isLegendary = type === 'legendary';
     const isAdvanced = type === 'advanced';
-    const available = isAdvanced ? advancedPotions : normalPotions;
+    const available = isLegendary ? legendaryPotions : isAdvanced ? advancedPotions : normalPotions;
     if (available < 1) return;
     const session = getSession();
     try {
@@ -371,12 +402,15 @@
         });
         normalPotions = Math.max(0, Number(state.normal_potions) || 0);
         advancedPotions = Math.max(0, Number(state.advanced_potions) || 0);
+        legendaryPotions = Math.max(0, Number(state.legendary_potions) || 0);
+      } else if (isLegendary) {
+        legendaryPotions -= 1;
       } else if (isAdvanced) {
         advancedPotions -= 1;
       } else {
         normalPotions -= 1;
       }
-      potionMultiplier = isAdvanced ? 10n : 2n;
+      potionMultiplier = isLegendary ? 100n : isAdvanced ? 10n : 2n;
       potionEffectEndsAt = Date.now() + 10000;
       window.clearTimeout(potionTimer);
       potionTimer = window.setTimeout(() => {
@@ -558,7 +592,8 @@
       p_guest_companion_x: getLocalCompanionPosition().x,
       p_guest_companion_y: getLocalCompanionPosition().y,
       p_guest_normal_potions: normalPotions,
-      p_guest_advanced_potions: advancedPotions
+      p_guest_advanced_potions: advancedPotions,
+      p_guest_legendary_potions: legendaryPotions
     });
     coins = BigInt(String(state.coins || '0'));
     breathLevel = Math.min(maxBreathLevel, Math.max(1, Number(state.breath_level) || 1));
@@ -576,8 +611,10 @@
     companionLevel = Math.min(maxCompanionLevel, Math.max(1, Number(state.companion_level) || 1));
     normalPotions = Math.max(0, Number(state.normal_potions) || 0);
     advancedPotions = Math.max(0, Number(state.advanced_potions) || 0);
+    legendaryPotions = Math.max(0, Number(state.legendary_potions) || 0);
     localStorage.setItem(normalPotionStorageKey, String(normalPotions));
     localStorage.setItem(advancedPotionStorageKey, String(advancedPotions));
+    localStorage.setItem(legendaryPotionStorageKey, String(legendaryPotions));
     localStorage.setItem(companionStateKey, JSON.stringify({
       unlocked: companionUnlocked,
       summoned: companionSummoned,
@@ -799,6 +836,7 @@
   });
   normalPotionButton.addEventListener('click', () => usePotion('normal'));
   advancedPotionButton.addEventListener('click', () => usePotion('advanced'));
+  legendaryPotionButton.addEventListener('click', () => usePotion('legendary'));
   document.querySelector('#sanggi-shop-button')?.addEventListener('click', () => {
     shopStatus.textContent = '';
     shopModal.hidden = false;
@@ -817,6 +855,7 @@
   shopCompleteBackdrop?.addEventListener('click', closeShopComplete);
   document.querySelector('#sanggi-buy-normal-potion')?.addEventListener('click', () => buyPotion('normal_potion'));
   document.querySelector('#sanggi-buy-advanced-potion')?.addEventListener('click', () => buyPotion('advanced_potion'));
+  document.querySelector('#sanggi-buy-legendary-potion')?.addEventListener('click', () => buyPotion('legendary_potion'));
 
   if (character) {
     disableNativeImageGestures(character);
