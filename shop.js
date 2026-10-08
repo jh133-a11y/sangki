@@ -32,6 +32,7 @@ const shopCategoryByItem = {
   mid_missile: 'shop-missile',
   high_missile: 'shop-missile',
   nuclear_missile: 'shop-missile',
+  china_missile: 'shop-missile',
   missile_shield: 'shop-protection',
   nickname_ticket: 'shop-other',
   gambling_box: 'shop-items'

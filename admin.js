@@ -11,6 +11,7 @@ const adminItemIcons = {
   low_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m7 36 21-21 6 6-21 21H7v-6Z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m31 18 6-6 6 6-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m12 42-5 5m12-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>',
+  china_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 24-24 9 9-24 24H5v-9Z" fill="#d6281f" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/></svg>',
   nuclear_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 35 27 13l10 10-22 22H5v-10Z" fill="#b9c0c8" stroke="#171717" stroke-width="2.5"/><path d="M29 11c4-5 10-7 15-6-1 5-3 10-8 13" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m9 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   missile_shield: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 40 10v12c0 10-6 17-16 22C14 39 8 32 8 22V10l16-6Z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m15 24 6 6 12-13" fill="none" stroke="#d9ff36" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
@@ -31,6 +32,7 @@ const adminItemIcons = {
 const itemDefinitions = [
   ['low_missile', '하급 미사일'], ['mid_missile', '중급 미사일'],
   ['high_missile', '고급 미사일'], ['nuclear_missile', '핵 미사일'],
+  ['china_missile', '중국산 미사일'],
   ['missile_shield', '미사일 방어막'], ['nickname_ticket', '닉네임 변경권'],
   ['letter', '편지'], ['normal_potion', '일반 물약'],
   ['gambling_box', '도박 중독자 상자'],

@@ -639,6 +639,7 @@ const shopItemIcons = {
   mid_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 25-25 8 8-25 25H5v-8Z" fill="#ffb02e" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>',
   high_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m3 36 28-28 10 10-28 28H3V36Z" fill="#ff5b36" stroke="#171717" stroke-width="2.5"/><path d="m34 14 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m8 44-5 5m14-5-5 5" stroke="#d9ff36" stroke-width="3"/></svg>'
   ,nuclear_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 35 27 13l10 10-22 22H5v-10Z" fill="#b9c0c8" stroke="#171717" stroke-width="2.5"/><path d="M29 11c4-5 10-7 15-6-1 5-3 10-8 13" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="m9 43-5 5m13-5-5 5" stroke="#ff5b36" stroke-width="3"/></svg>'
+  ,china_missile: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="m5 36 24-24 9 9-24 24H5v-9Z" fill="#d6281f" stroke="#171717" stroke-width="2.5"/><path d="m32 15 6-6 7 7-6 6" fill="none" stroke="#171717" stroke-width="3"/><path d="m10 43-5 5m13-5-5 5" stroke="#ffd42a" stroke-width="3"/></svg>'
   ,missile_shield: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 40 10v12c0 10-6 17-16 22C14 39 8 32 8 22V10l16-6Z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m15 24 6 6 12-13" fill="none" stroke="#d9ff36" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   ,nickname_ticket: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 12h34v24H7z" fill="#d9ff36" stroke="#171717" stroke-width="2.5"/><path d="M15 12v24M33 12v24" stroke="#171717" stroke-width="2" stroke-dasharray="3 3"/><path d="M20 20h8M20 25h8M20 30h5" stroke="#ff5b36" stroke-width="2.5" stroke-linecap="round"/></svg>',
   letter: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 11h38v27H5z" fill="#8ed8d2" stroke="#171717" stroke-width="2.5"/><path d="m6 13 18 14 18-14M6 36l13-13m23 13L29 23" fill="none" stroke="#171717" stroke-width="2.5"/><path d="M35 5v10M30 10h10" stroke="#ff5b36" stroke-width="2.5"/></svg>',
@@ -659,7 +660,8 @@ const shopItemDescriptions = {
   mid_missile: '30% 확률로 선택한 유저의 전체 자산 30%를 감소시킵니다.',
   high_missile: '40% 확률로 선택한 유저의 전체 자산 40%를 감소시킵니다.'
   ,nuclear_missile: '80% 확률로 선택한 유저의 전체 자산 80%를 감소시킵니다.'
-  ,missile_shield: '다른 유저의 미사일을 막을 수 있습니다. 하급 미사일을 막는 데에는 1개, 중급 미사일에는 3개, 고급 미사일에는 5개, 핵 미사일에는 미사일 방어막 10개가 필요합니다. 미사일에 피격되면 자동으로 소모됩니다.'
+  ,china_missile: '1% 확률로 선택한 유저의 전체 자산 10%를 감소시킵니다.'
+  ,missile_shield: '다른 유저의 미사일을 막을 수 있습니다. 하급 미사일과 중국산 미사일에는 1개, 중급 미사일에는 3개, 고급 미사일에는 5개, 핵 미사일에는 미사일 방어막 10개가 필요합니다. 미사일에 피격되면 자동으로 소모됩니다.'
   ,nickname_ticket: '사용하면 투자 닉네임을 한 번 변경할 수 있습니다.',
   letter: '선택한 유저에게 최대 500자의 메시지를 보내는 일회용 편지입니다.',
   megaphone: '모든 유저의 메시지함에 최대 500자의 메시지를 보냅니다. 사용하면 1개가 소모됩니다.',
@@ -679,6 +681,7 @@ const shopItemNames = {
   mid_missile: '중급 미사일',
   high_missile: '고급 미사일',
   nuclear_missile: '핵 미사일',
+  china_missile: '중국산 미사일',
   missile_shield: '미사일 방어막',
   nickname_ticket: '닉네임 변경권',
   letter: '편지',
@@ -748,7 +751,7 @@ const selectShopItem = (item) => {
   const targetLabel = document.querySelector('.bag-target-label');
   const isMegaphone = item.item_type === 'megaphone';
   const hasTarget = isCashBox || isNicknameTicket || isLetter
-    || ['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile'].includes(item.item_type);
+    || ['low_missile', 'mid_missile', 'high_missile', 'nuclear_missile', 'china_missile'].includes(item.item_type);
   targetLabel.hidden = isShield || isMegaphone || !hasTarget;
   bagTarget.hidden = isShield || isMegaphone || !hasTarget;
   bagTarget.value = isMegaphone || isShield ? '' : bagTarget.value;

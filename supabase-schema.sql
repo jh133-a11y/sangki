@@ -927,6 +927,7 @@ begin
 
   if p_item_type not in (
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
+    'china_missile',
     'missile_shield', 'nickname_ticket', 'letter',
     'megaphone',
     'gambling_box',
@@ -954,6 +955,7 @@ begin
     when 'mid_missile' then '중급 미사일'
     when 'high_missile' then '고급 미사일'
     when 'nuclear_missile' then '핵 미사일'
+    when 'china_missile' then '중국산 미사일'
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
@@ -1037,6 +1039,7 @@ begin
 
   if p_item_type not in (
     'low_missile', 'mid_missile', 'high_missile', 'nuclear_missile',
+    'china_missile',
     'missile_shield', 'nickname_ticket', 'letter',
     'megaphone',
     'gambling_box',
@@ -1064,6 +1067,7 @@ begin
     when 'mid_missile' then '중급 미사일'
     when 'high_missile' then '고급 미사일'
     when 'nuclear_missile' then '핵 미사일'
+    when 'china_missile' then '중국산 미사일'
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
@@ -2351,7 +2355,7 @@ to anon, authenticated;
 
 create table if not exists public.investment_shop_items (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
-  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nuclear_missile', 'missile_shield', 'nickname_ticket', 'letter')),
+  item_type text not null check (item_type in ('low_missile', 'mid_missile', 'high_missile', 'nuclear_missile', 'china_missile', 'missile_shield', 'nickname_ticket', 'letter')),
   quantity bigint not null default 0 check (quantity >= 0),
   primary key (client_id, item_type)
 );
@@ -2367,6 +2371,7 @@ alter table public.investment_shop_items
     'mid_missile',
     'high_missile',
     'nuclear_missile',
+    'china_missile',
     'missile_shield',
     'nickname_ticket',
     'letter',
@@ -2542,6 +2547,7 @@ begin
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
           when 'nuclear_missile' then '핵 미사일'
+          when 'china_missile' then '중국산 미사일'
           when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
           when 'letter' then '편지'
@@ -2620,6 +2626,7 @@ begin
           when 'mid_missile' then '중급 미사일'
           when 'high_missile' then '고급 미사일'
           when 'nuclear_missile' then '핵 미사일'
+          when 'china_missile' then '중국산 미사일'
           when 'missile_shield' then '미사일 방어막'
           when 'nickname_ticket' then '닉네임 변경권'
           when 'letter' then '편지'
@@ -2684,6 +2691,7 @@ begin
     ('mid_missile', 50000000::bigint, '중급 미사일'),
     ('high_missile', 150000000::bigint, '고급 미사일'),
     ('nuclear_missile', 10000000000::bigint, '핵 미사일'),
+    ('china_missile', 1000000::bigint, '중국산 미사일'),
     ('missile_shield', 10000000::bigint, '미사일 방어막'),
     ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
     ('megaphone', 50000::bigint, '확성기'),
@@ -3373,17 +3381,20 @@ begin
       when 'mid_missile' then 0.30
       when 'high_missile' then 0.40
       when 'nuclear_missile' then 0.80
+      when 'china_missile' then 0.01
     end,
     case p_item_type
       when 'low_missile' then 0.20
       when 'mid_missile' then 0.30
       when 'high_missile' then 0.40
       when 'nuclear_missile' then 0.80
+      when 'china_missile' then 0.10
     end,
     case p_item_type
       when 'low_missile' then '하급 미사일'
       when 'mid_missile' then '중급 미사일'
       when 'high_missile' then '고급 미사일'
+      when 'china_missile' then '중국산 미사일'
       else '핵 미사일'
     end
   into v_chance, v_damage, v_name;
@@ -3422,6 +3433,7 @@ begin
     when 'mid_missile' then 3
     when 'high_missile' then 5
     when 'nuclear_missile' then 10
+    when 'china_missile' then 1
   end;
   select quantity into v_shield_quantity
   from public.investment_shop_items
@@ -3562,6 +3574,7 @@ begin
     when 'mid_missile' then '중급 미사일'
     when 'high_missile' then '고급 미사일'
     when 'nuclear_missile' then '핵 미사일'
+    when 'china_missile' then '중국산 미사일'
     when 'missile_shield' then '미사일 방어막'
     when 'nickname_ticket' then '닉네임 변경권'
     when 'letter' then '편지'
