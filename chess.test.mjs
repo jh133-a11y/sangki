@@ -92,3 +92,37 @@ test('guest investment identity keeps AI start enabled without account RPCs', as
   assert.equal(elements.get('#chess-account').textContent, '비로그인 · 연습 모드');
   assert.equal(elements.get('#chess-start').disabled, false);
 });
+test('a stalled RPC aborts at 12 seconds with an explicit recovery message', async () => {
+  let expire;
+  let cleared = false;
+  const rpcContext = vm.createContext({
+    document: { querySelector: () => null },
+    AbortController,
+    setTimeout: (callback, delay) => {
+      assert.equal(delay, 12000);
+      expire = callback;
+      return 1;
+    },
+    clearTimeout: () => { cleared = true; },
+    fetch: (_, { signal }) => new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+    })
+  });
+  vm.runInContext(source.slice(0, source.lastIndexOf("  document.querySelectorAll('.chess-seg')"))
+    + '\n globalThis.rpc=rpc;})();', rpcContext);
+  const request = rpcContext.rpc('chess_move');
+  expire();
+  await assert.rejects(request, /서버 응답이 지연.*서버 경기 불러오기/);
+  assert.equal(cleared, true);
+});
+test('AI speed patch matches the full migration and retains bounded server computation', () => {
+  const schema = readFileSync(new URL('./chess-schema.sql', import.meta.url), 'utf8');
+  const patch = readFileSync(new URL('./chess-speed-fix.sql', import.meta.url), 'utf8');
+  for (const name of ['chess_search_fast', 'chess_ai']) {
+    const definition = new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\n\\$\\$;`);
+    assert.equal(patch.match(definition)?.[0], schema.match(definition)?.[0]);
+  }
+  assert.match(patch, /interval '750 milliseconds'/);
+  assert.match(patch, /limit 6 loop/);
+  assert.match(patch, /revoke all on function public\.chess_search_fast/);
+});

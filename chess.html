@@ -46,6 +46,7 @@
         </div>
       </div>
       <button class="chess-start" id="chess-start" type="button">게임 시작</button>
+      <button id="chess-practice" type="button">빠른 연습 경기 (전적·보상 없음)</button>
     </section>
 
     <section class="chess-game" id="chess-game" hidden>
@@ -59,6 +60,7 @@
         <div class="chess-moves" id="chess-moves"></div>
         <p id="chess-reward-status" role="status" aria-live="polite"></p>
         <button id="chess-sync" type="button" hidden>서버 경기 불러오기</button>
+        <button id="chess-game-practice" type="button">빠른 연습 경기로 전환 (전적·보상 없음)</button>
         <div class="chess-buttons">
           <button type="button" id="chess-undo">무르기</button>
           <button type="button" id="chess-flip">판 뒤집기</button>
@@ -103,7 +105,7 @@
     </div>
   </section>
 
-  <script src="chess.js?v=5"></script>
+  <script src="chess.js?v=6"></script>
   <script>
     history.pushState({ returnToHome: true }, '', location.href);
     window.addEventListener('popstate', () => location.replace('index.html'));

@@ -34,18 +34,32 @@
   const assistsAllowed = () => settings.mode === 'local' || settings.level === 1;
   const accountMessage = (text) => { $('#chess-account-status').textContent = text; };
   const rpc = async (name, payload = {}) => {
-    const response = await fetch(`${API_URL}/rest/v1/rpc/${name}`, {
-      method: 'POST',
-      headers: { apikey: API_KEY, Authorization: 'Bearer ' + API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.code === 'PGRST202'
-        ? '체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 chess-schema.sql을 실행하세요.'
-        : result.message || '체스 요청에 실패했습니다.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(`${API_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        headers: { apikey: API_KEY, Authorization: 'Bearer ' + API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.code === 'PGRST202'
+          ? '체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 chess-schema.sql을 실행하세요.'
+          : result.code === '57014'
+            ? '서버 AI 계산 시간이 초과되었습니다. chess-speed-fix.sql을 실행하거나 빠른 연습 경기를 이용하세요.'
+            : result.message || '체스 요청에 실패했습니다.');
+      }
+      return result;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('서버 응답이 지연되고 있습니다. 서버 경기 불러오기로 반영 여부를 확인하거나 빠른 연습 경기를 이용하세요.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-    return result;
   };
   const accountPayload = () => {
     if (!accountSession?.session_token) throw new Error('메인에서 로그인하세요.');
@@ -495,7 +509,7 @@
     $('#chess-undo').disabled = !assistsAllowed() || !history.length || thinking || (serverGame && gameOver)
       || (serverGame && history.length < (settings.side === 'b' ? 3 : 2));
     $('#chess-flip').disabled = !assistsAllowed() || thinking;
-    ['#chess-new', '#chess-exit', '#chess-result-new', '#chess-result-exit'].forEach((selector) => {
+    ['#chess-new', '#chess-exit', '#chess-result-new', '#chess-result-exit', '#chess-game-practice'].forEach((selector) => {
       $(selector).disabled = thinking;
     });
     $('#chess-sync').hidden = !serverGame;
@@ -678,20 +692,30 @@
 
   const submitServerMove = async (move) => {
     const id = gameId;
+    const previousGame = serverGame;
+    const ply = history.length;
     thinking = true;
-    setStatus('서버에서 이동 확인 및 AI 계산 중…');
+    history.push({ state, move, san: sanFor(state, move, legalCache), counts: { ...positionCounts } });
+    state = applyMove(state, move);
+    selected = -1;
+    lastMove = move;
+    legalCache = legalMoves(state);
+    playSound(Boolean(move.capture));
+    setStatus('컴퓨터 생각 중…');
     refresh();
     try {
       const game = await rpc('chess_move', {
-        ...accountPayload(), p_game_id: serverGame.id, p_ply: history.length,
+        ...accountPayload(), p_game_id: previousGame.id, p_ply: ply,
         p_from: move.from, p_to: move.to, p_promo: move.promo || null
       });
       if (id !== gameId) return;
-      playSound(Boolean(move.capture));
       restoreServerGame(game);
       if (game.result) await loadProfile();
     } catch (error) {
-      if (id === gameId) setStatus(`${error.message} 서버 경기 불러오기로 결과를 확인하세요.`, true);
+      if (id === gameId) {
+        restoreServerGame(previousGame);
+        setStatus(`${error.message} 서버 경기 불러오기로 결과를 확인하세요.`, true);
+      }
     } finally {
       if (id === gameId) { thinking = false; refresh(); }
     }
@@ -786,6 +810,16 @@
   });
 
   $('#chess-start').addEventListener('click', startGame);
+  const startPractice = () => {
+    if (thinking) return;
+    if (serverGame && !serverGame.result
+      && !window.confirm('서버 경기는 보존하고 새 연습 경기를 시작합니다. 연습 경기는 전적·보상이 없습니다. 계속할까요?')) return;
+    serverGame = null;
+    $('#chess-reward-status').textContent = '빠른 연습 경기 · 전적 저장 및 보상 없음';
+    resetGame();
+  };
+  $('#chess-practice').addEventListener('click', startPractice);
+  $('#chess-game-practice').addEventListener('click', startPractice);
   $('#chess-board').addEventListener('click', (event) => {
     const cell = event.target.closest('.chess-sq');
     if (cell) onSquare(Number(cell.dataset.index));
