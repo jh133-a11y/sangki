@@ -133,6 +133,10 @@ const renderPoll = (poll) => {
   </div>`;
 };
 
+const imageIcon = (item) => (Array.isArray(item.images) && item.images.length
+  ? '<svg class="records-image-icon" viewBox="0 0 16 16" width="13" height="13" aria-label="사진 첨부" role="img"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="5.5" cy="6" r="1.2" fill="currentColor"/><path d="M2.5 12l3.5-3.5 2.5 2.5 2-2 3 3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>'
+  : '');
+
 const imagesHtml = (images) => (Array.isArray(images) && images.length
   ? `<div class="records-detail-images">${images.map((path) => `<a href="${imageUrl(path)}" target="_blank" rel="noopener"><img src="${imageUrl(path)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>`
   : '');
@@ -331,7 +335,7 @@ const renderNotices = () => {
     <article class="records-row records-notice-row" data-notice-id="${notice.id}">
       <span>공지</span>
       <div class="records-title-cell">
-        <strong>${escapeHtml(notice.title)}</strong>
+        <strong>${escapeHtml(notice.title)}${imageIcon(notice)}</strong>
       </div>
       <span>-</span>
       <span>-</span>
@@ -347,7 +351,7 @@ const renderPosts = () => {
     <article class="records-post-group" data-post-id="${post.id}">
       <div class="records-row">
         <span>${postNumber}</span>
-        <div class="records-title-cell"><strong>${escapeHtml(post.title)}</strong></div>
+        <div class="records-title-cell"><strong>${escapeHtml(post.title)}${imageIcon(post)}</strong></div>
         <span>${post.view_count ?? 0}</span>
         <span>${post.comment_count || 0}</span>
       </div>
