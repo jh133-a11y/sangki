@@ -2643,7 +2643,7 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
-requestNotifications().then(updateNotificationButton);
+updateNotificationButton();
 updateNotificationButton();
 if (accountSession?.session_token) {
   loadSiteAccountState()
