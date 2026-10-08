@@ -3588,6 +3588,7 @@ begin
     when 'juseong_spacesuit' then '주성 우주복'
     when 'cash_box' then '랜덤 현금 박스'
     when 'weird_cash_box' then '이상한 랜덤 현금 박스'
+    when 'gambling_box' then '도박 중독자 상자'
     else null
   end;
 
