@@ -1933,23 +1933,12 @@ const renderPlayerLevelRanking = () => {
 
 const refreshPlayerLevelRanking = async () => {
   if (!playerLevelRankingList) return;
-  if (!accountSession?.session_token) {
-    playerLevelRanking = [];
-    playerLevelRankingList.replaceChildren(Object.assign(document.createElement('li'), {
-      className: 'ranking-empty',
-      textContent: '로그인 후 랭킹을 불러옵니다.'
-    }));
-    playerLevelRankingPagination?.replaceChildren();
-    return;
-  }
   playerLevelRankingList.replaceChildren(Object.assign(document.createElement('li'), {
     className: 'ranking-empty',
     textContent: '랭킹을 불러오는 중...'
   }));
   try {
-    const result = await callInvestmentRpc('sanggi_get_player_ranking', {
-      p_session_token: accountSession.session_token
-    });
+    const result = await callInvestmentRpc('sanggi_get_public_player_ranking', {});
     playerLevelRanking = Array.isArray(result) ? result : [];
     playerLevelRankingPage = 1;
     renderPlayerLevelRanking();

@@ -14,6 +14,7 @@
   const companionOutfitKey = 'sanggi-companion-outfit';
   const sessionKey = 'sangki-auth-session';
   const tabSessionKey = 'sangki-auth-session-tab';
+  const investmentClientKey = 'sangki-investment-client-id';
   const keepLoginKey = 'sangki-keep-login';
   const rpcEndpoint = 'https://ejrwrwjsgizzxhqybtff.supabase.co/rest/v1/rpc';
   const rpcKey = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
@@ -52,6 +53,8 @@
   let remoteSaveRequested = false;
   let remoteSaveRevision = 0;
   let remoteSaveCompletedRevision = 0;
+  let guestSyncTimer = null;
+  let guestSyncInFlight = null;
   let lastSyncedSessionToken = null;
   const character = document.querySelector('.sanggi-character');
   const companion = document.querySelector('#sanggi-companion');
@@ -132,6 +135,8 @@
     if (remoteReady) {
       remoteSaveRevision += 1;
       scheduleRemoteSave();
+    } else if (!getSession()?.session_token) {
+      scheduleGuestSync();
     }
   };
 
@@ -159,6 +164,46 @@
     if (!response.ok) throw new Error(result.message || result.hint || '상기 키우기 정보를 저장하지 못했습니다.');
     return result;
   };
+
+  const guestInvestment = () => {
+    if (getSession()?.session_token) return null;
+    const clientId = localStorage.getItem(investmentClientKey);
+    const nickname = localStorage.getItem(shopNicknameKey);
+    return clientId && nickname ? { clientId, nickname } : null;
+  };
+
+  const syncGuestState = async () => {
+    const guest = guestInvestment();
+    if (!guest) return false;
+    if (guestSyncInFlight) return guestSyncInFlight;
+    guestSyncInFlight = remoteRpc('sanggi_sync_guest_state', {
+      p_client_id: guest.clientId,
+      p_nickname: guest.nickname,
+      p_coins: coins.toString(),
+      p_player_level: playerLevel
+    }).then((state) => {
+      coins = BigInt(String(state.coins || '0'));
+      playerLevel = Math.max(1, Number(state.player_level) || playerLevel);
+      localStorage.setItem(storageKey, coins.toString());
+      localStorage.setItem(playerLevelStorageKey, String(playerLevel));
+      renderBalance();
+      renderPlayer();
+      return true;
+    }).finally(() => {
+      guestSyncInFlight = null;
+    });
+    return guestSyncInFlight;
+  };
+
+  function scheduleGuestSync() {
+    if (!guestInvestment()) return;
+    window.clearTimeout(guestSyncTimer);
+    guestSyncTimer = window.setTimeout(() => {
+      syncGuestState().catch((error) => {
+        console.warn('Guest Sanggi state sync failed:', error.message);
+      });
+    }, 600);
+  }
 
   const remoteSanggiRpc = async (name, payload) => {
     try {
@@ -257,18 +302,25 @@
   const shopTitle = document.querySelector('#sanggi-shop-title');
   const ownedOutfits = new Set();
   let shopConfirmResolve = null;
-  const shopSession = () => getSession();
+  const shopClient = () => {
+    const session = getSession();
+    return {
+      clientId: session?.account_id || localStorage.getItem(investmentClientKey),
+      nickname: localStorage.getItem(shopNicknameKey) || null,
+      isGuest: !session?.session_token
+    };
+  };
   const shopCoin = document.querySelector('#sanggi-shop-coin-balance');
   const loadShopCash = async () => {
-    const session = shopSession();
-    if (!session?.account_id) {
-      shopCash.textContent = '로그인 후 구매할 수 있습니다.';
+    const client = shopClient();
+    if (!client.clientId) {
+      shopCash.textContent = '홈 화면에서 투자 닉네임을 먼저 설정하세요.';
       if (shopCoin) shopCoin.textContent = '보유 코인 확인 중...';
       return;
     }
     const state = await remoteRpc('shop_get_state', {
-      p_client_id: session.account_id,
-      p_nickname: localStorage.getItem(shopNicknameKey) || null
+      p_client_id: client.clientId,
+      p_nickname: client.nickname
     });
     shopCash.textContent = `보유 현금 ${formatCoins(BigInt(String(state.cash_exact || state.cash || 0)))}원`;
     if (shopCoin) shopCoin.textContent = `보유 코인 ${formatCoins(coins)}원`;
@@ -323,9 +375,9 @@
     shopConfirmQuantity.focus();
   });
   const buyCoinBox = async (type) => {
-    const session = shopSession();
-    if (!session?.account_id) {
-      shopStatus.textContent = '로그인 후 코인 상점에서 구매할 수 있습니다.';
+    const client = shopClient();
+    if (!client.clientId || (client.isGuest && !client.nickname)) {
+      shopStatus.textContent = '홈 화면에서 투자 닉네임을 먼저 설정하세요.';
       return;
     }
     const config = {
@@ -347,11 +399,21 @@
     button.disabled = true;
     shopStatus.textContent = `${config.name} ${quantity}개 구매 확인 중...`;
     try {
-      const result = await remoteRpc('shop_purchase_coin_box', {
-        p_client_id: session.account_id,
-        p_item_type: type,
-        p_quantity: quantity
-      });
+      const result = client.isGuest
+        ? await (async () => {
+          await syncGuestState();
+          return remoteRpc('shop_purchase_guest_coin_box', {
+            p_client_id: client.clientId,
+            p_nickname: client.nickname,
+            p_item_type: type,
+            p_quantity: quantity
+          });
+        })()
+        : await remoteRpc('shop_purchase_coin_box', {
+          p_client_id: client.clientId,
+          p_item_type: type,
+          p_quantity: quantity
+        });
       coins = BigInt(String(result.coins || coins));
       saveState();
       renderBalance();
@@ -369,9 +431,9 @@
   shopConfirmCancel.addEventListener('click', () => closeShopConfirm(0));
   shopConfirmBackdrop.addEventListener('click', () => closeShopConfirm(0));
   const buyPotion = async (type) => {
-    const session = shopSession();
-    if (!session?.account_id) {
-      shopStatus.textContent = '로그인 후 물약을 구매할 수 있습니다.';
+    const client = shopClient();
+    if (!client.clientId) {
+      shopStatus.textContent = '홈 화면에서 투자 닉네임을 먼저 설정하세요.';
       return;
     }
     const potionConfig = {
@@ -409,7 +471,7 @@
     shopStatus.textContent = `${potionName} ${quantity}개 구매 확인 중...`;
     try {
       await remoteRpc('shop_purchase', {
-        p_client_id: session.account_id,
+        p_client_id: client.clientId,
         p_item_type: type,
         p_quantity: quantity
       });
@@ -433,9 +495,9 @@
     }
   };
   const buyOther = async (type, name, price, button) => {
-    const session = shopSession();
-    if (!session?.account_id) {
-      shopStatus.textContent = '로그인 후 상품을 구매할 수 있습니다.';
+    const client = shopClient();
+    if (!client.clientId) {
+      shopStatus.textContent = '홈 화면에서 투자 닉네임을 먼저 설정하세요.';
       return;
     }
     if (ownedOutfits.has(type)) {
@@ -462,7 +524,7 @@
     shopStatus.textContent = `${name} 구매 확인 중...`;
     try {
       await remoteRpc('shop_purchase', {
-        p_client_id: session.account_id,
+        p_client_id: client.clientId,
         p_item_type: type,
         p_quantity: 1
       });
@@ -1107,7 +1169,9 @@
     selectShopTab('items');
     shopModal.hidden = false;
     shopBackdrop.hidden = false;
-    loadShopCash().catch((error) => {
+    syncGuestState().catch((error) => {
+      console.warn('Guest Sanggi state sync failed:', error.message);
+    }).then(() => loadShopCash()).catch((error) => {
       shopCash.textContent = error.message || '보유 현금을 불러오지 못했습니다.';
     });
   });
@@ -1345,6 +1409,7 @@
       await syncAccountState();
       await loadOutfits();
       remoteReady = Boolean(getSession()?.session_token);
+      if (!remoteReady) await syncGuestState();
     } catch (error) {
       console.warn('Sanggi account sync failed:', error.message);
     } finally {
