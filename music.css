@@ -1,0 +1,32 @@
+.music-heading { margin: 28px 0; }
+.music-heading h1 { font-size: 40px; margin: 0 0 12px; letter-spacing: .1em; }
+.music-heading p, .music-hint, #track-count, #queue-label { font-size: 12px; line-height: 1.7; }
+.music-layout { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr); gap: 20px; }
+.music-panel { background: #fff; border: 2px solid var(--ink); padding: 20px; min-width: 0; }
+.music-panel h2 { font-size: 18px; }
+.music-panel h2:first-child { margin-top: 0; }
+.music-panel form { margin-bottom: 24px; }
+.music-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+label { display: grid; gap: 6px; font-size: 12px; margin: 10px 0; }
+input, select { max-width: 100%; min-width: 0; border: 1px solid var(--ink); background: var(--paper); padding: 10px; font: inherit; color: var(--ink); }
+button { border: 1px solid var(--ink); background: var(--paper); padding: 10px 12px; cursor: pointer; }
+button:hover:not(:disabled), button[aria-pressed="true"] { background: var(--acid); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+#playlist-list { display: grid; gap: 8px; }
+#playlist-list button { text-align: left; overflow-wrap: anywhere; }
+#music-status { min-height: 24px; overflow-wrap: anywhere; }
+#music-status.is-error { color: #a02012; }
+.music-actions { margin: 16px 0; }
+.music-tracks { list-style: none; padding: 0; margin: 0; }
+.music-tracks li { padding: 14px 0; border-top: 1px solid #ccc; }
+.music-track-name { display: block; overflow-wrap: anywhere; margin-bottom: 8px; }
+.music-track-detail { font-size: 11px; margin: 8px 0; }
+.music-tracks li.is-playing { border-left: 4px solid var(--orange); padding-left: 10px; }
+.music-player { margin-top: 20px; position: sticky; bottom: 0; }
+#now-playing { overflow-wrap: anywhere; }
+audio { display: block; width: 100%; margin: 12px 0; }
+@media (max-width: 760px) {
+  .music-layout { grid-template-columns: 1fr; }
+  .music-player { position: static; }
+}

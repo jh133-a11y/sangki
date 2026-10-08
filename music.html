@@ -5,16 +5,75 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>음악 — byungsin</title>
   <link rel="stylesheet" href="chess.css?v=1">
+  <link rel="stylesheet" href="music.css?v=1">
+  <script type="module" src="music.js?v=1"></script>
 </head>
 <body>
   <main class="chess-shell">
     <div class="chess-top">
       <a class="chess-logo" href="index.html">byungsin<span>.</span></a>
-      <a class="chess-home" href="index.html">← 메인으로</a>
+      <a class="chess-home" href="index.html" target="_blank" rel="noopener">← 메인으로 (새 탭)</a>
     </div>
-    <section class="chess-menu">
+    <section class="music-heading">
       <h1>MUSIC</h1>
-      <p>음악 방은 준비 중입니다.</p>
+      <p>이름을 붙여 음악을 공유하고, 나만의 재생목록을 만들어 보세요.</p>
+      <p>이 음악 탭을 열어 두면 다른 탭에서도 재생이 계속됩니다.</p>
+      <p id="account-state">로그인 상태 확인 중…</p>
+      <form id="login-form" class="music-inline" hidden>
+        <label>아이디 <input id="login-username" required autocomplete="username" maxlength="24"></label>
+        <label>비밀번호 <input id="login-password" required type="password" autocomplete="current-password"></label>
+        <button type="submit">로그인</button>
+        <a href="index.html" target="_blank" rel="noopener">회원가입 / 메인 페이지 ↗</a>
+      </form>
+    </section>
+    <p id="music-status" role="status" aria-live="polite"></p>
+    <div class="music-layout">
+      <aside class="music-panel">
+        <h2>음악 올리기</h2>
+        <form id="upload-form">
+          <label>음악 이름 <input id="upload-name" required maxlength="100" placeholder="음악 이름을 입력하세요"></label>
+          <label>음악 파일 <input id="upload-file" required type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.webm,.aac"></label>
+          <p class="music-hint">로그인 필요 · 파일당 10 MB · 계정당 100 MB<br>MP3, WAV, OGG, FLAC, M4A, WebM, AAC. 공유 권한이 있는 음악만 올리세요.</p>
+          <button type="submit" id="upload-submit" disabled>음악 올리기</button>
+          <button type="button" id="upload-retry" hidden>업로드 완료 처리 재시도</button>
+        </form>
+        <h2>내 재생목록</h2>
+        <form id="playlist-form" class="music-inline">
+          <label>재생목록 이름 <input id="playlist-name" required maxlength="100"></label>
+          <button type="submit" id="playlist-submit" disabled>만들기</button>
+        </form>
+        <nav id="playlist-list" aria-label="재생목록"></nav>
+      </aside>
+      <section class="music-panel" aria-labelledby="library-title">
+        <div class="music-inline">
+          <h2 id="library-title">모든 음악</h2>
+          <button type="button" id="refresh">새로고침</button>
+        </div>
+        <label>음악 이름 검색 <input id="music-search" type="search" placeholder="현재 목록에서 검색"></label>
+        <div class="music-inline music-actions">
+          <button type="button" id="play-all" disabled>목록 전체 재생</button>
+          <button type="button" id="delete-playlist" hidden>재생목록 삭제</button>
+        </div>
+        <p id="track-count"></p>
+        <ol id="track-list" class="music-tracks"></ol>
+      </section>
+    </div>
+    <section class="music-panel music-player" aria-label="음악 플레이어">
+      <strong id="now-playing" aria-live="polite">재생할 음악을 선택하세요.</strong>
+      <p id="queue-label">재생 대기열 없음</p>
+      <audio id="music-audio" controls preload="auto"></audio>
+      <div class="music-inline">
+        <button type="button" id="previous-track" disabled>이전 곡</button>
+        <button type="button" id="next-track" disabled>다음 곡</button>
+        <label>반복 재생
+          <select id="repeat-mode">
+            <option value="off">반복 안 함</option>
+            <option value="one">현재 곡 반복</option>
+            <option value="all">전체 목록 반복</option>
+          </select>
+        </label>
+      </div>
+      <p class="music-hint">전체 재생은 검색 결과가 아닌 현재 목록의 모든 곡을 순서대로 재생합니다. 다른 목록으로 이동해도 재생 대기열은 유지됩니다. 탭을 닫으면 재생이 멈춥니다. 모바일 절전 모드나 브라우저 정책에 따라 백그라운드 재생이 제한될 수 있습니다.</p>
     </section>
   </main>
 </body>
