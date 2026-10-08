@@ -656,11 +656,18 @@ document.addEventListener('submit', async (event) => {
 });
 
 $('#records-notice-button').addEventListener('click', () => {
-  const password = prompt('공지 작성은 관리자만 할 수 있습니다. 관리자 비밀번호를 입력하세요.');
-  if (password !== '8170') {
-    if (password !== null) alert('관리자 비밀번호가 올바르지 않습니다.');
-    return;
-  }
+  openActionModal('공지 작성', `
+    <form class="record-inline-form" data-entry-mode="notice-gate">
+      <input name="password" type="password" maxlength="72" placeholder="관리자 비밀번호" required>
+      <div class="record-inline-buttons">
+        <button type="submit">확인</button>
+        <button type="button" data-close-modal>취소</button>
+      </div>
+      <p class="records-form-status record-inline-status"></p>
+    </form>`);
+});
+
+const startNoticeCompose = (password) => {
   adminPassword = password;
   $('#records-post-form').reset();
   $('#records-post-id').value = '';
@@ -670,7 +677,7 @@ $('#records-notice-button').addEventListener('click', () => {
   setComposeMode('notice');
   setStatus('records-post-form-status', '');
   openModal('records-post-modal');
-});
+};
 
 document.addEventListener('click', async (event) => {
   const button = event.target.closest('button');
@@ -781,6 +788,15 @@ document.addEventListener('submit', async (event) => {
   if (!form) return;
   event.preventDefault();
   const { entryMode: mode, entryKind: kind, id } = form.dataset;
+  if (mode === 'notice-gate') {
+    if (form.elements.password.value !== '8170') {
+      form.querySelector('.record-inline-status').textContent = '관리자 비밀번호가 올바르지 않습니다.';
+      return;
+    }
+    closeModals();
+    startNoticeCompose(form.elements.password.value);
+    return;
+  }
   const isNotice = kind === 'notice';
   const status = form.querySelector('.record-inline-status');
   const submit = form.querySelector('button[type="submit"]');
