@@ -1574,3 +1574,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .records-comments-section .record-comments:empty::before { content: '아직 댓글이 없습니다.'; color: #999; font: 11px var(--sans); }
 
 .records-image-icon { display: inline-block; margin-left: 5px; vertical-align: -2px; color: #5578b5; }
+
+.record-comments, .records-comments-section .record-comments { gap: 0; }
+.record-comment, .record-comment.is-reply { margin-left: 0; padding: 10px 12px 8px calc(12px + var(--depth, 0) * 22px); border: 0; border-bottom: 1px solid #d8dce4; background: transparent; }
+.record-comment:first-child { border-top: 1px solid #d8dce4; }
+.record-comment.is-reply { background: #f1f3f8; }
+.record-reply-arrow { color: #5578b5; font: 700 14px/1 var(--sans); }

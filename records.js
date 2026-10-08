@@ -369,16 +369,15 @@ const loadComments = async (targetId, containerId = `comments-${targetId}`, kind
     const render = (parentId, depth = 0) => comments
       .filter((comment) => comment.parent_id === parentId)
       .map((comment) => `
-        <div class="record-comment ${depth ? 'is-reply' : ''}">
-          <div><strong>${escapeHtml(comment.nickname)}</strong><time>${formatDate(comment.created_at)}</time></div>
+        <div class="record-comment ${depth ? 'is-reply' : ''}" style="--depth:${Math.min(depth, 4)}">
+          <div>${depth ? '<span class="record-reply-arrow" aria-hidden="true">↳</span>' : ''}<strong>${escapeHtml(comment.nickname)}</strong><time>${formatDate(comment.created_at)}</time></div>
           <p>${escapeHtml(comment.body)}</p>
           <div class="record-comment-actions">
             <button data-reply="${targetId}" data-kind="${kind}" data-parent="${comment.id}" type="button">답글</button>
             <button data-comment-edit="${comment.id}" type="button">수정</button>
             <button data-comment-delete="${comment.id}" type="button">삭제</button>
           </div>
-          ${render(comment.id, depth + 1)}
-        </div>`).join('');
+        </div>${render(comment.id, depth + 1)}`).join('');
     container.innerHTML = render(null);
   } catch (error) {
     $('#records-status').textContent = error.message;
