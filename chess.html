@@ -10,7 +10,7 @@
   <main class="chess-shell">
     <div class="chess-top">
       <a class="chess-logo" href="index.html">byungsin<span>.</span></a>
-      <a class="chess-home" href="index.html">← 메인으로</a>
+      <a class="chess-home" href="index.html">← 뒤로가기</a>
     </div>
 
     <section class="chess-menu" id="chess-menu">
@@ -77,5 +77,9 @@
   </section>
 
   <script src="chess.js?v=3"></script>
+  <script>
+    history.pushState({ returnToHome: true }, '', location.href);
+    window.addEventListener('popstate', () => location.replace('index.html'));
+  </script>
 </body>
 </html>

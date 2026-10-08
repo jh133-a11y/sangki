@@ -11,7 +11,7 @@
   <main class="records-shell">
     <header class="records-site-header">
       <a class="records-logo" href="index.html">byungsin</a>
-      <nav><a href="index.html">홈</a><a href="archive.html">상점</a><a href="projects.html">상기 키우기</a><a href="index.html">메인으로</a></nav>
+      <nav><a href="index.html">홈</a><a href="archive.html">상점</a><a href="projects.html">상기 키우기</a><a href="index.html">뒤로가기</a></nav>
     </header>
     <section class="records-gallery-head">
       <div class="records-gallery-label">GALLERY</div>
@@ -84,5 +84,9 @@
   </section>
 
   <script src="records.js?v=28"></script>
+  <script>
+    history.pushState({ returnToHome: true }, '', location.href);
+    window.addEventListener('popstate', () => location.replace('index.html'));
+  </script>
 </body>
 </html>
