@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=63">
+  <link rel="stylesheet" href="style.css?v=64">
 </head>
 <body>
   <div class="noise"></div>
@@ -87,6 +87,15 @@
     <h2 id="confirm-title">확인</h2>
     <p id="confirm-message"></p>
     <div><button id="confirm-cancel" type="button">취소</button><button id="confirm-ok" type="button">확인</button></div>
+  </section>
+  <div class="site-form-backdrop" id="form-backdrop" hidden></div>
+  <section class="site-form-modal" id="form-modal" role="dialog" aria-modal="true" aria-labelledby="form-title" hidden>
+    <header><h2 id="form-title"></h2><button id="form-close" type="button" aria-label="닫기">×</button></header>
+    <form id="form-modal-form">
+      <div id="form-fields"></div>
+      <p class="site-form-error" id="form-error" role="alert"></p>
+      <div class="site-form-actions"><button id="form-cancel" type="button">취소</button><button id="form-submit" type="submit">확인</button></div>
+    </form>
   </section>
   <div class="bag-backdrop" id="bag-backdrop" hidden></div>
   <section class="bag-modal" id="bag-modal" role="dialog" aria-modal="true" aria-labelledby="bag-title" hidden>
@@ -324,6 +333,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=123"></script>
+  <script src="app.js?v=124"></script>
 </body>
 </html>

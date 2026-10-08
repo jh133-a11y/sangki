@@ -2245,22 +2245,91 @@ const loadComments = async () => {
   }
 };
 
-const addReply = async (parentId) => {
-  const nickname = window.prompt('답글 작성자의 닉네임을 입력하세요.');
-  if (nickname === null || !nickname.trim()) return;
-  const password = requestPassword();
-  if (password === null) return;
-  const body = window.prompt('답글을 입력하세요.');
-  if (body === null || !body.trim()) return;
+const formModal = document.querySelector('#form-modal');
+const formBackdrop = document.querySelector('#form-backdrop');
+const formModalForm = document.querySelector('#form-modal-form');
+const formFields = document.querySelector('#form-fields');
+const formError = document.querySelector('#form-error');
+const formSubmit = document.querySelector('#form-submit');
+let formHandler = null;
 
+const closeSiteForm = () => {
+  formModal.hidden = true;
+  formBackdrop.hidden = true;
+  formHandler = null;
+};
+
+const siteForm = ({ title, note = '', fields, submitLabel, onSubmit }) => {
+  document.querySelector('#form-title').textContent = title;
+  formFields.replaceChildren();
+  if (note) {
+    const noteElement = document.createElement('p');
+    noteElement.className = 'site-form-note';
+    noteElement.textContent = note;
+    formFields.append(noteElement);
+  }
+  fields.forEach((field) => {
+    const label = document.createElement('label');
+    label.append(field.label);
+    const input = document.createElement(field.textarea ? 'textarea' : 'input');
+    input.name = field.name;
+    input.required = true;
+    input.autocomplete = 'off';
+    if (field.textarea) input.rows = 5;
+    else input.type = field.type || 'text';
+    if (field.maxlength) input.maxLength = field.maxlength;
+    if (field.pattern) input.pattern = field.pattern;
+    if (field.inputmode) input.inputMode = field.inputmode;
+    if (field.placeholder) input.placeholder = field.placeholder;
+    input.value = field.value || '';
+    label.append(input);
+    formFields.append(label);
+  });
+  formError.textContent = '';
+  formSubmit.textContent = submitLabel;
+  formSubmit.disabled = false;
+  formHandler = onSubmit;
+  formModal.hidden = false;
+  formBackdrop.hidden = false;
+  formFields.querySelector('input, textarea')?.focus();
+};
+
+formModalForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!formHandler) return;
+  const values = Object.fromEntries(new FormData(formModalForm));
+  formSubmit.disabled = true;
+  formError.textContent = '';
   try {
+    await formHandler(values);
+    closeSiteForm();
+  } catch (error) {
+    formError.textContent = error.message;
+    formSubmit.disabled = false;
+  }
+});
+document.querySelector('#form-cancel').addEventListener('click', closeSiteForm);
+document.querySelector('#form-close').addEventListener('click', closeSiteForm);
+formBackdrop.addEventListener('click', closeSiteForm);
+
+const passwordField = { name: 'password', label: '비밀번호 4자리', type: 'password', maxlength: 4, pattern: '[0-9]{4}', inputmode: 'numeric', placeholder: '••••' };
+
+const addReply = (parentId) => siteForm({
+  title: '답글 쓰기',
+  fields: [
+    { name: 'nickname', label: '닉네임', maxlength: 24, placeholder: '이름을 입력하세요' },
+    passwordField,
+    { name: 'body', label: '답글', textarea: true, maxlength: 500, placeholder: '답글을 입력하세요' }
+  ],
+  submitLabel: '답글 등록',
+  onSubmit: async (values) => {
     const response = await fetch(commentsEndpoint, {
       method: 'POST',
       headers: { ...apiHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify({
-        nickname: nickname.trim(),
-        body: body.trim(),
-        password_hash: await hashPassword(password),
+        nickname: values.nickname.trim(),
+        body: values.body.trim(),
+        password_hash: await hashPassword(values.password),
         parent_id: parentId
       })
     });
@@ -2269,20 +2338,8 @@ const addReply = async (parentId) => {
     watchComment(parentId);
     if (createdReply) watchComment(createdReply.id);
     await loadComments();
-  } catch (error) {
-    window.alert(error.message);
   }
-};
-
-const requestPassword = () => {
-  const password = window.prompt('댓글의 4자리 비밀번호를 입력하세요.');
-  if (password === null) return null;
-  if (!/^\d{4}$/.test(password)) {
-    window.alert('비밀번호는 숫자 4자리여야 합니다.');
-    return null;
-  }
-  return password;
-};
+});
 
 const callCommentRpc = async (name, payload) => {
   const response = await fetch(`${rpcEndpoint}/${name}`, {
@@ -2311,58 +2368,60 @@ refreshButton.addEventListener('click', async () => {
   refreshButton.textContent = '새로고침 ↻';
 });
 
-const editComment = async (item) => {
-  const password = requestPassword();
-  if (password === null) return;
-  const body = window.prompt('수정할 댓글을 입력하세요.', item.body);
-  if (body === null || !body.trim()) return;
-
-  try {
+const editComment = (item) => siteForm({
+  title: '댓글 수정',
+  fields: [
+    passwordField,
+    { name: 'body', label: '댓글', textarea: true, maxlength: 500, value: item.body }
+  ],
+  submitLabel: '수정 저장',
+  onSubmit: async (values) => {
     const updated = await callCommentRpc('update_comment', {
       p_id: item.id,
-      p_password_hash: await hashPassword(password),
-      p_body: body
+      p_password_hash: await hashPassword(values.password),
+      p_body: values.body
     });
     if (!updated) throw new Error('비밀번호가 틀렸거나 댓글을 수정할 수 없습니다.');
     await loadComments();
-  } catch (error) {
-    window.alert(error.message);
   }
-};
+});
 
 const deleteComment = async (item) => {
   const isInvestorComment = Boolean(item.author_account_id);
-  if (isInvestorComment && !accountSession?.session_token) {
-    window.alert('이 투자자 댓글을 삭제하려면 작성한 계정으로 로그인해야 합니다.');
-    return;
-  }
-  const password = isInvestorComment ? null : requestPassword();
-  if (!isInvestorComment && password === null) return;
-  const isAdmin = !isInvestorComment && password === '8170';
-  if (!await siteConfirm(isInvestorComment
-    ? '로그인한 본인의 투자자 댓글을 삭제할까요?'
-    : isAdmin ? '관리자 권한으로 이 댓글을 삭제할까요?' : '이 댓글을 삭제할까요?')) return;
-
-  try {
-    const deleted = isInvestorComment
-      ? await callCommentRpc('delete_investor_comment', {
+  if (isInvestorComment) {
+    if (!accountSession?.session_token) {
+      siteNotice('이 투자자 댓글을 삭제하려면 작성한 계정으로 로그인해야 합니다.');
+      return;
+    }
+    if (!await siteConfirm('로그인한 본인의 투자자 댓글을 삭제할까요?')) return;
+    try {
+      const deleted = await callCommentRpc('delete_investor_comment', {
         p_id: item.id,
         p_session_token: accountSession.session_token
-      })
-      : await callCommentRpc('delete_comment', {
-        p_id: item.id,
-        p_password_hash: await hashPassword(password),
-        p_admin_password: isAdmin ? password : ''
       });
-    if (!deleted) {
-      throw new Error(isInvestorComment
-        ? '작성한 계정으로 로그인했는지 확인해주세요.'
-        : '비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+      if (!deleted) throw new Error('작성한 계정으로 로그인했는지 확인해주세요.');
+      await loadComments();
+    } catch (error) {
+      siteNotice(error.message);
     }
-    await loadComments();
-  } catch (error) {
-    window.alert(error.message);
+    return;
   }
+  siteForm({
+    title: '댓글 삭제',
+    note: '삭제하려면 댓글 비밀번호를 입력하세요. 관리자 비밀번호도 사용할 수 있습니다.',
+    fields: [{ ...passwordField, label: '비밀번호' , maxlength: 72, pattern: '' }],
+    submitLabel: '삭제',
+    onSubmit: async (values) => {
+      const isAdmin = values.password === '8170';
+      const deleted = await callCommentRpc('delete_comment', {
+        p_id: item.id,
+        p_password_hash: await hashPassword(values.password),
+        p_admin_password: isAdmin ? values.password : ''
+      });
+      if (!deleted) throw new Error('비밀번호가 틀렸거나 댓글을 삭제할 수 없습니다.');
+      await loadComments();
+    }
+  });
 };
 
 const hashPassword = async (password) => {

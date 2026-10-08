@@ -1589,3 +1589,36 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .record-inline-buttons button[type="submit"]{background:var(--ink);color:var(--paper)}
 .record-inline-status:empty{display:none}
 .record-comments-empty{opacity:.6;margin:8px 0}
+
+/* 직선형 폼 / 창 */
+.site-form-backdrop{position:fixed;inset:0;z-index:80;background:rgba(23,23,23,.5)}
+.site-form-modal,#records-comment-modal{position:fixed;top:50%;left:50%;z-index:81;width:min(440px,calc(100% - 30px));max-height:88vh;overflow:auto;transform:translate(-50%,-50%);padding:0;border:2px solid var(--ink);background:var(--paper);color:var(--ink);box-shadow:none}
+.site-form-modal[hidden],.site-form-backdrop[hidden]{display:none!important}
+.site-form-modal header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ink)}
+.site-form-modal h2,#records-comment-modal h2{margin:0;padding:15px 20px;font:700 12px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+#records-comment-modal h2{border-bottom:1px solid var(--ink);padding-right:56px}
+.site-form-modal header button,#records-comment-modal .records-modal-close{width:50px;height:100%;border:0;border-left:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;font:20px/1 var(--mono)}
+#records-comment-modal .records-modal-close{position:absolute;top:0;right:0;height:46px}
+.site-form-modal header button:hover,#records-comment-modal .records-modal-close:hover{background:var(--ink);color:var(--paper)}
+.site-form-modal form,#records-action-body{display:block;padding:20px}
+#form-fields,.record-inline-form{display:grid;gap:14px}
+.site-form-modal label{display:grid;gap:6px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.site-form-note{margin:0;font:11px/1.6 var(--mono)}
+.site-form-modal input,.site-form-modal textarea,.record-inline-form input,.record-inline-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--ink);border-radius:0;padding:11px 12px;background:#fff;color:var(--ink);font:12px/1.5 var(--mono);outline:none}
+.site-form-modal input:focus,.site-form-modal textarea:focus,.record-inline-form input:focus,.record-inline-form textarea:focus{box-shadow:inset 0 -3px 0 var(--ink)}
+.site-form-modal textarea,.record-inline-form textarea{resize:vertical}
+.site-form-error,.record-inline-status{min-height:0;margin:12px 0 0;color:#c0391b;font:11px/1.5 var(--mono)}
+.site-form-error:empty,.record-inline-status:empty{display:none}
+.site-form-actions,.record-inline-buttons{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;margin-top:18px;border:1px solid var(--ink)}
+.record-inline-buttons{margin-top:4px}
+.site-form-actions button,.record-inline-buttons button{border:0;border-radius:0;padding:13px;background:transparent;color:var(--ink);cursor:pointer;font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.site-form-actions button+button,.record-inline-buttons button+button{border-left:1px solid var(--ink)}
+.site-form-actions button[type="submit"],.record-inline-buttons button[type="submit"]{background:var(--ink);color:var(--paper)}
+.record-inline-buttons button[type="submit"]:only-child{grid-column:1/-1}
+.site-form-actions button:disabled,.record-inline-buttons button:disabled{cursor:wait;opacity:.55}
+.records-comments-section>.record-inline-form{padding-bottom:16px;border-bottom:1px solid var(--ink);margin:0 0 6px}
+/* 메인 댓글 폼 */
+.comment-form input,.comment-form textarea{padding:12px 13px;font:13px/1.5 var(--sans)}
+.comment-form button{width:100%;justify-self:stretch;padding:15px 18px;letter-spacing:.1em}
+.comment-form button:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.comment-form .comment-field{grid-column:1/-1}
