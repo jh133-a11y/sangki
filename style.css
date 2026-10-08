@@ -1045,6 +1045,29 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-refresh-button:hover {
   transform: rotate(25deg);
 }
+.sanggi-music-button {
+  position: absolute;
+  top: 82px;
+  right: 24px;
+  z-index: 6;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 2px solid #302a35;
+  background: #fff7dc;
+  color: #2a2730;
+  cursor: pointer;
+  font: 700 12px var(--sans);
+}
+.sanggi-music-status {
+  position: absolute;
+  top: 130px;
+  right: 24px;
+  z-index: 6;
+  max-width: 160px;
+  color: #000;
+  font: 700 11px var(--sans);
+  text-shadow: -1px -1px #fff, 1px -1px #fff, -1px 1px #fff, 1px 1px #fff;
+}
 .sanggi-sky,
 .sanggi-moon,
 .sanggi-city,
