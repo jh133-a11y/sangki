@@ -1580,3 +1580,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .record-comment:first-child { border-top: 1px solid #d8dce4; }
 .record-comment.is-reply { background: #f1f3f8; }
 .record-reply-arrow { color: #5578b5; font: 700 14px/1 var(--sans); }
+
+.record-inline-form{display:grid;gap:8px;margin:10px 0 14px}
+.record-inline-form input,.record-inline-form textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font:inherit}
+.record-inline-form textarea{resize:vertical}
+.record-inline-buttons{display:flex;gap:8px}
+.record-inline-buttons button{padding:8px 16px;border-radius:8px;cursor:pointer}
+.record-inline-slot .record-inline-form{margin:8px 0 0}
+.record-inline-status:empty{display:none}
+.record-comments-empty{opacity:.6;margin:8px 0}

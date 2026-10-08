@@ -165,6 +165,7 @@ const openNoticeDetail = (notice) => {
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
+      ${commentFormHtml({ mode: 'create', target: notice.id, kind: 'notice' })}
       <div class="record-comments" id="comments-detail-${notice.id}"></div>
     </section>`;
   pushSub(`#notice=${notice.id}`);
@@ -202,6 +203,7 @@ const openPostDetail = (post, countView = true) => {
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
+      ${commentFormHtml({ mode: 'create', target: post.id, kind: 'post' })}
       <div class="record-comments" id="comments-detail-${post.id}"></div>
     </section>`;
   pushSub(`#post=${post.id}`);
@@ -360,12 +362,32 @@ const renderPosts = () => {
   renderPagination();
 };
 
+const commentCache = {};
+
+const commentFormHtml = ({ mode, target, kind, parent = '', id = '', body = '' }) => {
+  const needsBody = mode !== 'delete';
+  const needsNick = mode === 'create' || mode === 'reply';
+  const label = { create: '댓글 등록', reply: '답글 등록', edit: '수정 저장', delete: '삭제' }[mode];
+  return `
+    <form class="record-inline-form" data-mode="${mode}" data-target="${target}" data-kind="${kind}" data-parent="${parent}" data-id="${id}">
+      ${needsNick ? '<input name="nickname" maxlength="24" placeholder="닉네임" required>' : ''}
+      <input name="password" type="password" maxlength="72" ${mode === 'create' || mode === 'reply' ? 'minlength="4"' : ''} placeholder="${mode === 'delete' ? '댓글 비밀번호 또는 관리자 비밀번호' : '비밀번호'}" required>
+      ${needsBody ? `<textarea name="body" maxlength="1000" rows="3" placeholder="내용" required>${escapeHtml(body)}</textarea>` : ''}
+      <div class="record-inline-buttons">
+        <button type="submit">${label}</button>
+        ${mode === 'create' ? '' : '<button type="button" data-inline-cancel>취소</button>'}
+      </div>
+      <p class="records-form-status record-inline-status"></p>
+    </form>`;
+};
+
 const loadComments = async (targetId, containerId = `comments-${targetId}`, kind = 'post') => {
   try {
     const comments = await rpc(kind === 'notice' ? 'record_get_notice_comments' : 'record_get_comments',
       kind === 'notice' ? { p_notice_id: targetId } : { p_post_id: targetId });
     const container = $(`#${containerId}`);
     if (!container) return;
+    comments.forEach((comment) => { commentCache[comment.id] = comment; });
     const render = (parentId, depth = 0) => comments
       .filter((comment) => comment.parent_id === parentId)
       .map((comment) => `
@@ -377,8 +399,9 @@ const loadComments = async (targetId, containerId = `comments-${targetId}`, kind
             <button data-comment-edit="${comment.id}" type="button">수정</button>
             <button data-comment-delete="${comment.id}" type="button">삭제</button>
           </div>
+          <div class="record-inline-slot" data-slot="${comment.id}"></div>
         </div>${render(comment.id, depth + 1)}`).join('');
-    container.innerHTML = render(null);
+    container.innerHTML = render(null) || '<p class="record-comments-empty">아직 댓글이 없습니다.</p>';
   } catch (error) {
     $('#records-status').textContent = error.message;
   }
@@ -593,22 +616,38 @@ $('#records-post-form').addEventListener('submit', async (event) => {
 });
 
 let commentKind = 'post';
-$('#records-comment-form').addEventListener('submit', async (event) => {
+document.addEventListener('submit', async (event) => {
+  const form = event.target.closest('.record-inline-form');
+  if (!form) return;
   event.preventDefault();
-  const isNotice = commentKind === 'notice';
-  const payload = {
-    [isNotice ? 'p_notice_id' : 'p_post_id']: $('#records-comment-post-id').value,
-    p_parent_id: $('#records-comment-parent-id').value || null,
-    p_nickname: $('#records-comment-nickname').value.trim(),
-    p_password_hash: await hashPassword($('#records-comment-password').value),
-    p_body: $('#records-comment-body').value.trim()
-  };
+  const { mode, target, kind, parent, id } = form.dataset;
+  const status = form.querySelector('.record-inline-status');
+  const password = form.elements.password.value;
+  const bodyField = form.elements.body;
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
   try {
-    await rpc(isNotice ? 'record_create_notice_comment' : 'record_create_comment', payload);
-    closeModals();
-    await loadBoard();
+    const passwordHash = await hashPassword(password);
+    if (mode === 'create' || mode === 'reply') {
+      const isNotice = kind === 'notice';
+      await rpc(isNotice ? 'record_create_notice_comment' : 'record_create_comment', {
+        [isNotice ? 'p_notice_id' : 'p_post_id']: target,
+        p_parent_id: parent || null,
+        p_nickname: form.elements.nickname.value.trim(),
+        p_password_hash: passwordHash,
+        p_body: bodyField.value.trim()
+      });
+    } else if (mode === 'edit') {
+      await rpc('record_update_comment', { p_id: id, p_password_hash: passwordHash, p_body: bodyField.value.trim() });
+    } else {
+      await rpc('record_delete_comment', { p_id: id, p_password_hash: passwordHash, p_admin_password: password });
+    }
+    await loadComments(target, `comments-detail-${target}`, kind);
+    if (mode === 'create') form.reset();
+    loadBoard();
   } catch (error) {
-    setStatus('records-comment-form-status', error.message);
+    status.textContent = error.message;
+    button.disabled = false;
   }
 });
 
@@ -698,17 +737,25 @@ document.addEventListener('click', async (event) => {
             localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
             await loadBoard();
     } else if (button.dataset.comment) {
-      $('#records-comment-form').reset();
-      $('#records-comment-post-id').value = button.dataset.comment;
-      $('#records-comment-parent-id').value = '';
-      commentKind = button.dataset.kind || 'post';
-      openModal('records-comment-modal');
-    } else if (button.dataset.reply) {
-      $('#records-comment-form').reset();
-      $('#records-comment-post-id').value = button.dataset.reply;
-      $('#records-comment-parent-id').value = button.dataset.parent;
-      commentKind = button.dataset.kind || 'post';
-      openModal('records-comment-modal');
+      document.querySelector('.records-comments-section > .record-inline-form [name="body"]')?.focus();
+    } else if (button.dataset.reply || button.dataset.commentEdit || button.dataset.commentDelete) {
+      const commentId = button.dataset.parent || button.dataset.commentEdit || button.dataset.commentDelete;
+      const slot = document.querySelector(`[data-slot="${commentId}"]`);
+      const mode = button.dataset.reply ? 'reply' : button.dataset.commentEdit ? 'edit' : 'delete';
+      const existing = slot.querySelector('form');
+      const sameMode = existing && existing.dataset.mode === mode;
+      document.querySelectorAll('.record-inline-slot').forEach((el) => { el.innerHTML = ''; });
+      if (sameMode) return;
+      const section = slot.closest('.records-comments-section');
+      const target = section.querySelector('.record-inline-form').dataset.target;
+      const kind = section.querySelector('.record-inline-form').dataset.kind;
+      slot.innerHTML = commentFormHtml({
+        mode, target, kind, parent: button.dataset.parent || '', id: commentId,
+        body: mode === 'edit' ? (commentCache[commentId]?.body || '') : ''
+      });
+      slot.querySelector('input, textarea').focus();
+    } else if (button.dataset.inlineCancel !== undefined) {
+      button.closest('.record-inline-slot').innerHTML = '';
     } else if (button.dataset.delete && post) {
       const password = prompt('게시물 비밀번호 또는 관리자 비밀번호를 입력하세요.');
       if (password !== null && confirm('게시물을 삭제할까요?')) {
@@ -746,19 +793,6 @@ document.addEventListener('click', async (event) => {
       const body = prompt('내용을 입력하세요.', notice.body);
       if (title !== null && body !== null) {
         await rpc('record_update_notice', { p_id: notice.id, p_admin_password: password, p_title: title, p_body: body });
-        await loadBoard();
-      }
-    } else if (button.dataset.commentEdit) {
-      const password = prompt('댓글 비밀번호를 입력하세요.');
-      const body = prompt('댓글 내용을 입력하세요.');
-      if (password !== null && body !== null) {
-        await rpc('record_update_comment', { p_id: button.dataset.commentEdit, p_password_hash: await hashPassword(password), p_body: body });
-        await loadBoard();
-      }
-    } else if (button.dataset.commentDelete) {
-      const password = prompt('댓글 비밀번호 또는 관리자 비밀번호를 입력하세요.');
-      if (password !== null && confirm('댓글을 삭제할까요?')) {
-        await rpc('record_delete_comment', { p_id: button.dataset.commentDelete, p_password_hash: await hashPassword(password), p_admin_password: password });
         await loadBoard();
       }
     }
