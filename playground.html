@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=45">
 </head>
 <body class="records-page">
   <main class="records-shell">
@@ -53,6 +53,13 @@
       <label>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
       <label>제목<input id="records-post-subject" maxlength="100" required></label>
       <label>내용<textarea id="records-post-body" maxlength="5000" rows="9" required></textarea></label>
+      <div class="records-image-field">
+        <button class="records-add-poll" id="records-add-image" type="button">＋ 사진 추가</button>
+        <input id="records-image-input" type="file" accept="image/*" multiple hidden>
+        <span class="records-image-count" id="records-image-count"></span>
+        <div class="records-image-previews" id="records-image-previews"></div>
+        <p class="records-poll-help">사진은 자동으로 압축되며 게시물당 최대 100장, 원본 한 장당 10MB까지 가능합니다.</p>
+      </div>
       <button class="records-add-poll" id="records-add-poll" type="button">＋ 투표 추가</button>
       <fieldset class="records-poll-fieldset" id="records-poll-fieldset" hidden>
         <legend>투표 <span>(선택)</span></legend>
@@ -99,6 +106,6 @@
     </form>
   </section>
 
-  <script src="records.js?v=16"></script>
+  <script src="records.js?v=17"></script>
 </body>
 </html>

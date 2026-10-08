@@ -30,6 +30,83 @@ const voterKey = () => {
 let myPollVotes = JSON.parse(localStorage.getItem('records-poll-votes') || '{}');
 const myPostVotes = JSON.parse(localStorage.getItem('records-post-votes') || '{}');
 const pendingPollChoice = {};
+
+const IMAGE_BUCKET = 'record-images';
+const MAX_IMAGES = 100;
+const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
+const MAX_OUTPUT_BYTES = 300 * 1024;
+const MAX_DIMENSION = 1280;
+let pendingImages = [];
+const imageUrl = (path) => `${SUPABASE_URL}/storage/v1/object/public/${IMAGE_BUCKET}/${path.split('/').map(encodeURIComponent).join('/')}`;
+
+const compressImage = async (file) => {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  const toBlob = (type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+  let scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  let type = 'image/webp';
+  let blob = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.82, 0.7, 0.58, 0.46]) {
+      blob = await toBlob(type, quality);
+      if (blob && blob.type !== type) { type = 'image/jpeg'; blob = await toBlob(type, quality); }
+      if (blob && blob.size <= MAX_OUTPUT_BYTES) { bitmap.close?.(); return blob; }
+    }
+    scale *= 0.8;
+  }
+  bitmap.close?.();
+  if (!blob || blob.size > 900 * 1024) throw new Error('compress failed');
+  return blob;
+};
+
+const renderImagePreviews = () => {
+  $('#records-image-count').textContent = pendingImages.length ? `${pendingImages.length}/${MAX_IMAGES}장` : '';
+  $('#records-image-previews').innerHTML = pendingImages.map((item, index) => `
+    <figure><img src="${item.preview}" alt=""><button data-image-remove="${index}" type="button" aria-label="사진 삭제">×</button></figure>`).join('');
+};
+
+const clearPendingImages = () => {
+  pendingImages.forEach((item) => URL.revokeObjectURL(item.preview));
+  pendingImages = [];
+  renderImagePreviews();
+};
+
+const uploadPostImages = async (postId, passwordHash) => {
+  const paths = new Array(pendingImages.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < pendingImages.length) {
+      const index = next++;
+      const blob = pendingImages[index].blob;
+      const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${postId}/${String(index).padStart(3, '0')}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+      const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}/${path}`, {
+        method: 'POST',
+        headers: { ...apiHeaders, 'Content-Type': blob.type, 'x-upsert': 'false' },
+        body: blob
+      });
+      if (!response.ok) throw new Error('사진 업로드에 실패했습니다. 이미지 SQL이 적용되었는지 확인하세요.');
+      paths[index] = path;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, pendingImages.length) }, worker));
+  await rpc('record_set_post_images', { p_id: postId, p_password_hash: passwordHash, p_images: paths });
+};
+
+const deletePostImages = async (images) => {
+  if (!images?.length) return;
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}`, {
+    method: 'DELETE',
+    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prefixes: images })
+  }).catch(() => {});
+};
 const saveMyPollVotes = () => localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
 
 const renderPoll = (poll) => {
@@ -70,6 +147,7 @@ const openPostDetail = (post, countView = true) => {
       <div class="records-detail-meta"><strong>${escapeHtml(post.nickname)}</strong><time>${formatDate(post.created_at)}</time></div>
       <h1>${escapeHtml(post.title)}</h1>
       <div class="records-detail-body">${escapeHtml(post.body)}</div>
+      ${Array.isArray(post.images) && post.images.length ? `<div class="records-detail-images">${post.images.map((path) => `<a href="${imageUrl(path)}" target="_blank" rel="noopener"><img src="${imageUrl(path)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>` : ''}
       ${renderPoll(post.poll)}
       <div class="records-row-actions">
         <button class="${myPostVotes[post.id] === 1 ? 'is-voted-pick' : ''}" data-vote="1" type="button">추천 ${post.upvotes}</button>
@@ -257,8 +335,48 @@ $('#records-write-button').addEventListener('click', () => {
   $('#records-post-id').value = '';
   $('#records-post-title').textContent = '글쓰기';
   resetPollForm();
+  clearPendingImages();
   setStatus('records-post-form-status', '');
   openModal('records-post-modal');
+});
+
+$('#records-add-image').addEventListener('click', () => $('#records-image-input').click());
+
+$('#records-image-input').addEventListener('change', async (event) => {
+  const files = Array.from(event.target.files);
+  event.target.value = '';
+  const status = 'records-post-form-status';
+  const submit = $('#records-post-form .records-submit');
+  submit.disabled = true;
+  try {
+    for (const file of files) {
+      if (pendingImages.length >= MAX_IMAGES) {
+        setStatus(status, `사진은 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+        break;
+      }
+      if (!file.type.startsWith('image/')) { setStatus(status, '이미지 파일만 첨부할 수 있습니다.'); continue; }
+      if (file.size > MAX_SOURCE_BYTES) { setStatus(status, `${file.name}: 10MB를 넘는 사진은 올릴 수 없습니다.`); continue; }
+      setStatus(status, `사진 압축 중... (${pendingImages.length + 1})`);
+      try {
+        const blob = await compressImage(file);
+        pendingImages.push({ blob, preview: URL.createObjectURL(blob) });
+        renderImagePreviews();
+        setStatus(status, '');
+      } catch (error) {
+        setStatus(status, `${file.name}: 사진을 처리하지 못했습니다.`);
+      }
+    }
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+$('#records-image-previews').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-image-remove]');
+  if (!button) return;
+  const [removed] = pendingImages.splice(Number(button.dataset.imageRemove), 1);
+  URL.revokeObjectURL(removed.preview);
+  renderImagePreviews();
 });
 
 $('#records-add-poll').addEventListener('click', () => {
@@ -290,8 +408,9 @@ $('#records-post-form').addEventListener('submit', async (event) => {
         p_title: payload.p_title,
         p_body: payload.p_body
       };
+    let postId;
     try {
-      await rpc('record_create_post', createPayload);
+      postId = await rpc('record_create_post', createPayload);
     } catch (error) {
       const missingPollFunction = payload.p_poll_question
         && error.message.includes('Could not find the function public.record_create_post');
@@ -299,6 +418,19 @@ $('#records-post-form').addEventListener('submit', async (event) => {
       setStatus('records-post-form-status', '투표 기능 SQL이 아직 적용되지 않았습니다. Supabase SQL을 먼저 실행하세요.');
       return;
     }
+    if (pendingImages.length) {
+      setStatus('records-post-form-status', '사진 업로드 중...');
+      try {
+        await uploadPostImages(postId, payload.p_password_hash);
+      } catch (error) {
+        closeModals();
+        clearPendingImages();
+        await loadBoard();
+        window.alert(`글은 등록되었지만 ${error.message}`);
+        return;
+      }
+    }
+    clearPendingImages();
     closeModals();
     await loadBoard();
   } catch (error) {
@@ -427,6 +559,7 @@ document.addEventListener('click', async (event) => {
       const password = prompt('게시물 비밀번호 또는 관리자 비밀번호를 입력하세요.');
       if (password !== null && confirm('게시물을 삭제할까요?')) {
         await rpc('record_delete_post', { p_id: post.id, p_password_hash: await hashPassword(password), p_admin_password: password });
+        await deletePostImages(post.images);
         await loadBoard();
       }
     } else if (button.dataset.edit && post) {

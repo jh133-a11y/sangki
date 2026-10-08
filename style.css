@@ -254,6 +254,16 @@ nav a:hover { opacity: .5; }
 .records-remove-option { width: 34px; padding: 0; }
 .records-add-option { justify-self: start; }
 .records-poll-help { margin: 0; font: 10px var(--sans); }
+.records-image-field { display: grid; gap: 6px; justify-items: start; }
+.records-image-count { color: #5578b5; font: 700 11px var(--sans); }
+.records-image-count:empty { display: none; }
+.records-image-previews { display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; }
+.records-image-previews:empty { display: none; }
+.records-image-previews figure { position: relative; width: 64px; height: 64px; margin: 0; border: 1px solid #d8dce4; }
+.records-image-previews img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.records-image-previews button { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border: 0; border-radius: 50%; padding: 0; background: #333; color: #fff; cursor: pointer; font: 12px/18px var(--sans); }
+.records-detail-images { display: grid; gap: 10px; padding: 0 16px 20px; }
+.records-detail-images img { display: block; max-width: 100%; height: auto; margin: 0 auto; border: 1px solid #e5e5e5; }
 .records-add-poll { justify-self: start; border: 1px dashed #9eabc0; padding: 9px 12px; background: #fff; color: #5578b5; cursor: pointer; font: 11px var(--sans); }
 .records-add-poll:hover { border-color: #5578b5; background: #f7f9fc; }
 .records-poll-fieldset[hidden], .records-add-poll[hidden] { display: none !important; }
