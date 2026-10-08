@@ -20,7 +20,7 @@
     <section class="chess-menu" id="chess-menu">
       <h1>CHESS</h1>
       <p>모드와 색을 고르고 시작하세요.</p>
-      <p class="chess-help">AI 승리 보상: 랜덤 현금 박스 쉬움 1개 · 보통 5개 · 어려움 15개.<br>로그인 및 투자 고유 닉네임 설정 필요. 비로그인/2인 대결은 연습 경기입니다.<br>무르기·이동 후보 표시·판 뒤집기는 AI 쉬움에서만 지원합니다.</p>
+      <p class="chess-help">AI 난이도 쉬움: 승리 시 랜덤 현금 박스 1개<br><br>AI 난이도 보통: 승리 시 랜덤 현금 박스 5개<br><br>AI 난이도 어려움: 승리 시 랜덤 현금 박스 15개<br><br>무르기·이동 후보 표시·판 뒤집기는 AI 난이도 쉬움에서만 지원합니다.<br><br>AI 경기는 로그인 시 전적과 보상이 저장됩니다.</p>
       <p id="chess-account-status" role="status" aria-live="polite"></p>
       <button id="chess-resume" type="button" hidden>진행 중인 서버 경기 이어하기</button>
       <div class="chess-field">
@@ -103,7 +103,7 @@
     </div>
   </section>
 
-  <script src="chess.js?v=4"></script>
+  <script src="chess.js?v=5"></script>
   <script>
     history.pushState({ returnToHome: true }, '', location.href);
     window.addEventListener('popstate', () => location.replace('index.html'));

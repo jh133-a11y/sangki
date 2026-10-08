@@ -30,6 +30,7 @@
   let profileRequest = 0;
   let statsFocus = null;
   let profileError = '';
+  let guestNickname = '';
   const assistsAllowed = () => settings.mode === 'local' || settings.level === 1;
   const accountMessage = (text) => { $('#chess-account-status').textContent = text; };
   const rpc = async (name, payload = {}) => {
@@ -53,7 +54,7 @@
   const updateProfileView = () => {
     $('#chess-account').textContent = profile
       ? `Lv.${profile.player_level} · ${profile.nickname || '투자 닉네임 미설정'}`
-      : accountSession ? '계정 정보를 불러오지 못했습니다.' : '비로그인 · 연습 모드';
+      : accountSession ? '계정 정보를 불러오지 못했습니다.' : guestNickname ? `비회원 · ${guestNickname}` : '비로그인 · 연습 모드';
     $('#chess-wins').textContent = `${profile?.wins || 0}회`;
     $('#chess-draws').textContent = `${profile?.draws || 0}회`;
     $('#chess-losses').textContent = `${profile?.losses || 0}회`;
@@ -62,7 +63,7 @@
     $('#chess-stats-refresh').disabled = profileBusy;
     $('#chess-resume').hidden = !profile?.active || Boolean(serverGame);
     $('#chess-start').disabled = profileBusy || thinking
-      || (settings.mode === 'ai' && accountSession && !accountReady);
+      || (settings.mode === 'ai' && Boolean(accountSession) && !accountReady);
     $('#chess-stats-status').textContent = profileBusy ? '전적을 불러오는 중…' : profileError || (profile
       ? `수령 대기 랜덤 현금 박스 ${profile.pending_boxes}개 · 보유 한도 100개`
       : accountSession ? '계정 전적을 불러오지 못했습니다. 새로고침을 눌러 주세요.' : '로그인 후 전적을 확인할 수 있습니다.');
@@ -76,14 +77,16 @@
     try {
       const stored = localStorage.getItem('sangki-auth-session') || sessionStorage.getItem('sangki-auth-session-tab');
       accountSession = JSON.parse(stored || 'null');
+      guestNickname = !accountSession && localStorage.getItem('sangki-investment-client-id')
+        ? localStorage.getItem('sangki-investor-nickname') || '' : '';
       profile = null;
       const next = accountSession ? await rpc('chess_profile', accountPayload()) : null;
       if (request !== profileRequest) return;
       profile = next;
       accountReady = true;
       accountMessage(profile
-        ? profile.nickname ? '로그인 AI 경기는 전적과 보상이 저장됩니다.' : '메인에서 투자 고유 닉네임을 먼저 설정하세요.'
-        : '로그인하지 않은 AI 경기는 전적과 보상이 저장되지 않습니다.');
+        ? profile.nickname ? '' : '메인에서 투자 고유 닉네임을 먼저 설정하세요.'
+        : '');
     } catch (error) {
       if (request === profileRequest) {
         accountMessage(error.message);
@@ -901,7 +904,7 @@
     }
   });
   window.addEventListener('storage', (event) => {
-    if (event.key && event.key !== 'sangki-auth-session') return;
+    if (event.key && !['sangki-auth-session', 'sangki-investment-client-id', 'sangki-investor-nickname'].includes(event.key)) return;
     if (!localStorage.getItem('sangki-auth-session')) sessionStorage.removeItem('sangki-auth-session-tab');
     gameId += 1;
     thinking = false;

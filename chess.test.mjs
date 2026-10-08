@@ -66,3 +66,29 @@ test('AI assists only on easy; local play retains its existing tools', () => {
   settings.mode = 'local';
   assert.equal(assistsAllowed(), true);
 });
+test('guest investment identity keeps AI start enabled without account RPCs', async () => {
+  const elements = new Map();
+  const storage = new Map([
+    ['sangki-investment-client-id', 'guest-id'],
+    ['sangki-investor-nickname', '<투자 닉네임>']
+  ]);
+  const guestContext = vm.createContext({
+    document: { querySelector: (selector) => {
+      if (!elements.has(selector)) elements.set(selector, {});
+      return elements.get(selector);
+    } },
+    localStorage: { getItem: (key) => storage.get(key) || null },
+    sessionStorage: { getItem: () => null },
+    fetch: () => { throw new Error('Guest must not call account RPCs'); }
+  });
+  vm.runInContext(source.slice(0, source.lastIndexOf("  document.querySelectorAll('.chess-seg')"))
+    + '\n globalThis.loadProfile=loadProfile;})();', guestContext);
+  await guestContext.loadProfile();
+  assert.equal(elements.get('#chess-account').textContent, '비회원 · <투자 닉네임>');
+  assert.equal(elements.get('#chess-start').disabled, false);
+  assert.equal(elements.get('#chess-account-status').textContent, '');
+  storage.clear();
+  await guestContext.loadProfile();
+  assert.equal(elements.get('#chess-account').textContent, '비로그인 · 연습 모드');
+  assert.equal(elements.get('#chess-start').disabled, false);
+});
