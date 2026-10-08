@@ -17,6 +17,18 @@ button { font: inherit; color: inherit; }
 .chess-logo { color: var(--ink); font: 700 22px var(--mono); text-decoration: none; }
 .chess-logo span { color: var(--orange); }
 .chess-home { color: var(--ink); font-size: 12px; }
+.chess-top { gap: 12px; flex-wrap: wrap; }
+.chess-account-area { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-left: auto; max-width: 100%; }
+#chess-account { font-size: 12px; overflow-wrap: anywhere; }
+.chess-settings { background: transparent; border: 1px solid var(--ink); padding: 7px 10px; font-size: 20px; cursor: pointer; }
+.chess-help { font-size: 11px; line-height: 1.7; }
+#chess-account-status, #chess-reward-status { font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+#chess-resume, #chess-sync { padding: 10px; background: var(--acid); border: 1px solid var(--ink); cursor: pointer; }
+.chess-stats { margin: 20px; display: grid; gap: 12px; }
+.chess-stats div { display: flex; justify-content: space-between; gap: 12px; }
+.chess-stats dd { margin: 0; font-weight: bold; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+.chess-modal { max-height: calc(100dvh - 30px); overflow: auto; }
 
 .chess-menu { max-width: 460px; margin: 40px auto; border: 2px solid var(--ink); padding: 28px; background: #fff; }
 .chess-menu h1 { margin: 0 0 6px; font-size: 40px; letter-spacing: .1em; }
@@ -27,6 +39,7 @@ button { font: inherit; color: inherit; }
 .chess-seg button { border: 0; border-radius: 0; padding: 12px 6px; background: transparent; cursor: pointer; font-size: 12px; }
 .chess-seg button + button { border-left: 1px solid var(--ink); }
 .chess-seg button.is-on { background: var(--ink); color: var(--paper); }
+.chess-seg button small { display: block; margin-top: 6px; font-size: 10px; line-height: 1.5; }
 .chess-start { width: 100%; margin-top: 8px; border: 1px solid var(--ink); border-radius: 0; padding: 15px; background: var(--acid); cursor: pointer; font-size: 13px; letter-spacing: .1em; }
 .chess-start:hover { background: var(--ink); color: var(--acid); }
 
