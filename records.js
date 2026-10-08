@@ -156,6 +156,7 @@ const openNoticeDetail = (notice) => {
         <button data-notice-delete="${notice.id}" type="button">삭제</button>
       </div>
     </article>`;
+  pushSub();
   page.classList.add('records-detailing');
   detail.hidden = false;
 };
@@ -188,6 +189,7 @@ const openPostDetail = (post, countView = true) => {
       </div>
       <div class="record-comments" id="comments-detail-${post.id}"></div>
     </article>`;
+  pushSub();
   page.classList.add('records-detailing');
   detail.hidden = false;
   loadComments(post.id, `comments-detail-${post.id}`);
@@ -214,10 +216,36 @@ const formatDate = (value) => {
     : date.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
 };
 
+let subOpen = false;
+const pushSub = () => {
+  if (subOpen) return;
+  subOpen = true;
+  history.pushState({ records: 'sub' }, '');
+};
+const leaveSub = () => {
+  if (subOpen) history.back();
+};
+const hideViews = () => {
+  modalIds.forEach((id) => { $(`#${id}`).hidden = true; });
+  backdrop.hidden = true;
+  page.classList.remove('records-writing', 'records-detailing');
+  $('#records-detail-page').hidden = true;
+};
+history.replaceState({ records: 'root' }, '');
+history.pushState({ records: 'list' }, '');
+window.addEventListener('popstate', (event) => {
+  const state = event.state && event.state.records;
+  if (state === 'sub') return;
+  subOpen = false;
+  if (state === 'list') hideViews();
+  else location.replace('index.html');
+});
+
 const openModal = (id) => {
   modalIds.forEach((modalId) => { $(`#${modalId}`).hidden = modalId !== id; });
   const isComposer = id === 'records-post-modal';
   if (isComposer) {
+    pushSub();
     page.classList.remove('records-detailing');
     $('#records-detail-page').hidden = true;
   }
@@ -229,6 +257,7 @@ const closeModals = () => {
   modalIds.forEach((id) => { $(`#${id}`).hidden = true; });
   backdrop.hidden = true;
   page.classList.remove('records-writing');
+  if ($('#records-detail-page').hidden) leaveSub();
 };
 
 const setStatus = (id, message) => { $(`#${id}`).textContent = message || ''; };
@@ -570,8 +599,8 @@ document.addEventListener('click', async (event) => {
     return;
   }
   if (button.hasAttribute('data-close-detail')) {
-    page.classList.remove('records-detailing');
-    $('#records-detail-page').hidden = true;
+    hideViews();
+    leaveSub();
     return;
   }
   if (button.id === 'records-add-option') {
@@ -655,8 +684,8 @@ document.addEventListener('click', async (event) => {
         const target = notices.find((item) => item.id === button.dataset.noticeDelete);
         await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: password });
         if (target) await deletePostImages(target.images);
-        page.classList.remove('records-detailing');
-        $('#records-detail-page').hidden = true;
+        hideViews();
+        leaveSub();
         await loadBoard();
       }
     } else if (button.dataset.noticeEdit) {

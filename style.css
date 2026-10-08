@@ -278,7 +278,7 @@ nav a:hover { opacity: .5; }
 /* Compact gallery board */
 .records-page { min-height: 100vh; padding: 0 0 32px; background: #f4f4f4; color: #333; }
 .records-shell { width: min(1120px, calc(100% - 16px)); margin: 0 auto; }
-.records-site-header { display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid #d7d7d7; background: #fff; }
+.records-site-header { position: relative; top: auto; left: auto; width: auto; z-index: auto; padding: 0; display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid #d7d7d7; background: #fff; }
 .records-logo { color: #3b5f9e; font: 700 18px var(--sans); letter-spacing: -.04em; }
 .records-site-header nav { display: flex; gap: 0; color: #777; font: 11px var(--sans); }
 .records-site-header nav a { padding: 0 9px; border-right: 1px solid #e5e5e5; }
