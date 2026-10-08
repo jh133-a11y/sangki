@@ -1,0 +1,559 @@
+-- 급등주: 일반 변동 ±30%, 1% 급등 후 80% 하락, 100만원 이상 1000주 분할(알림), 10원 이하 상장폐지(알림) 후 다음 갱신에 재상장
+update public.investment_surge_settings
+set normal_max = 30,
+    spike_chance = 1,
+    spike_min = 200,
+    spike_max = 2000,
+    crash_chance = 80
+where id = 1;
+
+create or replace function public.investment_update_market()
+returns date
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  kst_now timestamp := now() at time zone 'Asia/Seoul';
+  today date := kst_now::date;
+  current_bucket timestamptz :=
+    date_trunc('hour', now())
+    + make_interval(
+        mins => (floor(extract(minute from now()) / 5) * 5)::integer
+      );
+  direction_date_value date;
+  direction_state_value jsonb;
+  asset record;
+  pct numeric;
+  pct_two numeric;
+  previous_pct numeric;
+  previous_pct_two numeric;
+  daily_direction integer;
+  movement_direction integer;
+  step numeric;
+  step_two numeric;
+  min_pct numeric;
+  max_pct numeric;
+  next_price bigint;
+  next_price_two bigint;
+  new_direction_day boolean := false;
+begin
+  insert into public.investment_market (id, last_market_date)
+  values (1, null)
+  on conflict (id) do nothing;
+
+  select direction_date, direction_state
+  into direction_date_value, direction_state_value
+  from public.investment_market
+  where id = 1
+  for update;
+
+  if direction_date_value is distinct from today then
+    direction_state_value := jsonb_build_object(
+      'SANGI_ROCKET', case when random() < 0.5 then -1 else 1 end,
+      'JEONGMIN_ROCKET', 0,
+      'SANGI_BIO', case when random() < 0.5 then -1 else 1 end,
+      'SAMSUNG_MICROWAVE', case when random() < 0.5 then -1 else 1 end,
+      'SEOK_HYNIX', 0,
+      'KOREA_SANGI_INDEX', case when random() < 0.5 then -1 else 1 end,
+      'SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'CURRENT_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'DONGHWA_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JEONGMIN_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JUSEONG_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JAEJJING_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'SANGI_AI', case when random() < 0.5 then -1 else 1 end,
+      'QUANTUM_YOON', case when random() < 0.5 then -1 else 1 end,
+      'rocket_event', random() < 0.10,
+      'bio_event', random() < 0.05,
+      'quantum_event', random() < 0.05,
+      'tech_direction', case when random() < 0.5 then -1 else 1 end
+    );
+    direction_state_value := jsonb_set(
+      direction_state_value,
+      '{JEONGMIN_ROCKET}',
+      direction_state_value->'SANGI_ROCKET'
+    );
+    direction_state_value := jsonb_set(
+      direction_state_value,
+      '{SEOK_HYNIX}',
+      direction_state_value->'SAMSUNG_MICROWAVE'
+    );
+    update public.investment_market
+    set direction_date = today,
+        direction_state = direction_state_value,
+        last_market_date = today,
+        last_price_update = null
+    where id = 1;
+    new_direction_day := true;
+  end if;
+
+  select direction_state into direction_state_value
+  from public.investment_market
+  where id = 1;
+
+  perform set_config('app.investment_admin_reset', 'on', true);
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      delisted_at = null,
+      was_delisted = true
+  where listed = false
+    and (
+      delisted_at is null
+      or delisted_at < current_bucket
+    );
+  perform set_config('app.investment_admin_reset', 'off', true);
+
+  if not new_direction_day
+     and (
+       select last_price_update
+       from public.investment_market
+       where id = 1
+     ) is not distinct from current_bucket then
+    return today;
+  end if;
+
+  for asset in select * from public.investment_assets order by symbol for update loop
+    if not asset.listed and not new_direction_day then
+      continue;
+    end if;
+
+    if not asset.listed and new_direction_day then
+      update public.investment_assets
+      set current_price = base_price, change_pct = 0, listed = true
+      where symbol = asset.symbol;
+      asset.current_price := asset.base_price;
+      asset.change_pct := 0;
+    end if;
+
+    if asset.symbol = 'JEONGMIN_ROCKET' then
+      continue;
+    end if;
+
+    pct := 0;
+    previous_pct := asset.change_pct;
+    if asset.symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET') then
+      daily_direction := (direction_state_value->>'SANGI_ROCKET')::integer;
+      min_pct := -30;
+      max_pct := 30;
+      if new_direction_day and (direction_state_value->>'rocket_event')::boolean
+         and daily_direction > 0 then
+        pct := floor(random() * 101) + 100;
+        pct_two := floor(random() * 101) + 100;
+      else
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+        step := floor(random() * 5) + 1;
+        step_two := floor(random() * 5) + 1;
+        pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
+        previous_pct_two := (
+          select change_pct from public.investment_assets
+          where symbol = 'JEONGMIN_ROCKET'
+        );
+        pct_two := greatest(min_pct, least(max_pct, previous_pct_two + movement_direction * step_two));
+        if pct = 0 then pct := movement_direction; end if;
+        if pct_two = 0 then pct_two := movement_direction; end if;
+      end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    elsif asset.symbol in ('SAMSUNG_MICROWAVE', 'SEOK_HYNIX') then
+      daily_direction := (direction_state_value->>'SAMSUNG_MICROWAVE')::integer;
+      min_pct := -15;
+      max_pct := 15;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+      step := floor(random() * 5) + 1;
+      step_two := floor(random() * 5) + 1;
+      pct := greatest(min_pct, least(max_pct, previous_pct + movement_direction * step));
+      previous_pct_two := (
+        select change_pct from public.investment_assets
+        where symbol = 'SEOK_HYNIX'
+      );
+      pct_two := greatest(min_pct, least(max_pct, previous_pct_two + movement_direction * step_two));
+      if pct = 0 then pct := movement_direction; end if;
+      if pct_two = 0 then pct_two := movement_direction; end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    elsif asset.symbol = 'SANGI_BIO' then
+      daily_direction := (direction_state_value->>'SANGI_BIO')::integer;
+      if new_direction_day and (direction_state_value->>'bio_event')::boolean
+         and daily_direction > 0 then
+        pct := floor(random() * 501) + 500;
+      else
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+        step := floor(random() * 5) + 1;
+        pct := greatest(-30, least(30, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
+      end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    elsif asset.symbol in (
+      'SURGE_STOCK',
+      'CURRENT_SURGE_STOCK',
+      'DONGHWA_SURGE_STOCK',
+      'JEONGMIN_SURGE_STOCK',
+      'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
+    ) then
+      daily_direction := coalesce((direction_state_value->>asset.symbol)::integer, case when random() < 0.5 then -1 else 1 end);
+      if random() < 0.01 then
+        pct := floor(random() * 1801) + 200;
+      else
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+        step := floor(random() * 100) + 1;
+        pct := greatest(-100, least(100, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
+      end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    elsif asset.symbol = 'KOREA_SANGI_INDEX' then
+      daily_direction := (direction_state_value->>'KOREA_SANGI_INDEX')::integer;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+      step := floor(random() * 3) + 1;
+      pct := greatest(-1, least(3, previous_pct + movement_direction * step));
+      if pct = 0 then pct := movement_direction; end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    elsif asset.symbol = 'SANGI_AI' then
+      daily_direction := (direction_state_value->>'SANGI_AI')::integer;
+      movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+      step := floor(random() * 5) + 1;
+      pct := greatest(-10, least(20, previous_pct + movement_direction * step));
+      if pct = 0 then pct := movement_direction; end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    else
+      daily_direction := (direction_state_value->>'QUANTUM_YOON')::integer;
+      if new_direction_day and (direction_state_value->>'quantum_event')::boolean
+         and daily_direction > 0 then
+        pct := floor(random() * 101) + 100;
+      else
+        movement_direction := public.investment_next_direction(previous_pct, daily_direction);
+        step := floor(random() * 5) + 1;
+        pct := greatest(-30, least(50, previous_pct + movement_direction * step));
+        if pct = 0 then pct := movement_direction; end if;
+      end if;
+      next_price := round(asset.current_price * (1 + pct / 100));
+    end if;
+
+    if previous_pct >= 10 and random() < 0.7 then
+      pct := -abs(pct);
+      next_price := round(asset.current_price * (1 + pct / 100));
+    end if;
+
+    update public.investment_assets
+    set current_price = case when next_price <= 10 then 0 else next_price end,
+        change_pct = pct,
+        listed = next_price > 10
+    where symbol = asset.symbol;
+
+    if next_price <= 10 and asset.symbol not in (
+      'SURGE_STOCK', 'CURRENT_SURGE_STOCK', 'DONGHWA_SURGE_STOCK',
+    'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK', 'JAEJJING_SURGE_STOCK'
+    ) then
+      if asset.listed then
+        insert into public.investment_shop_messages(client_id, message)
+        select
+          h.client_id,
+          '보유하고 있던 ' || a.name || ' 종목이 상장폐지되었습니다. 보유 수량 '
+            || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+            || '주는 정리되었습니다.'
+        from public.investment_holdings h
+        join public.investment_assets a on a.symbol = h.symbol
+        where h.symbol = asset.symbol
+          and h.quantity > 0;
+      end if;
+      delete from public.investment_holdings where symbol = asset.symbol;
+    end if;
+
+    if asset.symbol = 'SANGI_ROCKET' then
+      if (
+        select change_pct
+        from public.investment_assets
+        where symbol = 'JEONGMIN_ROCKET'
+      ) >= 10 and random() < 0.7 then
+        pct_two := -abs(pct_two);
+      end if;
+
+      next_price_two := round(
+        (select current_price from public.investment_assets where symbol = 'JEONGMIN_ROCKET')
+        * (1 + pct_two / 100)
+      );
+      if next_price_two <= 10 then
+        insert into public.investment_shop_messages(client_id, message)
+        select
+          h.client_id,
+          '보유하고 있던 ' || a.name || ' 종목이 상장폐지되었습니다. 보유 수량 '
+            || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+            || '주는 정리되었습니다.'
+        from public.investment_holdings h
+        join public.investment_assets a on a.symbol = h.symbol
+        where h.symbol = 'JEONGMIN_ROCKET'
+          and h.quantity > 0
+          and exists (
+            select 1
+            from public.investment_assets
+            where symbol = 'JEONGMIN_ROCKET'
+              and listed = true
+          );
+      end if;
+      update public.investment_assets
+      set current_price = case when next_price_two <= 10 then 0 else next_price_two end,
+          change_pct = pct_two,
+          listed = next_price_two > 10
+      where symbol = 'JEONGMIN_ROCKET';
+      if next_price_two <= 10 then
+        delete from public.investment_holdings
+        where symbol = 'JEONGMIN_ROCKET';
+      end if;
+    end if;
+  end loop;
+
+  -- 시장 가격 계산이 끝난 뒤 분할을 적용해 다음 갱신이 분할 가격을 기준으로 시작되게 한다.
+  perform set_config('app.investment_admin_reset', 'on', true);
+  perform public.investment_apply_stock_splits();
+  perform set_config('app.investment_admin_reset', 'off', true);
+
+  update public.investment_market
+  set last_market_date = today,
+      last_price_update = current_bucket
+  where id = 1;
+  return today;
+end;
+$$;
+
+create or replace function public.apply_surge_stock_volatility()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  settings public.investment_surge_settings%rowtype;
+  movement_direction integer;
+  movement_pct numeric;
+  next_price bigint;
+begin
+  if current_setting('app.investment_admin_reset', true) = 'on'
+     or new.symbol not in (
+       'SURGE_STOCK', 'CURRENT_SURGE_STOCK', 'DONGHWA_SURGE_STOCK',
+    'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK', 'JAEJJING_SURGE_STOCK'
+     ) then
+    return new;
+  end if;
+
+  select * into settings
+  from public.investment_surge_settings
+  where id = 1;
+
+  if old.surge_spike then
+    if random() < settings.crash_chance / 100 then
+      movement_pct := -(floor(random() * (settings.crash_max - settings.crash_min + 1)) + settings.crash_min);
+    else
+      movement_direction := case
+        when old.change_pct <= -10 and random() < 0.7 then 1
+        when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
+        when old.change_pct <> 0 then -sign(old.change_pct)::integer
+        else case when random() < 0.5 then -1 else 1 end
+      end;
+      movement_pct := movement_direction * (floor(random() * settings.normal_max) + 1);
+    end if;
+    next_price := round(old.current_price * (1 + movement_pct / 100));
+    new.current_price := case when next_price <= 10 then 0 else next_price end;
+    new.change_pct := movement_pct;
+    new.listed := next_price > 10;
+    new.surge_spike := false;
+    return new;
+  end if;
+
+  if random() < settings.spike_chance / 100 then
+    movement_pct := floor(random() * (settings.spike_max - settings.spike_min + 1)) + settings.spike_min;
+    next_price := round(old.current_price * (1 + movement_pct / 100));
+    new.current_price := next_price;
+    new.change_pct := movement_pct;
+    new.listed := true;
+    new.surge_spike := true;
+    return new;
+  end if;
+
+  movement_direction := case
+    when old.change_pct <= -10 and random() < 0.7 then 1
+    when old.change_pct <> 0 and random() < 0.7 then sign(old.change_pct)::integer
+    when old.change_pct <> 0 then -sign(old.change_pct)::integer
+    else case when random() < 0.5 then -1 else 1 end
+  end;
+  movement_pct := movement_direction * (floor(random() * settings.normal_max) + 1);
+  next_price := round(old.current_price * (1 + movement_pct / 100));
+  new.current_price := case when next_price <= 10 then 0 else next_price end;
+  new.change_pct := movement_pct;
+  new.listed := next_price > 10;
+  new.surge_spike := false;
+  return new;
+end;
+$$;
+
+create or replace function public.investment_surge_delist_cleanup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if current_setting('app.investment_admin_reset', true) = 'on' then
+    return new;
+  end if;
+  insert into public.investment_shop_messages(client_id, message)
+  select
+    h.client_id,
+    '보유하고 있던 ' || new.name || ' 종목이 상장폐지되었습니다. 보유 수량 '
+      || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+      || '주는 정리되었습니다. 다음 갱신에 재상장됩니다.'
+  from public.investment_holdings h
+  where h.symbol = new.symbol
+    and h.quantity > 0;
+  delete from public.investment_holdings where symbol = new.symbol;
+  return new;
+end;
+$$;
+
+drop trigger if exists investment_surge_delist_cleanup_trigger on public.investment_assets;
+create trigger investment_surge_delist_cleanup_trigger
+after update of listed on public.investment_assets
+for each row
+when (
+  old.listed = true and new.listed = false
+  and new.symbol in (
+    'SURGE_STOCK', 'CURRENT_SURGE_STOCK', 'DONGHWA_SURGE_STOCK',
+    'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK', 'JAEJJING_SURGE_STOCK'
+  )
+)
+execute function public.investment_surge_delist_cleanup();
+
+create or replace function public.investment_relist_delisted_assets()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_bucket timestamptz :=
+    date_trunc('hour', now())
+    + make_interval(
+        mins => (floor(extract(minute from now()) / 5) * 5)::integer
+      );
+begin
+  perform set_config('app.investment_admin_reset', 'on', true);
+  update public.investment_assets
+  set current_price = base_price,
+      change_pct = 0,
+      listed = true,
+      delisted_at = null,
+      was_delisted = true
+  where listed = false
+    and (
+      delisted_at is null
+      or delisted_at < current_bucket
+    );
+  perform public.investment_apply_stock_splits();
+  perform set_config('app.investment_admin_reset', 'off', true);
+end;
+$$;
+
+create or replace function public.investment_apply_stock_splits()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  asset_row record;
+  v_split_factor bigint;
+begin
+  for asset_row in
+    select symbol, current_price
+    from public.investment_assets
+    where listed = true
+      and (
+        (
+          symbol in (
+            'SURGE_STOCK',
+            'CURRENT_SURGE_STOCK',
+            'DONGHWA_SURGE_STOCK',
+            'JEONGMIN_SURGE_STOCK',
+            'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
+          )
+          and current_price >= 1000000
+        )
+        or (
+          symbol in ('SANGI_ROCKET', 'JEONGMIN_ROCKET', 'SANGI_BIO')
+          and current_price > 1000000
+        )
+        or (
+          symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE')
+          and current_price > 10000000
+        )
+        or (
+          symbol not in (
+            'SURGE_STOCK',
+            'CURRENT_SURGE_STOCK',
+            'DONGHWA_SURGE_STOCK',
+            'JEONGMIN_SURGE_STOCK',
+            'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK',
+            'SANGI_ROCKET',
+            'JEONGMIN_ROCKET',
+            'SANGI_BIO',
+            'SEOK_HYNIX',
+            'SAMSUNG_MICROWAVE'
+          )
+          and current_price > 1000000
+        )
+      )
+    for update
+  loop
+    if asset_row.symbol in (
+      'SURGE_STOCK',
+      'CURRENT_SURGE_STOCK',
+      'DONGHWA_SURGE_STOCK',
+      'JEONGMIN_SURGE_STOCK',
+      'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
+    ) then
+      v_split_factor := 1000;
+    elsif asset_row.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE') then
+      v_split_factor := 10;
+    else
+      v_split_factor := 100;
+    end if;
+
+    if v_split_factor = 1000 then
+      insert into public.investment_shop_messages(client_id, message)
+      select
+        h.client_id,
+        '보유하고 있던 ' || a.name || ' 종목이 1주당 1,000주로 분할되었습니다. 보유 수량 '
+          || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+          || '주 → '
+          || to_char(h.quantity * v_split_factor, 'FM999,999,999,999,999,999,999')
+          || '주, 주가는 '
+          || to_char(asset_row.current_price, 'FM999,999,999,999,999')
+          || '원 → '
+          || to_char(greatest(1, round(asset_row.current_price::numeric / v_split_factor)::bigint), 'FM999,999,999,999,999')
+          || '원으로 조정되었습니다.'
+      from public.investment_holdings h
+      join public.investment_assets a on a.symbol = h.symbol
+      where h.symbol = asset_row.symbol
+        and h.quantity > 0;
+    end if;
+
+    update public.investment_holdings
+    set quantity = quantity * v_split_factor
+    where symbol = asset_row.symbol;
+
+    update public.investment_assets
+    set current_price = greatest(
+          1,
+          round(current_price::numeric / v_split_factor)::bigint
+        ),
+        split_notice = true
+    where symbol = asset_row.symbol;
+
+  end loop;
+end;
+$$;
+
+notify pgrst, 'reload schema';
