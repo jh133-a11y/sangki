@@ -712,6 +712,8 @@
         new Promise((resolve) => setTimeout(resolve, 350))
       ]);
       if (id !== gameId) return;
+      const opponentMove = game.moves[ply + 1];
+      if (opponentMove) playSound(Boolean(opponentMove.capture));
       restoreServerGame(game);
       if (game.result) await loadProfile();
     } catch (error) {

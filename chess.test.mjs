@@ -131,12 +131,13 @@ test('player move is rendered before even an immediate server opponent response'
   const renders = [];
   const initial = newState();
   const playerMove = legalMoves(initial).find((m) => m.from === 52 && m.to === 36);
-  const serverResponse = { id: 'game', result: null };
+  const serverResponse = { id: 'game', result: null, moves: [playerMove, { capture: 'P' }] };
+  const sounds = [];
   const turnContext = vm.createContext({
     gameId: 1, serverGame: { id: 'game' }, history: [], state: initial,
     legalCache: legalMoves(initial), positionCounts: {}, thinking: false,
     selected: 52, lastMove: null, sanFor: () => 'e4', applyMove, legalMoves,
-    playSound: () => {}, setStatus: () => {}, accountPayload: () => ({}),
+    playSound: (capture) => sounds.push(capture), setStatus: () => {}, accountPayload: () => ({}),
     rpc: async () => serverResponse,
     setTimeout: (callback, delay) => {
       assert.equal(delay, 350);
@@ -154,10 +155,12 @@ test('player move is rendered before even an immediate server opponent response'
   const pending = turnContext.submit(playerMove);
   await Promise.resolve();
   assert.deepEqual(renders, ['P']);
+  assert.deepEqual(sounds, [false]);
   assert.equal(turnContext.state.board[52], ' ');
   assert.equal(turnContext.thinking, true);
   finishDisplay();
   await pending;
   assert.deepEqual(renders, ['P', 'opponent', 'P']);
+  assert.deepEqual(sounds, [false, true]);
   assert.equal(turnContext.thinking, false);
 });
