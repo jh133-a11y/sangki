@@ -710,10 +710,16 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .sanggi-coin-balance small {
   font: 700 9px var(--mono);
   letter-spacing: .12em;
-  color: #8b6a38;
+  color: #000;
 }
 .sanggi-coin-balance strong {
   font: 700 17px var(--sans);
+}
+.sanggi-coin-balance small, .sanggi-coin-balance strong {
+  color: #000;
+  -webkit-text-stroke: 2px #fff;
+  paint-order: stroke fill;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
 }
 .sanggi-player-button {
   position: absolute;
