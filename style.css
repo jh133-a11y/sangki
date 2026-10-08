@@ -273,7 +273,8 @@ nav a:hover { opacity: .5; }
 .records-gallery-stats { padding-left: 10px; border-left: 1px solid #e5e5e5; color: #999; font: 9px var(--sans); }
 .records-gallery-stats strong { display: block; margin-top: 2px; color: #333; font-size: 12px; }
 .records-tabs { display: flex; margin-top: 0; border-bottom: 2px solid #5578b5; background: #fff; }
-.records-tabs button { min-width: 62px; border: 0; border-right: 1px solid #e5e5e5; padding: 5px 11px; background: #fff; color: #777; cursor: pointer; font: 10px var(--sans); }
+.records-tabs { min-height: 34px; overflow: visible; }
+.records-tabs button { min-width: 70px; height: 34px; border: 0; border-right: 1px solid #e5e5e5; padding: 0 14px; background: #fff; color: #777; cursor: pointer; font: 12px/34px var(--sans); }
 .records-tabs button.is-active { background: #5578b5; color: #fff; }
 .records-toolbar { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 3px; color: #888; font: 9px var(--sans); }
 .records-toolbar strong { color: #444; }
@@ -283,7 +284,7 @@ nav a:hover { opacity: .5; }
 .records-button-dark { border-color: #5578b5; background: #5578b5; color: #fff; }
 .records-button-dark:hover { background: #3b5f9e; color: #fff; }
 .records-board { border-top: 2px solid #5578b5; background: #fff; }
-.records-table-head, .records-row { display: grid; grid-template-columns: 54px 64px minmax(0, 1fr) 105px 70px 50px 50px; align-items: center; min-height: 30px; border-bottom: 1px solid #e5e5e5; font: 10px var(--sans); }
+.records-table-head, .records-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 60px 60px; align-items: center; min-height: 30px; border-bottom: 1px solid #e5e5e5; font: 10px var(--sans); }
 .records-table-head { border-bottom-color: #bfc8d8; background: #f7f8fa; color: #555; font-weight: 700; text-align: center; }
 .records-row > * { padding: 6px 5px; text-align: center; }
 .records-title-cell { min-width: 0; text-align: left !important; }
@@ -329,7 +330,7 @@ nav a:hover { opacity: .5; }
   .records-gallery-copy strong { font-size: 17px; }
   .records-gallery-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .records-gallery-stats { padding-left: 8px; }
-  .records-table-head, .records-row { grid-template-columns: 38px 52px minmax(0, 1fr) 68px 50px 42px 42px; font-size: 9px; }
+  .records-table-head, .records-row { grid-template-columns: 38px minmax(0, 1fr) 46px 46px; font-size: 9px; }
   .records-row > * { padding: 5px 2px; }
   .record-comments { margin-left: 65px; }
   .records-poll { margin-left: 65px; }

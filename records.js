@@ -140,14 +140,11 @@ const renderPagination = () => {
 const renderNotices = () => {
   $('#records-notices').innerHTML = activeTab === 'general' ? '' : notices.map((notice, index) => `
     <article class="records-row records-notice-row">
-      <span>${index + 1}</span>
       <span>공지</span>
       <div class="records-title-cell">
         <strong>${escapeHtml(notice.title)}</strong>
         <p>${escapeHtml(notice.body)}</p>
       </div>
-      <span>운영자</span>
-      <time>${formatDate(notice.created_at)}</time>
       <span>-</span>
       <span>-</span>
       ${adminPassword ? `<div class="records-row-actions">
@@ -162,33 +159,16 @@ const renderPosts = () => {
   $('#records-count').textContent = `${posts.length + notices.length}개`;
   $('#records-list').innerHTML = pagePosts.length ? pagePosts.map((post, index) => {
     const postNumber = posts.length - ((currentPage - 1) * pageSize + index);
-    const pollMarkup = renderPoll(post.poll);
     return `
     <article class="records-post-group" data-post-id="${post.id}">
       <div class="records-row">
         <span>${postNumber}</span>
-        <span>일반</span>
-        <div class="records-title-cell">
-          <strong>${escapeHtml(post.title)} <em>${post.comment_count ? `[${post.comment_count}]` : ''}</em></strong>
-          <p>${escapeHtml(post.body)}</p>
-        </div>
-        <span>${escapeHtml(post.nickname)}</span>
-        <time>${formatDate(post.created_at)}</time>
-        <span>-</span>
-        <span>${post.upvotes}</span>
+        <div class="records-title-cell"><strong>${escapeHtml(post.title)}</strong></div>
+        <span>${post.view_count ?? 0}</span>
+        <span>${post.comment_count || 0}</span>
       </div>
-      <div class="records-row-actions">
-        <button data-vote="1" type="button">추천 ${post.upvotes}</button>
-        <button data-vote="-1" type="button">비추천 ${post.downvotes}</button>
-        <button data-comment="${post.id}" type="button">댓글 ${post.comment_count}</button>
-        <button data-edit="${post.id}" type="button">수정</button>
-        <button data-delete="${post.id}" type="button">삭제</button>
-      </div>
-      ${pollMarkup}
-      <div class="record-comments" id="comments-${post.id}"></div>
     </article>`;
   }).join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
-  pagePosts.forEach((post) => loadComments(post.id));
   renderPagination();
 };
 
