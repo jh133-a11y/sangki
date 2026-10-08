@@ -433,11 +433,6 @@ begin
   where id = 1
   for update;
 
-  if kst_now::time < time '12:00'
-     and direction_date_value is distinct from today then
-    return coalesce(direction_date_value, today);
-  end if;
-
   if direction_date_value is distinct from today then
     direction_state_value := jsonb_build_object(
       'SANGI_ROCKET', case when random() < 0.5 then -1 else 1 end,
