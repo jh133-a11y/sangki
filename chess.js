@@ -47,7 +47,7 @@
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.code === 'PGRST202'
-          ? `체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 ${name === 'chess_guest_session' ? 'allow-guest-chess.sql' : 'chess-schema.sql'}을 실행하세요.`
+          ? `체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 ${name === 'chess_ranking' ? 'chess-ranking.sql' : name === 'chess_guest_session' ? 'allow-guest-chess.sql' : 'chess-schema.sql'}을 실행하세요.`
           : result.code === '57014'
             ? '서버 AI 계산 시간이 초과되었습니다. chess-speed-fix.sql을 실행하거나 빠른 연습 경기를 이용하세요.'
             : result.message || '체스 요청에 실패했습니다.');
@@ -952,6 +952,93 @@
       }
     }
   });
+  let rankingPage = 1;
+  let rankingPages = 1;
+  let rankingRequest = 0;
+  let rankingBusy = false;
+  const loadRanking = async (page = rankingPage) => {
+    const request = ++rankingRequest;
+    rankingBusy = true;
+    $('#chess-ranking-previous').disabled = true;
+    $('#chess-ranking-next').disabled = true;
+    $('#chess-ranking-refresh').disabled = true;
+    $('#chess-ranking-list').replaceChildren();
+    $('#chess-ranking-status').textContent = '랭킹을 불러오는 중…';
+    try {
+      const result = await rpc('chess_ranking', { p_page: page });
+      if (request !== rankingRequest) return;
+      rankingPages = Math.max(1, Math.ceil(result.total / 5));
+      if (page > rankingPages) {
+        await loadRanking(rankingPages);
+        return;
+      }
+      rankingPage = page;
+      $('#chess-ranking-page').textContent = `${page} / ${rankingPages}`;
+      $('#chess-ranking-list').start = (page - 1) * 5 + 1;
+      const rows = result.entries.map((entry) => {
+        const row = document.createElement('li');
+        const rank = document.createElement('span');
+        rank.textContent = `${entry.rank}위`;
+        const name = document.createElement('strong');
+        name.textContent = entry.nickname;
+        const wins = document.createElement('span');
+        wins.textContent = `${entry.wins}승`;
+        row.append(rank, name, wins);
+        return row;
+      });
+      $('#chess-ranking-list').replaceChildren(...rows);
+      $('#chess-ranking-status').textContent = result.total
+        ? `전체 ${result.total}명 · 한 페이지에 5명씩 표시`
+        : '아직 기록된 서버 AI 경기가 없습니다.';
+    } catch (error) {
+      if (request === rankingRequest) $('#chess-ranking-status').textContent = error.message;
+    } finally {
+      if (request === rankingRequest) {
+        rankingBusy = false;
+        $('#chess-ranking-previous').disabled = rankingPage <= 1;
+        $('#chess-ranking-next').disabled = rankingPage >= rankingPages;
+        $('#chess-ranking-refresh').disabled = false;
+      }
+    }
+  };
+  const showRankingScreen = () => {
+    const open = location.hash === '#ranking';
+    document.body.classList.toggle('is-ranking', open);
+    $('#chess-screen').hidden = open;
+    $('#chess-ranking').hidden = !open;
+    if (open) {
+      $('#chess-ranking-title').focus();
+      void loadRanking(1);
+    } else {
+      rankingRequest += 1;
+      rankingBusy = false;
+      $('#chess-ranking-open').focus();
+    }
+    window.scrollTo(0, 0);
+  };
+  $('#chess-ranking-open').addEventListener('click', () => {
+    window.history.pushState({ chessRanking: true }, '', '#ranking');
+    showRankingScreen();
+  });
+  $('#chess-ranking-back').addEventListener('click', () => {
+    if (window.history.state?.chessRanking) window.history.back();
+    else {
+      window.history.replaceState(null, '', location.pathname + location.search);
+      showRankingScreen();
+    }
+  });
+  $('#chess-ranking-previous').addEventListener('click', () => {
+    if (!rankingBusy && rankingPage > 1) void loadRanking(rankingPage - 1);
+  });
+  $('#chess-ranking-next').addEventListener('click', () => {
+    if (!rankingBusy && rankingPage < rankingPages) void loadRanking(rankingPage + 1);
+  });
+  $('#chess-ranking-refresh').addEventListener('click', () => {
+    if (!rankingBusy) void loadRanking();
+  });
+  window.addEventListener('popstate', showRankingScreen);
+  window.addEventListener('hashchange', showRankingScreen);
+  if (location.hash === '#ranking') showRankingScreen();
   window.addEventListener('storage', (event) => {
     if (event.key && !['sangki-auth-session', 'sangki-investment-client-id', 'sangki-investor-nickname'].includes(event.key)) return;
     if (!localStorage.getItem('sangki-auth-session')) sessionStorage.removeItem('sangki-auth-session-tab');

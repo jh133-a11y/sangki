@@ -4,15 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>체스 — byungsin</title>
-  <link rel="stylesheet" href="chess.css?v=3">
+  <link rel="stylesheet" href="chess.css?v=4">
 </head>
 <body>
-  <main class="chess-shell">
+  <main class="chess-shell" id="chess-screen">
     <div class="chess-top">
       <a class="chess-logo" href="index.html">byungsin<span>.</span></a>
       <div class="chess-account-area">
         <a class="chess-home" href="index.html">← 뒤로가기</a>
         <strong id="chess-account">계정 확인 중…</strong>
+        <button id="chess-ranking-open" type="button">랭킹</button>
         <button id="chess-settings" class="chess-settings" type="button" aria-label="체스 설정 및 전적" aria-haspopup="dialog">⚙</button>
       </div>
     </div>
@@ -105,10 +106,23 @@
     </div>
   </section>
 
-  <script src="chess.js?v=10"></script>
-  <script>
-    history.pushState({ returnToHome: true }, '', location.href);
-    window.addEventListener('popstate', () => location.replace('index.html'));
-  </script>
+  <section id="chess-ranking" class="chess-ranking" aria-labelledby="chess-ranking-title" hidden>
+    <div class="chess-ranking-content">
+      <header class="chess-top">
+        <h1 id="chess-ranking-title" tabindex="-1">체스 승리 랭킹</h1>
+        <button id="chess-ranking-back" type="button">← 뒤로가기</button>
+      </header>
+      <p class="chess-help">회원·비회원의 서버 AI 경기 전적을 승리 횟수순으로 표시합니다. 동률은 닉네임순입니다. 연습 경기는 제외됩니다.</p>
+      <p id="chess-ranking-status" role="status" aria-live="polite"></p>
+      <ol id="chess-ranking-list" class="chess-ranking-list"></ol>
+      <nav class="chess-ranking-pages" aria-label="랭킹 페이지">
+        <button id="chess-ranking-previous" type="button" disabled>이전</button>
+        <span id="chess-ranking-page" aria-live="polite">1 / 1</span>
+        <button id="chess-ranking-next" type="button" disabled>다음</button>
+      </nav>
+      <button id="chess-ranking-refresh" type="button">새로고침</button>
+    </div>
+  </section>
+  <script src="chess.js?v=11"></script>
 </body>
 </html>

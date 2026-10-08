@@ -7,6 +7,17 @@
   --dark: #9c8a6b;
   --mono: "DM Mono", "Courier New", monospace;
 }
+.chess-ranking { min-height: 100dvh; padding: 22px 18px 50px; }
+.chess-ranking-content { max-width: 1040px; margin: 0 auto; }
+.chess-ranking h1 { font-size: 24px; margin: 0; }
+.chess-ranking button, #chess-ranking-open { padding: 10px 14px; border: 1px solid var(--ink); background: var(--paper); cursor: pointer; }
+.chess-ranking button:disabled { opacity: .5; cursor: not-allowed; }
+.chess-ranking-list { list-style: none; display: grid; gap: 12px; padding: 0; margin: 24px 0; }
+.chess-ranking-list li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 20px 16px; border: 1px solid var(--ink); background: white; }
+.chess-ranking-list strong { overflow-wrap: anywhere; }
+.chess-ranking-list span { font-size: 14px; }
+.chess-ranking-pages { display: flex; justify-content: center; align-items: center; gap: 16px; margin-bottom: 20px; }
+body.is-ranking .chess-modal, body.is-ranking .chess-backdrop { display: none; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--mono); }
 button { font: inherit; color: inherit; }
