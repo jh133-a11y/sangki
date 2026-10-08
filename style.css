@@ -1564,3 +1564,5 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   .message-button { right: 136px; }
   #site-nav .notification-toggle { right: 204px; }
 }
+
+[data-post-only][hidden] { display: none !important; }
