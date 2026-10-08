@@ -77,20 +77,12 @@
     </form>
   </section>
 
-  <section class="records-modal" id="records-comment-modal" role="dialog" aria-modal="true" aria-labelledby="records-comment-title" hidden>
+  <section class="records-modal" id="records-comment-modal" role="dialog" aria-modal="true" aria-labelledby="records-action-title" hidden>
     <button class="records-modal-close" data-close-modal type="button" aria-label="닫기">×</button>
-    <h2 id="records-comment-title">댓글 쓰기</h2>
-    <form id="records-comment-form">
-      <input type="hidden" id="records-comment-post-id">
-      <input type="hidden" id="records-comment-parent-id">
-      <label>닉네임<input id="records-comment-nickname" maxlength="24" required></label>
-      <label>비밀번호<input id="records-comment-password" type="password" minlength="4" maxlength="72" required></label>
-      <label>내용<textarea id="records-comment-body" maxlength="1000" rows="5" required></textarea></label>
-      <button class="records-submit" type="submit">댓글 등록</button>
-      <p class="records-form-status" id="records-comment-form-status"></p>
-    </form>
+    <h2 id="records-action-title"></h2>
+    <div id="records-action-body"></div>
   </section>
 
-  <script src="records.js?v=26"></script>
+  <script src="records.js?v=27"></script>
 </body>
 </html>

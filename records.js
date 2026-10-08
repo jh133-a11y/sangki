@@ -162,7 +162,6 @@ const openNoticeDetail = (notice) => {
         <button data-notice-edit="${notice.id}" type="button">수정</button>
         <button data-notice-delete="${notice.id}" type="button">삭제</button>
       </div>
-      <div class="record-entry-slot"></div>
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
@@ -201,7 +200,6 @@ const openPostDetail = (post, countView = true) => {
         <button data-edit="${post.id}" type="button">수정</button>
         <button data-delete="${post.id}" type="button">삭제</button>
       </div>
-      <div class="record-entry-slot"></div>
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
@@ -377,7 +375,7 @@ const commentFormHtml = ({ mode, target, kind, parent = '', id = '', body = '' }
       ${needsBody ? `<textarea name="body" maxlength="1000" rows="3" placeholder="내용" required>${escapeHtml(body)}</textarea>` : ''}
       <div class="record-inline-buttons">
         <button type="submit">${label}</button>
-        ${mode === 'create' ? '' : '<button type="button" data-inline-cancel>취소</button>'}
+        ${mode === 'create' ? '' : '<button type="button" data-close-modal>취소</button>'}
       </div>
       <p class="records-form-status record-inline-status"></p>
     </form>`;
@@ -401,7 +399,6 @@ const loadComments = async (targetId, containerId = `comments-${targetId}`, kind
             <button data-comment-edit="${comment.id}" type="button">수정</button>
             <button data-comment-delete="${comment.id}" type="button">삭제</button>
           </div>
-          <div class="record-inline-slot" data-slot="${comment.id}"></div>
         </div>${render(comment.id, depth + 1)}`).join('');
     container.innerHTML = render(null) || '<p class="record-comments-empty">아직 댓글이 없습니다.</p>';
   } catch (error) {
@@ -617,7 +614,12 @@ $('#records-post-form').addEventListener('submit', async (event) => {
   }
 });
 
-let commentKind = 'post';
+const openActionModal = (title, html) => {
+  $('#records-action-title').textContent = title;
+  $('#records-action-body').innerHTML = html;
+  openModal('records-comment-modal');
+  $('#records-action-body').querySelector('input, textarea')?.focus();
+};
 document.addEventListener('submit', async (event) => {
   const form = event.target.closest('.record-inline-form');
   if (!form || form.dataset.entryMode) return;
@@ -645,7 +647,7 @@ document.addEventListener('submit', async (event) => {
       await rpc('record_delete_comment', { p_id: id, p_password_hash: passwordHash, p_admin_password: password });
     }
     await loadComments(target, `comments-detail-${target}`, kind);
-    if (mode === 'create') form.reset();
+    if (mode === 'create') form.reset(); else closeModals();
     loadBoard();
   } catch (error) {
     status.textContent = error.message;
@@ -742,43 +744,32 @@ document.addEventListener('click', async (event) => {
       document.querySelector('.records-comments-section > .record-inline-form [name="body"]')?.focus();
     } else if (button.dataset.reply || button.dataset.commentEdit || button.dataset.commentDelete) {
       const commentId = button.dataset.parent || button.dataset.commentEdit || button.dataset.commentDelete;
-      const slot = document.querySelector(`[data-slot="${commentId}"]`);
       const mode = button.dataset.reply ? 'reply' : button.dataset.commentEdit ? 'edit' : 'delete';
-      const existing = slot.querySelector('form');
-      const sameMode = existing && existing.dataset.mode === mode;
-      document.querySelectorAll('.record-inline-slot').forEach((el) => { el.innerHTML = ''; });
-      if (sameMode) return;
-      const section = slot.closest('.records-comments-section');
-      const target = section.querySelector('.record-inline-form').dataset.target;
-      const kind = section.querySelector('.record-inline-form').dataset.kind;
-      slot.innerHTML = commentFormHtml({
-        mode, target, kind, parent: button.dataset.parent || '', id: commentId,
-        body: mode === 'edit' ? (commentCache[commentId]?.body || '') : ''
-      });
-      slot.querySelector('input, textarea').focus();
-    } else if (button.dataset.inlineCancel !== undefined) {
-      button.closest('.record-inline-slot').innerHTML = '';
-    } else if (button.dataset.entryCancel !== undefined) {
-      button.closest('.record-entry-slot').innerHTML = '';
+      const createForm = button.closest('.records-comments-section').querySelector('.record-inline-form');
+      openActionModal(
+        { reply: '답글 쓰기', edit: '댓글 수정', delete: '댓글 삭제' }[mode],
+        commentFormHtml({
+          mode, target: createForm.dataset.target, kind: createForm.dataset.kind,
+          parent: button.dataset.parent || '', id: commentId,
+          body: mode === 'edit' ? (commentCache[commentId]?.body || '') : ''
+        })
+      );
     } else if (button.dataset.delete || button.dataset.edit || button.dataset.noticeDelete || button.dataset.noticeEdit) {
       const isNotice = Boolean(button.dataset.noticeDelete || button.dataset.noticeEdit);
       const item = isNotice ? notice : post;
       if (!item) return;
       const mode = button.dataset.edit || button.dataset.noticeEdit ? 'edit' : 'delete';
-      const slot = button.closest('.records-detail-card').querySelector('.record-entry-slot');
-      if (slot.querySelector('form')?.dataset.entryMode === mode) { slot.innerHTML = ''; return; }
       const passwordHint = isNotice ? '관리자 비밀번호' : (mode === 'edit' ? '게시물 비밀번호' : '게시물 비밀번호 또는 관리자 비밀번호');
-      slot.innerHTML = `
+      openActionModal(`${isNotice ? '공지' : '게시물'} ${mode === 'edit' ? '수정' : '삭제'}`, `
         <form class="record-inline-form" data-entry-mode="${mode}" data-entry-kind="${isNotice ? 'notice' : 'post'}" data-id="${item.id}">
           <input name="password" type="password" maxlength="72" placeholder="${passwordHint}" required>
           <div class="record-edit-fields"></div>
           <div class="record-inline-buttons">
             <button type="submit">${mode === 'edit' ? '확인' : '삭제'}</button>
-            <button type="button" data-entry-cancel>취소</button>
+            <button type="button" data-close-modal>취소</button>
           </div>
           <p class="records-form-status record-inline-status"></p>
-        </form>`;
-      slot.querySelector('input').focus();
+        </form>`);
     }
   } catch (error) {
     $('#records-status').textContent = error.message;
@@ -821,11 +812,11 @@ document.addEventListener('submit', async (event) => {
       } else {
         await rpc('record_update_post', { p_id: id, p_password_hash: await hashPassword(password), p_title: title, p_body: body });
       }
-      const card = form.closest('.records-detail-card');
+      const card = document.querySelector(`.records-detail-card[data-${isNotice ? 'notice' : 'post'}-id="${id}"]`);
       card.querySelector('h1').textContent = title;
       card.querySelector('.records-detail-body').textContent = body;
       if (item) { item.title = title; item.body = body; }
-      form.closest('.record-entry-slot').innerHTML = '';
+      closeModals();
       loadBoard();
     } else {
       if (isNotice) {
