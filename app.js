@@ -434,14 +434,17 @@ settingsDeleteAccount.addEventListener('click', async () => {
   }
 });
 settingsAdmin.addEventListener('click', () => {
-  const password = window.prompt('관리자 비밀번호를 입력하세요.');
-  if (password === null) return;
-  if (password !== '8170') {
-    settingsStatus.textContent = '관리자 비밀번호가 틀렸습니다.';
-    return;
-  }
-  sessionStorage.setItem('sangki-admin-auth', password);
-  window.location.href = 'admin.html';
+  siteForm({
+    title: '관리자 전용 사이트',
+    note: '관리자 비밀번호를 입력하세요.',
+    fields: [{ name: 'password', label: '관리자 비밀번호', type: 'password', maxlength: 72 }],
+    submitLabel: '입장',
+    onSubmit: async ({ password }) => {
+      if (password !== '8170') throw new Error('관리자 비밀번호가 틀렸습니다.');
+      sessionStorage.setItem('sangki-admin-auth', password);
+      window.location.href = 'admin.html';
+    }
+  });
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
@@ -1627,15 +1630,19 @@ investmentAdminButton.addEventListener('click', () => {
     if (investmentState) renderInvestmentState(investmentState);
     return;
   }
-  const password = window.prompt('관리자 비밀번호를 입력하세요.');
-  if (password !== '8170') {
-    if (password !== null) window.alert('관리자 비밀번호가 틀렸습니다.');
-    return;
-  }
-  investmentAdminMode = true;
-  investmentAdminPanel.hidden = false;
-  investmentAdminButton.textContent = '관리자 모드 종료';
-  if (investmentState) renderInvestmentState(investmentState);
+  siteForm({
+    title: '관리자 모드',
+    note: '관리자 비밀번호를 입력하세요.',
+    fields: [{ name: 'password', label: '관리자 비밀번호', type: 'password', maxlength: 72 }],
+    submitLabel: '확인',
+    onSubmit: async ({ password }) => {
+      if (password !== '8170') throw new Error('관리자 비밀번호가 틀렸습니다.');
+      investmentAdminMode = true;
+      investmentAdminPanel.hidden = false;
+      investmentAdminButton.textContent = '관리자 모드 종료';
+      if (investmentState) renderInvestmentState(investmentState);
+    }
+  });
 });
 
 const requireInvestmentAdmin = () => {
@@ -2585,11 +2592,12 @@ const loadGameRanking = async () => {
   }
 };
 
-const deleteGameScore = async (id) => {
-  const password = window.prompt('관리자 비밀번호를 입력하세요.');
-  if (password === null || !await siteConfirm('이 랭킹 기록을 삭제할까요?')) return;
-
-  try {
+const deleteGameScore = (id) => siteForm({
+  title: '랭킹 기록 삭제',
+  note: '이 랭킹 기록을 삭제할까요? 관리자 비밀번호를 입력하세요.',
+  fields: [{ name: 'password', label: '관리자 비밀번호', type: 'password', maxlength: 72 }],
+  submitLabel: '삭제',
+  onSubmit: async ({ password }) => {
     const response = await fetch(`${rpcEndpoint}/delete_speed_game_score`, {
       method: 'POST',
       headers: { ...apiHeaders, 'Content-Type': 'application/json' },
@@ -2599,10 +2607,8 @@ const deleteGameScore = async (id) => {
       throw new Error('관리자 비밀번호가 틀렸거나 삭제할 수 없습니다.');
     }
     await loadGameRanking();
-  } catch (error) {
-    window.alert(error.message);
   }
-};
+});
 
 loadGameRanking();
 
