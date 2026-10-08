@@ -441,7 +441,7 @@
     const board = $('#chess-board');
     board.replaceChildren();
     const kingSquare = inCheck(state) ? findKing(state.board, state.turn) : -1;
-    const targets = new Set(assistsAllowed() ? legalCache.filter((m) => m.from === selected).map((m) => m.to) : []);
+    const targets = new Set(legalCache.filter((m) => m.from === selected).map((m) => m.to));
     for (let visualRow = 0; visualRow < 8; visualRow += 1) {
       for (let visualCol = 0; visualCol < 8; visualCol += 1) {
         const r = flipped ? 7 - visualRow : visualRow;
