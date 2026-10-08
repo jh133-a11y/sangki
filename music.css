@@ -23,10 +23,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .music-track-name { display: block; overflow-wrap: anywhere; margin-bottom: 8px; }
 .music-track-detail { font-size: 11px; margin: 8px 0; }
 .music-tracks li.is-playing { border-left: 4px solid var(--orange); padding-left: 10px; }
-.music-player { margin-top: 20px; position: sticky; bottom: 0; }
+.music-player { margin-top: 20px; }
 #now-playing { overflow-wrap: anywhere; }
 audio { display: block; width: 100%; margin: 12px 0; }
 @media (max-width: 760px) {
   .music-layout { grid-template-columns: 1fr; }
-  .music-player { position: static; }
 }
