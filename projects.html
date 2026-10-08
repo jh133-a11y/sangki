@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=89">
+  <link rel="stylesheet" href="style.css?v=90">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -46,7 +46,7 @@
       </button>
       <button type="button" class="sanggi-action-button" id="sanggi-companion-button">
         <span class="sanggi-action-icon">+</span>
-        <span>동료 소환</span>
+        <span>동료</span>
       </button>
       <button type="button" class="sanggi-action-button">
         <span class="sanggi-action-icon">⌂</span>
@@ -217,13 +217,14 @@
           <button class="sanggi-upgrade-button" id="sanggi-auto-upgrade" type="button">강화</button>
         </article>
       </div>
+      <button class="sanggi-reset-position" id="sanggi-reset-character" type="button">상기 캐릭터 위치 초기화</button>
       <p class="sanggi-ability-status" id="sanggi-ability-status" role="status"></p>
     </section>
     <div class="sanggi-companion-backdrop" id="sanggi-companion-backdrop" hidden></div>
     <section class="sanggi-ability-modal sanggi-companion-modal" id="sanggi-companion-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-companion-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-companion-close" type="button" aria-label="닫기">×</button>
       <p class="sanggi-ability-eyebrow">COMPANION</p>
-      <h2 id="sanggi-companion-title">동료 소환</h2>
+      <h2 id="sanggi-companion-title">동료</h2>
       <div class="sanggi-ability-list">
         <article class="sanggi-ability-card">
           <div>
@@ -247,9 +248,10 @@
           <button class="sanggi-upgrade-button" id="sanggi-companion-upgrade" type="button">강화</button>
         </article>
       </div>
+      <button class="sanggi-reset-position" id="sanggi-reset-companion" type="button">주성 캐릭터 위치 초기화</button>
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=56"></script>
+  <script src="sanggi.js?v=57"></script>
 </body>
 </html>

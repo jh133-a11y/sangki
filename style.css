@@ -1637,3 +1637,6 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .site-form-note{padding-bottom:2px;color:#444}
 .site-form-actions,.record-inline-buttons{margin-top:22px}
 .record-inline-buttons{margin-top:6px}
+
+.sanggi-reset-position { display: block; width: 100%; margin-top: 12px; padding: 11px 14px; border: 2px solid #171717; border-radius: 0; background: #fff; color: #171717; font: inherit; font-weight: 800; cursor: pointer; }
+.sanggi-reset-position:hover { background: #d9ff36; }

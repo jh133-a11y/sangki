@@ -729,6 +729,26 @@
     if (remoteReady) scheduleRemoteSave();
   };
 
+  const resetCharacterPosition = (which) => {
+    if (which === 'companion') {
+      localStorage.setItem(companionPositionKey, JSON.stringify({ x: 0.78, y: 0.48 }));
+      loadCompanionPosition();
+    } else {
+      localStorage.setItem(characterPositionKey, JSON.stringify({ x: 0.09, y: 0.07 }));
+      loadCharacterPosition();
+    }
+    if (remoteReady) scheduleRemoteSave();
+  };
+
+  document.querySelector('#sanggi-reset-character')?.addEventListener('click', () => {
+    resetCharacterPosition('character');
+    document.querySelector('#sanggi-ability-status').textContent = '상기 캐릭터 위치를 초기화했습니다.';
+  });
+  document.querySelector('#sanggi-reset-companion')?.addEventListener('click', () => {
+    resetCharacterPosition('companion');
+    companionStatus.textContent = '주성 캐릭터 위치를 초기화했습니다.';
+  });
+
   const moveCompanion = (event) => {
     if (!companionDragState || companionDragState.pointerId !== event.pointerId) return;
     companionDragState.clientX = event.clientX;
