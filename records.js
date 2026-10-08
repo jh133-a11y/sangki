@@ -680,6 +680,7 @@ document.addEventListener('click', async (event) => {
       }
     } else if (button.dataset.noticeDelete) {
       const password = prompt('관리자 비밀번호를 입력하세요.');
+      if (password !== null && password !== '8170') alert('관리자 비밀번호가 올바르지 않습니다.');
       if (password === '8170' && confirm('공지를 삭제할까요?')) {
         const target = notices.find((item) => item.id === button.dataset.noticeDelete);
         await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: password });
@@ -690,18 +691,16 @@ document.addEventListener('click', async (event) => {
       }
     } else if (button.dataset.noticeEdit) {
       const password = prompt('관리자 비밀번호를 입력하세요.');
-      if (password !== '8170') return;
+      if (password === null) return;
+      if (password !== '8170') { alert('관리자 비밀번호가 올바르지 않습니다.'); return; }
       adminPassword = password;
       const notice = notices.find((item) => item.id === button.dataset.noticeEdit);
-      $('#records-post-form').reset();
-      resetPollForm();
-      clearPendingImages();
-      editingNoticeId = notice.id;
-      $('#records-post-subject').value = notice.title;
-      $('#records-post-body').value = notice.body;
-      setComposeMode('notice', true);
-      setStatus('records-post-form-status', '');
-      openModal('records-post-modal');
+      const title = prompt('제목을 입력하세요.', notice.title);
+      const body = prompt('내용을 입력하세요.', notice.body);
+      if (title !== null && body !== null) {
+        await rpc('record_update_notice', { p_id: notice.id, p_admin_password: password, p_title: title, p_body: body });
+        await loadBoard();
+      }
     } else if (button.dataset.commentEdit) {
       const password = prompt('댓글 비밀번호를 입력하세요.');
       const body = prompt('댓글 내용을 입력하세요.');

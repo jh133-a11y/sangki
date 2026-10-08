@@ -203,6 +203,7 @@ nav a:hover { opacity: .5; }
 .records-modal h2 { margin: 0 0 18px; font-size: 32px; }
 .records-modal-close { position: absolute; top: 12px; right: 15px; border: 0; background: transparent; cursor: pointer; font: 27px/1 var(--mono); }
 .records-modal form { display: grid; gap: 12px; }
+.records-modal label[hidden] { display: none !important; }
 .records-modal label { display: grid; gap: 6px; font: 10px var(--mono); }
 .records-modal input, .records-modal textarea { width: 100%; border: 1px solid var(--ink); padding: 10px; background: #fff; color: var(--ink); font: 11px/1.5 var(--mono); }
 .records-submit { border: 1px solid var(--ink); padding: 11px; background: var(--ink); color: var(--paper); cursor: pointer; font: 10px var(--mono); }
