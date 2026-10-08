@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="byungsin ???댁긽??寃껊뱾???꾪븳 ?붿????ㅽ뒠?붿삤">
-  <title>byungsin ???댁긽??寃껊뱾??湲곕줉</title>
+  <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
+  <title>byungsin — 이상한 것들의 기록</title>
   <link rel="stylesheet" href="style.css?v=63">
 </head>
 <body>
@@ -12,61 +12,61 @@
   <header>
     <div class="wrap eyebrow">
       <a class="brand" href="#">byungsin<span style="color:var(--orange)">.</span></a>
-      <nav id="site-nav" aria-label="二쇱슂 硫붾돱">
+      <nav id="site-nav" aria-label="주요 메뉴">
         <a href="#about">INVEST</a>
         <a href="#works">MEMORY</a>
         <a href="#contact">SPEED GAME</a>
         <a href="#guestbook">COMMENT</a>
-        <button class="notification-toggle" id="notification-toggle" type="button">?뚮┝ ?덉슜</button>
+        <button class="notification-toggle" id="notification-toggle" type="button">알림 허용</button>
       </nav>
-      <button class="message-button" id="message-button" type="button" aria-label="硫붿떆吏???닿린">硫붿떆吏??<span id="message-count">0</span></button>
-      <button class="bag-button" id="bag-button" type="button" aria-label="媛諛??닿린">媛諛?<span id="bag-count">0</span></button>
-      <button class="account-button" id="account-button" type="button">濡쒓렇??/button>
+      <button class="message-button" id="message-button" type="button" aria-label="메시지함 열기">메시지함 <span id="message-count">0</span></button>
+      <button class="bag-button" id="bag-button" type="button" aria-label="가방 열기">가방 <span id="bag-count">0</span></button>
+      <button class="account-button" id="account-button" type="button">로그인</button>
     </div>
   </header>
   <div class="account-backdrop" id="account-backdrop" hidden></div>
   <section class="account-modal" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title" hidden>
-    <button class="account-close" id="account-close" type="button" aria-label="濡쒓렇??李??リ린">횞</button>
+    <button class="account-close" id="account-close" type="button" aria-label="로그인 창 닫기">×</button>
     <h2 id="account-title">account</h2>
-    <p id="account-description">?ъ씠???꾩껜?먯꽌 ?ъ슜???꾩씠?붾? 留뚮뱾?댁＜?몄슂.</p>
+    <p id="account-description">사이트 전체에서 사용할 아이디를 만들어주세요.</p>
     <form id="account-form">
-      <label>?꾩씠??input id="account-username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocapitalize="none" autocomplete="username" required></label>
-      <label>鍮꾨?踰덊샇<input id="account-password" type="password" minlength="8" autocomplete="current-password" required></label>
+      <label>아이디<input id="account-username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocapitalize="none" autocomplete="username" required></label>
+      <label>비밀번호<input id="account-password" type="password" minlength="8" autocomplete="current-password" required></label>
       <div class="account-options">
-        <label><input id="remember-username" type="checkbox"> ?꾩씠?????/label>
-        <label><input id="keep-login" type="checkbox"> 濡쒓렇???좎?</label>
+        <label><input id="remember-username" type="checkbox"> 아이디 저장</label>
+        <label><input id="keep-login" type="checkbox"> 로그인 유지</label>
       </div>
-      <button type="submit" id="account-submit">濡쒓렇??/button>
+      <button type="submit" id="account-submit">로그인</button>
     </form>
-    <button class="account-switch" id="account-switch" type="button">?뚯썝媛?낆쑝濡??꾪솚</button>
+    <button class="account-switch" id="account-switch" type="button">회원가입으로 전환</button>
     <p class="account-status" id="account-status" role="status"></p>
   </section>
   <div class="message-backdrop" id="message-backdrop" hidden></div>
   <section class="message-modal" id="message-modal" role="dialog" aria-modal="true" aria-labelledby="message-title" hidden>
-    <button class="account-close" id="message-close" type="button" aria-label="硫붿떆吏???リ린">횞</button>
-    <h2 id="message-title">硫붿떆吏??/h2>
+    <button class="account-close" id="message-close" type="button" aria-label="메시지함 닫기">×</button>
+    <h2 id="message-title">메시지함</h2>
     <p class="message-subtitle">INCOMING / SYSTEM LOG</p>
-    <div id="message-list" class="message-list"><p>硫붿떆吏瑜?遺덈윭?ㅻ뒗 以?..</p></div>
-    <div id="message-pagination" class="message-pagination" aria-label="硫붿떆吏 ?섏씠吏 ?대룞"></div>
+    <div id="message-list" class="message-list"><p>메시지를 불러오는 중...</p></div>
+    <div id="message-pagination" class="message-pagination" aria-label="메시지 페이지 이동"></div>
   </section>
-  <button class="menu-toggle" id="menu-toggle" type="button" aria-label="?ъ씠?쒕컮 ?닿린" aria-expanded="false" aria-controls="side-menu">
+  <button class="menu-toggle" id="menu-toggle" type="button" aria-label="사이드바 열기" aria-expanded="false" aria-controls="side-menu">
     <span></span><span></span><span></span>
   </button>
   <div class="side-menu-backdrop" id="side-menu-backdrop"></div>
-  <aside class="side-menu" id="side-menu" aria-label="異붽? 硫붾돱" aria-hidden="true">
+  <aside class="side-menu" id="side-menu" aria-label="추가 메뉴" aria-hidden="true">
     <div class="side-menu-head">
       <span>new rooms</span>
-      <button class="side-menu-close" id="side-menu-close" type="button" aria-label="?ъ씠?쒕컮 ?リ린">횞</button>
+      <button class="side-menu-close" id="side-menu-close" type="button" aria-label="사이드바 닫기">×</button>
     </div>
-    <a href="projects.html" target="_blank" rel="noopener">?곴린 ?ㅼ슦湲?<span>??/span></a>
-    <a href="playground.html" target="_blank" rel="noopener">湲곕줉(?) <span>??/span></a>
-    <a href="archive.html" target="_blank" rel="noopener">?곸젏 <span>??/span></a>
+    <a href="projects.html" target="_blank" rel="noopener">상기 키우기 <span>↗</span></a>
+    <a href="playground.html" target="_blank" rel="noopener">기록(?) <span>↗</span></a>
+    <a href="archive.html" target="_blank" rel="noopener">상점 <span>↗</span></a>
     <div class="online-users" id="online-users">
-      <strong>?묒냽??/strong>
-      <p>濡쒓렇?명븳 ?좎?留??쒖떆?⑸땲?? 鍮꾪쉶???좎????쒖떆?섏? ?딆뒿?덈떎.</p>
-      <ul id="online-users-list"><li>濡쒓렇?????쒖떆?⑸땲??</li></ul>
+      <strong>접속자</strong>
+      <p>로그인한 유저만 표시됩니다. 비회원 유저는 표시되지 않습니다.</p>
+      <ul id="online-users-list"><li>로그인 후 표시됩니다.</li></ul>
     </div>
-    <button class="side-menu-settings" id="settings-open" type="button" aria-label="?ㅼ젙" title="?ㅼ젙">
+    <button class="side-menu-settings" id="settings-open" type="button" aria-label="설정" title="설정">
       <svg class="settings-gear" aria-hidden="true" viewBox="0 0 48 48" role="img">
         <path d="M20.4 3h7.2l1.3 5.3a16.9 16.9 0 0 1 3.8 1.6l4.7-2.8 5.1 5.1-2.8 4.7a16.9 16.9 0 0 1 1.6 3.8l5.3 1.3v7.2l-5.3 1.3a16.9 16.9 0 0 1-1.6 3.8l2.8 4.7-5.1 5.1-4.7-2.8a16.9 16.9 0 0 1-3.8 1.6L27.6 45h-7.2l-1.3-5.3a16.9 16.9 0 0 1-3.8-1.6l-4.7 2.8-5.1-5.1 2.8-4.7a16.9 16.9 0 0 1-1.6-3.8L1.4 26v-7.2l5.3-1.3a16.9 16.9 0 0 1 1.6-3.8L5.5 9l5.1-5.1 4.7 2.8a16.9 16.9 0 0 1 3.8-1.6L20.4 3Zm3.6 13.2a6.2 6.2 0 1 0 0 12.4 6.2 6.2 0 0 0 0-12.4Z"/>
       </svg>
@@ -74,47 +74,47 @@
   </aside>
   <div class="settings-backdrop" id="settings-backdrop" hidden></div>
   <section class="settings-modal" id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
-    <button class="account-close" id="settings-close" type="button" aria-label="?ㅼ젙 ?リ린">횞</button>
-    <h2 id="settings-title">?ㅼ젙</h2>
-    <p id="settings-account-status">濡쒓렇?명븯硫?怨꾩젙 ?ㅼ젙???ъ슜?????덉뒿?덈떎.</p>
-    <button class="settings-action" id="settings-logout" type="button">濡쒓렇?꾩썐</button>
-    <button class="settings-action settings-danger" id="settings-delete-account" type="button">?꾩씠????젣</button>
-    <button class="settings-action settings-admin" id="settings-admin" type="button">愿由ъ옄 ?꾩슜</button>
+    <button class="account-close" id="settings-close" type="button" aria-label="설정 닫기">×</button>
+    <h2 id="settings-title">설정</h2>
+    <p id="settings-account-status">로그인하면 계정 설정을 사용할 수 있습니다.</p>
+    <button class="settings-action" id="settings-logout" type="button">로그아웃</button>
+    <button class="settings-action settings-danger" id="settings-delete-account" type="button">아이디 삭제</button>
+    <button class="settings-action settings-admin" id="settings-admin" type="button">관리자 전용</button>
     <p class="settings-status" id="settings-status" role="status"></p>
   </section>
   <div class="site-confirm-backdrop" id="confirm-backdrop" hidden></div>
   <section class="site-confirm-modal" id="confirm-modal" role="dialog" aria-modal="true" hidden>
-    <h2 id="confirm-title">?뺤씤</h2>
+    <h2 id="confirm-title">확인</h2>
     <p id="confirm-message"></p>
-    <div><button id="confirm-cancel" type="button">痍⑥냼</button><button id="confirm-ok" type="button">?뺤씤</button></div>
+    <div><button id="confirm-cancel" type="button">취소</button><button id="confirm-ok" type="button">확인</button></div>
   </section>
   <div class="bag-backdrop" id="bag-backdrop" hidden></div>
   <section class="bag-modal" id="bag-modal" role="dialog" aria-modal="true" aria-labelledby="bag-title" hidden>
-    <button class="account-close" id="bag-close" type="button" aria-label="媛諛??リ린">횞</button>
-    <h2 id="bag-title">?몃깽?좊━</h2>
+    <button class="account-close" id="bag-close" type="button" aria-label="가방 닫기">×</button>
+    <h2 id="bag-title">인벤토리</h2>
     <p class="bag-subtitle">ITEMS / SLOT STORAGE</p>
-    <p id="bag-cash">?ъ옄 怨꾩젙???꾧툑?쇰줈 ?꾩씠?쒖쓣 援щℓ?⑸땲??</p>
-    <div id="bag-items" class="bag-items" aria-label="?꾩씠???몃깽?좊━"><p>媛諛⑹쓣 遺덈윭?ㅻ뒗 以?..</p></div>
+    <p id="bag-cash">투자 계정의 현금으로 아이템을 구매합니다.</p>
+    <div id="bag-items" class="bag-items" aria-label="아이템 인벤토리"><p>가방을 불러오는 중...</p></div>
     <div class="bag-use-panel" id="bag-use-panel" hidden style="display: none;">
       <div class="bag-use-icon" id="bag-use-icon"></div>
       <div class="bag-use-copy">
-        <strong id="bag-use-name">?꾩씠?쒖쓣 ?좏깮?섏꽭??</strong>
-        <p id="bag-use-description">?щ’???좏깮?섎㈃ ?꾩씠???ㅻ챸怨??ъ슜 諛⑸쾿???쒖떆?⑸땲??</p>
+        <strong id="bag-use-name">아이템을 선택하세요.</strong>
+        <p id="bag-use-description">슬롯을 선택하면 아이템 설명과 사용 방법이 표시됩니다.</p>
       </div>
-      <label class="bag-target-label" hidden>?ъ슜 ????좏깮
+      <label class="bag-target-label" hidden>사용 대상 선택
         <select id="bag-target"></select>
       </label>
-      <label class="bag-nickname-label" id="bag-nickname-label" hidden>???됰꽕??
-        <input id="bag-new-nickname" maxlength="24" placeholder="???됰꽕?꾩쓣 ?낅젰?섏꽭??>
+      <label class="bag-nickname-label" id="bag-nickname-label" hidden>새 닉네임
+        <input id="bag-new-nickname" maxlength="24" placeholder="새 닉네임을 입력하세요">
       </label>
-      <label class="bag-letter-label" id="bag-letter-label" hidden>?몄? ?댁슜
-        <textarea id="bag-letter-message" maxlength="500" rows="4" placeholder="?꾪븯怨??띠? 硫붿떆吏瑜??낅젰?섏꽭??></textarea>
+      <label class="bag-letter-label" id="bag-letter-label" hidden>편지 내용
+        <textarea id="bag-letter-message" maxlength="500" rows="4" placeholder="전하고 싶은 메시지를 입력하세요"></textarea>
       </label>
-      <label class="bag-discard-label" id="bag-discard-label">踰꾨┫ ?섎웾
+      <label class="bag-discard-label" id="bag-discard-label">버릴 수량
         <input id="bag-discard-quantity" type="text" inputmode="numeric" pattern="[0-9]+" value="1">
       </label>
-      <button class="bag-use-button" id="bag-use-button" type="button">?ъ슜?섍린</button>
-      <button class="bag-discard-button" id="bag-discard-button" type="button">?꾩씠??踰꾨━湲?/button>
+      <button class="bag-use-button" id="bag-use-button" type="button">사용하기</button>
+      <button class="bag-discard-button" id="bag-discard-button" type="button">아이템 버리기</button>
     </div>
     <p class="bag-status" id="bag-status" role="status"></p>
   </section>
@@ -122,113 +122,113 @@
   <main>
     <section class="hero">
       <div class="wrap hero-grid">
-        <div class="eyebrow"><span>creative playground / 2005?붴닞</span><span>bucheon, kr</span></div>
-        <h1>?먭툒<br><span>?덈뱾</span></h1>
-        <p class="hero-note">?먭툒 異붿뼲 ??댄꽣</p>
+        <div class="eyebrow"><span>creative playground / 2005—∞</span><span>bucheon, kr</span></div>
+        <h1>폐급<br><span>놈들</span></h1>
+        <p class="hero-note">폐급 추억 놀이터</p>
         <aside class="hero-player-level-ranking investment-ranking">
           <div class="ranking-head"><span>player level ranking</span><span>level</span></div>
-          <ol id="player-level-ranking-list"><li class="ranking-empty">濡쒓렇??????궧??遺덈윭?듬땲??</li></ol>
+          <ol id="player-level-ranking-list"><li class="ranking-empty">로그인 후 랭킹을 불러옵니다.</li></ol>
           <div class="investment-ranking-pagination" id="player-level-ranking-pagination"></div>
-          <p class="ranking-note">?곴린 ?ㅼ슦湲??뚮젅?댁뼱 ?덈꺼???믪? ?쒖꽌濡??쒖떆?⑸땲??</p>
+          <p class="ranking-note">상기 키우기 플레이어 레벨이 높은 순서로 표시됩니다.</p>
         </aside>
       </div>
-      <div class="wrap scroll"><i></i> ?꾨옒濡??대젮????蹂닿린</div>
+      <div class="wrap scroll"><i></i> 아래로 내려서 더 보기</div>
     </section>
 
     <section class="investment" id="about">
       <div class="wrap">
         <div class="section-head"><h2 class="section-title">virtual<br>market</h2><span class="section-index">01 / 04</span></div>
         <div class="investment-intro">
-          <h3>?ㅻ뒛???덉쑝濡?br><em>?댁씪??二쇱떇</em>????</h3>
-          <p>?됰꽕?꾩쓣 ?뺥븯硫??됱깮 諛붽? ???놁뒿?덈떎. ?뚯썝媛????理쒖큹 1??媛???ъ옄湲?500,000?먯쓣 異붽? 吏湲됲빀?덈떎.<br>留ㅼ씪 12:00(KST)???곸듅쨌?섎씫 諛⑺뼢???뺥빐吏怨? 媛寃⑹? 5遺꾨쭏??紐⑤뱺 ?묒냽?먯뿉寃??숈씪?섍쾶 蹂?숉빀?덈떎.</p>
+          <h3>오늘의 돈으로<br><em>내일의 주식</em>을 사.</h3>
+          <p>닉네임을 정하면 평생 바꿀 수 없습니다. 회원가입 시 최초 1회 가상 투자금 500,000원을 추가 지급합니다.<br>매일 12:00(KST)에 상승·하락 방향이 정해지고, 가격은 5분마다 모든 접속자에게 동일하게 변동합니다.</p>
         </div>
         <form class="investor-form" id="investor-form">
-          <label>怨좎쑀 ?됰꽕??input id="investor-nickname" maxlength="24" placeholder="??踰??뺥븯硫?諛붽? ???놁쓬" required></label>
-          <button type="submit">?ъ옄 ?쒖옉 ??/button>
+          <label>고유 닉네임<input id="investor-nickname" maxlength="24" placeholder="한 번 정하면 바꿀 수 없음" required></label>
+          <button type="submit">투자 시작 ↗</button>
           <p id="investor-status" class="investor-status" role="status"></p>
         </form>
         <div class="portfolio-summary" id="portfolio-summary" hidden>
-          <div><span>investor</span><strong id="portfolio-nickname">??/strong></div>
-          <div><span>?⑥? ??/span><strong id="portfolio-cash">??</strong></div>
-          <div><span>珥??먯궛</span><strong id="portfolio-total">??</strong></div>
-          <div><span>?쒖옣 ?곹깭</span><strong id="market-updated">??/strong></div>
+          <div><span>investor</span><strong id="portfolio-nickname">—</strong></div>
+          <div><span>남은 돈</span><strong id="portfolio-cash">₩0</strong></div>
+          <div><span>총 자산</span><strong id="portfolio-total">₩0</strong></div>
+          <div><span>시장 상태</span><strong id="market-updated">—</strong></div>
         </div>
-        <button class="investment-transfer-toggle" id="investment-transfer-toggle" type="button" hidden>?꾧툑 ?↔툑 ??/button>
+        <button class="investment-transfer-toggle" id="investment-transfer-toggle" type="button" hidden>현금 송금 ↗</button>
         <form class="investment-transfer" id="investment-transfer" hidden style="display: none;">
-          <label>諛쏅뒗 ?좎?
+          <label>받는 유저
             <select id="transfer-target" required>
-              <option value="">?좎?瑜??좏깮?섏꽭??/option>
+              <option value="">유저를 선택하세요</option>
             </select>
           </label>
-          <label>?↔툑??
-            <input id="transfer-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="蹂대궪 湲덉븸" required>
+          <label>송금액
+            <input id="transfer-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="보낼 금액" required>
           </label>
-          <button type="submit">?↔툑?섍린 ??/button>
+          <button type="submit">송금하기 ↗</button>
           <p id="transfer-status" role="status"></p>
         </form>
         <div class="investment-holdings" id="investment-holdings" hidden>
           <div class="holdings-heading">
             <div>
               <span class="holdings-kicker">portfolio</span>
-              <h3>蹂댁쑀 醫낅ぉ</h3>
+              <h3>보유 종목</h3>
             </div>
-            <span>?ъ옄湲덉븸 / ?됯?湲덉븸 / ?섏씡瑜?/ ?뱀씪 蹂??/span>
+            <span>투자금액 / 평가금액 / 수익률 / 당일 변동</span>
           </div>
           <div id="holdings-list"></div>
         </div>
         <div class="investment-layout">
           <div class="investment-products">
             <div class="investment-list-head">
-              <span>?곹뭹 / ?꾩옱媛</span>
-              <button class="investment-refresh" id="investment-refresh" type="button">?덈줈怨좎묠 ??/button>
+              <span>상품 / 현재가</span>
+              <button class="investment-refresh" id="investment-refresh" type="button">새로고침 ↻</button>
             </div>
-            <div id="investment-products"><p class="investment-empty">?됰꽕?꾩쓣 ?ㅼ젙?섎㈃ ?ъ옄 紐⑸줉???대┰?덈떎.</p></div>
+            <div id="investment-products"><p class="investment-empty">닉네임을 설정하면 투자 목록이 열립니다.</p></div>
           </div>
           <aside class="investment-ranking">
             <div class="ranking-head"><span>asset ranking</span><span>total</span></div>
-            <button class="investment-admin-button" id="investment-admin-button" type="button">愿由ъ옄 紐⑤뱶</button>
+            <button class="investment-admin-button" id="investment-admin-button" type="button">관리자 모드</button>
             <div class="investment-admin-panel" id="investment-admin-panel" hidden>
-              <p>??궧 ?좎??먭쾶 吏湲됲븷 湲덉븸???낅젰?섏꽭??</p>
+              <p>랭킹 유저에게 지급할 금액을 입력하세요.</p>
               <div class="investment-admin-market">
                 <div class="investment-admin-broadcast">
-                  <h3>?꾩껜 ?좎? ?꾧툑 吏湲?/h3>
-                  <label>吏湲됱븸
-                    <input id="admin-broadcast-amount" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="?? 10000">
+                  <h3>전체 유저 현금 지급</h3>
+                  <label>지급액
+                    <input id="admin-broadcast-amount" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="예: 10000">
                   </label>
-                  <label>?꾨떖??硫붿떆吏
-                    <textarea id="admin-broadcast-message" maxlength="500" rows="3" placeholder="紐⑤뱺 ?좎??먭쾶 ?꾨떖??硫붿떆吏" required></textarea>
+                  <label>전달할 메시지
+                    <textarea id="admin-broadcast-message" maxlength="500" rows="3" placeholder="모든 유저에게 전달할 메시지" required></textarea>
                   </label>
-                  <button id="admin-broadcast-cash" type="button">紐⑤뱺 ?좎??먭쾶 吏湲?諛?硫붿떆吏 ?꾨떖</button>
+                  <button id="admin-broadcast-cash" type="button">모든 유저에게 지급 및 메시지 전달</button>
                 </div>
-                <label>醫낅ぉ 珥덇린??
+                <label>종목 초기화
                   <select id="admin-asset-select"></select>
                 </label>
-                <button id="admin-reset-asset" type="button">媛쒕퀎 媛寃?珥덇린??/button>
-                <button id="admin-split-asset" type="button">?좏깮 醫낅ぉ 1000遺꾩쓽 1 ?〓㈃遺꾪븷</button>
-                <button id="admin-reset-all-assets" type="button">紐⑤뱺 媛寃?珥덇린??/button>
-                <label>湲됰벑二??쇰컲 蹂?숉룺
+                <button id="admin-reset-asset" type="button">개별 가격 초기화</button>
+                <button id="admin-split-asset" type="button">선택 종목 1000분의 1 액면분할</button>
+                <button id="admin-reset-all-assets" type="button">모든 가격 초기화</button>
+                <label>급등주 일반 변동폭
                   <input id="admin-surge-normal-max" type="number" min="1" max="100" value="30">
                 </label>
-                <label>湲됰벑 ?뺣쪧(%)
+                <label>급등 확률(%)
                   <input id="admin-surge-chance" type="number" min="0" max="100" value="10">
                 </label>
-                <label>湲됰벑 踰붿쐞(%)
+                <label>급등 범위(%)
                   <span><input id="admin-surge-min" type="number" min="1" max="10000" value="200"> ~ <input id="admin-surge-max" type="number" min="1" max="10000" value="2000"></span>
                 </label>
-                <label>湲됰벑 ??湲됰씫 ?뺣쪧(%)
+                <label>급등 후 급락 확률(%)
                   <input id="admin-crash-chance" type="number" min="0" max="100" value="60">
                 </label>
-                <label>湲됰씫 踰붿쐞(%)
+                <label>급락 범위(%)
                   <span><input id="admin-crash-min" type="number" min="1" max="100" value="50"> ~ <input id="admin-crash-max" type="number" min="1" max="100" value="90"></span>
                 </label>
-                <button id="admin-save-volatility" type="button">蹂?숈꽦 ???/button>
+                <button id="admin-save-volatility" type="button">변동성 저장</button>
                 <p id="admin-market-status" role="status"></p>
               </div>
-              <span class="investment-admin-active">愿由ъ옄 紐⑤뱶 ?쒖꽦</span>
+              <span class="investment-admin-active">관리자 모드 활성</span>
             </div>
-            <ol id="investment-ranking-list"><li class="ranking-empty">?꾩쭅 ?ъ옄?먭? ?놁뒿?덈떎.</li></ol>
+            <ol id="investment-ranking-list"><li class="ranking-empty">아직 투자자가 없습니다.</li></ol>
             <div class="investment-ranking-pagination" id="investment-ranking-pagination"></div>
-            <p class="ranking-note">珥??먯궛???믪? ?쒖꽌濡??쒖떆?⑸땲??</p>
+            <p class="ranking-note">총 자산이 높은 순서로 표시됩니다.</p>
           </aside>
         </div>
       </div>
@@ -239,24 +239,24 @@
         <div class="section-head"><h2 class="section-title">selected<br>oddities</h2><span class="section-index">02 / 04</span></div>
         <div class="works">
           <article class="work">
-            <img class="work-image" src="memory-01.jpg" alt="遺곴퀬 ?쒖젅">
-            <div class="work-top"><span>001 / memory</span><span>遺곴퀬 ?쒖젅</span></div>
-            <div class="work-bottom"><span class="work-name">遺곴퀬 ?쒖젅</span><span class="circle-arrow">??/span></div>
+            <img class="work-image" src="memory-01.jpg" alt="북고 시절">
+            <div class="work-top"><span>001 / memory</span><span>북고 시절</span></div>
+            <div class="work-bottom"><span class="work-name">북고 시절</span><span class="circle-arrow">↗</span></div>
           </article>
           <article class="work">
-            <img class="work-image" src="memory-02.jpg" alt="遺곴퀬 議몄뾽(2023)">
+            <img class="work-image" src="memory-02.jpg" alt="북고 졸업(2023)">
             <div class="work-top"><span>002 / memory</span><span>2023</span></div>
-            <div class="work-bottom"><span class="work-name">遺곴퀬 議몄뾽(2023)</span><span class="circle-arrow">??/span></div>
+            <div class="work-bottom"><span class="work-name">북고 졸업(2023)</span><span class="circle-arrow">↗</span></div>
           </article>
           <article class="work">
-            <img class="work-image" src="memory-03.jpg" alt="2024??>
+            <img class="work-image" src="memory-03.jpg" alt="2024년">
             <div class="work-top"><span>003 / memory</span><span>2024</span></div>
-            <div class="work-bottom"><span class="work-name">2024??/span><span class="circle-arrow">??/span></div>
+            <div class="work-bottom"><span class="work-name">2024년</span><span class="circle-arrow">↗</span></div>
           </article>
           <article class="work">
-            <img class="work-image" src="memory-04.jpg" alt="2026??>
+            <img class="work-image" src="memory-04.jpg" alt="2026년">
             <div class="work-top"><span>004 / memory</span><span>2026</span></div>
-            <div class="work-bottom"><span class="work-name">2026??/span><span class="circle-arrow">??/span></div>
+            <div class="work-bottom"><span class="work-name">2026년</span><span class="circle-arrow">↗</span></div>
           </article>
         </div>
       </div>
@@ -268,26 +268,26 @@
         <div class="game-layout">
           <div class="game-panel">
             <div class="game-status">
-              <span id="game-player">player ??--</span>
-              <span>臾몄젣 <b id="game-question-number">0</b></span>
-              <span>?⑥? ?쒓컙 <b id="game-time">10.0</b>s</span>
+              <span id="game-player">player —---</span>
+              <span>문제 <b id="game-question-number">0</b></span>
+              <span>남은 시간 <b id="game-time">10.0</b>s</span>
             </div>
             <div class="game-card">
               <p class="game-kicker">mental arithmetic / beat your best</p>
               <div class="game-question" id="game-question">?</div>
               <form class="game-answer-form" id="game-answer-form">
-                <input id="game-answer" type="number" inputmode="numeric" autocomplete="off" placeholder="?뺣떟 ?낅젰" disabled required>
-                <button type="submit" id="game-submit" disabled>?뺤씤 ??/button>
+                <input id="game-answer" type="number" inputmode="numeric" autocomplete="off" placeholder="정답 입력" disabled required>
+                <button type="submit" id="game-submit" disabled>확인 ↗</button>
               </form>
-              <button class="game-start" id="game-start" type="button">寃뚯엫 ?쒖옉</button>
-              <p class="game-message" id="game-message">?쒖옉 踰꾪듉???꾨Ⅴ怨??됰꽕?꾩쓣 ?낅젰?섏꽭??</p>
+              <button class="game-start" id="game-start" type="button">게임 시작</button>
+              <p class="game-message" id="game-message">시작 버튼을 누르고 닉네임을 입력하세요.</p>
             </div>
           </div>
           <aside class="game-ranking">
             <div class="ranking-head"><span>ranking</span><span>solved</span></div>
-            <ol id="game-ranking-list"><li class="ranking-empty">??궧??遺덈윭?ㅻ뒗 以?..</li></ol>
+            <ol id="game-ranking-list"><li class="ranking-empty">랭킹을 불러오는 중...</li></ol>
             <div class="game-ranking-pagination" id="game-ranking-pagination"></div>
-            <p class="ranking-note">臾몄젣瑜?留롮씠 ???쒖꽌濡?湲곕줉?⑸땲??</p>
+            <p class="ranking-note">문제를 많이 푼 순서로 기록됩니다.</p>
           </aside>
         </div>
       </div>
@@ -297,29 +297,29 @@
       <div class="wrap">
         <div class="section-head"><h2 class="section-title">leave a trace</h2><span class="section-index">04 / 04</span></div>
         <div class="guestbook-intro">
-          <h2>?ш린??br><em>?붿쟻</em>???④꺼.</h2>
-          <p>?됰꽕?꾧낵 吏㏃? ?댁빞湲곕? ?④꺼二쇱꽭??<br>鍮꾨?踰덊샇瑜??ъ슜???볤????섏젙?섍굅????젣?????덉뒿?덈떎.<br>遺?곸젅???볤?? 愿由ъ옄???섑빐 ??젣???섎룄 ?덉뒿?덈떎.</p>
+          <h2>여기에<br><em>흔적</em>을 남겨.</h2>
+          <p>닉네임과 짧은 이야기를 남겨주세요.<br>비밀번호를 사용해 댓글을 수정하거나 삭제할 수 있습니다.<br>부적절한 댓글은 관리자에 의해 삭제될 수도 있습니다.</p>
         </div>
         <form class="comment-form" id="comment-form">
           <label class="comment-investor-toggle">
             <span class="comment-investor-check"><input id="investor-comment" name="investor_comment" type="checkbox"><span aria-hidden="true"></span></span>
-            <span class="comment-investor-copy"><strong>?ъ옄???뺣낫濡??볤? ?묒꽦</strong><small>?뚮젅?댁뼱 ?덈꺼 + ?ъ옄???됰꽕?꾩쑝濡??쒖떆?⑸땲??</small></span>
+            <span class="comment-investor-copy"><strong>투자자 정보로 댓글 작성</strong><small>플레이어 레벨 + 투자자 닉네임으로 표시됩니다.</small></span>
           </label>
-          <p class="comment-investor-hint" id="investor-comment-hint">泥댄겕?섎㈃ 濡쒓렇?명븳 ?ъ옄?먯쓽 ?곴린 ?ㅼ슦湲??덈꺼怨?怨좎쑀 ?됰꽕?꾩쑝濡??볤????묒꽦?⑸땲??</p>
-          <label id="comment-nickname-field">?됰꽕??input id="nickname" name="nickname" type="text" maxlength="24" placeholder="?대쫫???낅젰?섏꽭?? required></label>
-          <label id="comment-password-field">鍮꾨?踰덊샇 4?먮━<input id="password" name="password" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="?™™™? required></label>
-          <label class="comment-field">?볤?<textarea id="comment" name="comment" maxlength="500" rows="4" placeholder="?섍퀬 ?띠? 留먯쓣 ?④꺼二쇱꽭?? required></textarea></label>
-          <button type="submit">?볤? ?④린湲???/button>
+          <p class="comment-investor-hint" id="investor-comment-hint">체크하면 로그인한 투자자의 상기 키우기 레벨과 고유 닉네임으로 댓글을 작성합니다.</p>
+          <label id="comment-nickname-field">닉네임<input id="nickname" name="nickname" type="text" maxlength="24" placeholder="이름을 입력하세요" required></label>
+          <label id="comment-password-field">비밀번호 4자리<input id="password" name="password" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required></label>
+          <label class="comment-field">댓글<textarea id="comment" name="comment" maxlength="500" rows="4" placeholder="하고 싶은 말을 남겨주세요" required></textarea></label>
+          <button type="submit">댓글 남기기 ↗</button>
           <p class="form-status" id="form-status" role="status"></p>
         </form>
         <div class="comments-heading">
           <span>comments</span>
-          <button class="comments-refresh" id="comments-refresh" type="button">?덈줈怨좎묠 ??/button>
+          <button class="comments-refresh" id="comments-refresh" type="button">새로고침 ↻</button>
         </div>
         <div class="comments" id="comments" aria-live="polite">
-          <p class="comments-loading">?볤???遺덈윭?ㅻ뒗 以?..</p>
+          <p class="comments-loading">댓글을 불러오는 중...</p>
         </div>
-        <div class="comments-pagination" id="comments-pagination" aria-label="?볤? ?섏씠吏 ?대룞"></div>
+        <div class="comments-pagination" id="comments-pagination" aria-label="댓글 페이지 이동"></div>
       </div>
     </section>
   </main>
