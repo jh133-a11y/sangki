@@ -23,6 +23,7 @@
   const API_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
   const API_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
   let accountSession = null;
+  let guestSession = null;
   let profile = null;
   let serverGame = null;
   let profileBusy = false;
@@ -46,7 +47,7 @@
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.code === 'PGRST202'
-          ? '체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 chess-schema.sql을 실행하세요.'
+          ? `체스 기능 설정이 필요합니다. Supabase SQL 편집기에서 ${name === 'chess_guest_session' ? 'allow-guest-chess.sql' : 'chess-schema.sql'}을 실행하세요.`
           : result.code === '57014'
             ? '서버 AI 계산 시간이 초과되었습니다. chess-speed-fix.sql을 실행하거나 빠른 연습 경기를 이용하세요.'
             : result.message || '체스 요청에 실패했습니다.');
@@ -62,8 +63,9 @@
     }
   };
   const accountPayload = () => {
-    if (!accountSession?.session_token) throw new Error('메인에서 로그인하세요.');
-    return { p_session_token: accountSession.session_token };
+    const session = accountSession || guestSession;
+    if (!session?.session_token) throw new Error('메인에서 로그인하거나 비회원 투자 닉네임을 설정하세요.');
+    return { p_session_token: session.session_token };
   };
   const updateProfileView = () => {
     $('#chess-account').textContent = profile
@@ -77,7 +79,7 @@
     $('#chess-stats-refresh').disabled = profileBusy;
     $('#chess-resume').hidden = !profile?.active || Boolean(serverGame);
     $('#chess-start').disabled = profileBusy || thinking
-      || (settings.mode === 'ai' && Boolean(accountSession) && !accountReady);
+      || (settings.mode === 'ai' && Boolean(accountSession || guestNickname) && !accountReady);
     $('#chess-stats-status').textContent = profileBusy ? '전적을 불러오는 중…' : profileError || (profile
       ? `수령 대기 랜덤 현금 박스 ${profile.pending_boxes}개 · 보유 한도 100개`
       : accountSession ? '계정 전적을 불러오지 못했습니다. 새로고침을 눌러 주세요.' : '로그인 후 전적을 확인할 수 있습니다.');
@@ -93,8 +95,16 @@
       accountSession = JSON.parse(stored || 'null');
       guestNickname = !accountSession && localStorage.getItem('sangki-investment-client-id')
         ? localStorage.getItem('sangki-investor-nickname') || '' : '';
+      guestSession = null;
       profile = null;
-      const next = accountSession ? await rpc('chess_profile', accountPayload()) : null;
+      if (guestNickname) {
+        const session = await rpc('chess_guest_session', {
+          p_client_id: localStorage.getItem('sangki-investment-client-id'), p_nickname: guestNickname
+        });
+        if (request !== profileRequest) return;
+        guestSession = session;
+      }
+      const next = accountSession || guestSession ? await rpc('chess_profile', accountPayload()) : null;
       if (request !== profileRequest) return;
       profile = next;
       accountReady = true;
@@ -730,7 +740,7 @@
     if (thinking) return;
     const id = gameId;
     if (serverGame && !serverGame.result && !window.confirm('새 경기를 시작하면 진행 중인 경기는 패배로 기록됩니다. 계속할까요?')) return;
-    if (settings.mode === 'ai' && accountSession) {
+    if (settings.mode === 'ai' && (accountSession || guestNickname)) {
       if (!accountReady || !profile?.nickname) {
         accountMessage('계정을 새로 불러오거나 메인에서 투자 닉네임을 설정하세요.');
         return;
@@ -922,21 +932,21 @@
   });
   $('#chess-claim').addEventListener('click', async () => {
     if (profileBusy) return;
-    const token = accountSession?.session_token;
+    const token = (accountSession || guestSession)?.session_token;
     profileBusy = true;
     profileError = '';
     updateProfileView();
     let message = '';
     try {
       const result = await rpc('chess_claim_rewards', accountPayload());
-      if (token !== accountSession?.session_token) return;
+      if (token !== (accountSession || guestSession)?.session_token) return;
       profile = result.profile;
       message = result.claimed ? `랜덤 현금 박스 ${result.claimed}개를 받았습니다.`
         : '보유 상자를 사용하여 공간을 확보한 후 다시 수령하세요.';
       accountMessage(message);
     } catch (error) { message = error.message; accountMessage(message); }
     finally {
-      if (token === accountSession?.session_token) {
+      if (token === (accountSession || guestSession)?.session_token) {
         profileBusy = false; updateProfileView();
         $('#chess-stats-status').textContent = `${message} 수령 대기 ${profile?.pending_boxes || 0}개`;
       }
