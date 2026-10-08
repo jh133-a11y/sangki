@@ -388,6 +388,7 @@ values
   ('DONGHWA_SURGE_STOCK', '동화급등주', 2000, 2000),
   ('JEONGMIN_SURGE_STOCK', '정민급등주', 900, 900),
   ('JUSEONG_SURGE_STOCK', '주성급등주', 120000, 120000),
+  ('JAEJJING_SURGE_STOCK', '재찡급등주', 1000, 1000),
   ('SANGI_AI', '상기AI', 1000, 1000),
   ('QUANTUM_YOON', '양자윤석열', 50000, 50000)
 on conflict (symbol) do nothing;
@@ -446,6 +447,7 @@ begin
       'DONGHWA_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
       'JEONGMIN_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
       'JUSEONG_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
+      'JAEJJING_SURGE_STOCK', case when random() < 0.5 then -1 else 1 end,
       'SANGI_AI', case when random() < 0.5 then -1 else 1 end,
       'QUANTUM_YOON', case when random() < 0.5 then -1 else 1 end,
       'rocket_event', random() < 0.10,
@@ -573,9 +575,10 @@ begin
       'CURRENT_SURGE_STOCK',
       'DONGHWA_SURGE_STOCK',
       'JEONGMIN_SURGE_STOCK',
-      'JUSEONG_SURGE_STOCK'
+      'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
     ) then
-      daily_direction := (direction_state_value->>asset.symbol)::integer;
+      daily_direction := coalesce((direction_state_value->>asset.symbol)::integer, case when random() < 0.5 then -1 else 1 end);
       if random() < 0.01 then
         pct := floor(random() * 1801) + 200;
       else
@@ -1543,7 +1546,7 @@ begin
   if current_setting('app.investment_admin_reset', true) = 'on'
      or new.symbol not in (
        'SURGE_STOCK', 'CURRENT_SURGE_STOCK', 'DONGHWA_SURGE_STOCK',
-       'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK'
+       'JEONGMIN_SURGE_STOCK', 'JUSEONG_SURGE_STOCK', 'JAEJJING_SURGE_STOCK'
      ) then
     return new;
   end if;
@@ -1648,7 +1651,8 @@ begin
             'CURRENT_SURGE_STOCK',
             'DONGHWA_SURGE_STOCK',
             'JEONGMIN_SURGE_STOCK',
-            'JUSEONG_SURGE_STOCK'
+            'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
           )
           and current_price >= 1000000
         )
@@ -1667,6 +1671,7 @@ begin
             'DONGHWA_SURGE_STOCK',
             'JEONGMIN_SURGE_STOCK',
             'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK',
             'SANGI_ROCKET',
             'JEONGMIN_ROCKET',
             'SANGI_BIO',
@@ -1683,7 +1688,8 @@ begin
       'CURRENT_SURGE_STOCK',
       'DONGHWA_SURGE_STOCK',
       'JEONGMIN_SURGE_STOCK',
-      'JUSEONG_SURGE_STOCK'
+      'JUSEONG_SURGE_STOCK',
+            'JAEJJING_SURGE_STOCK'
     ) then
       v_split_factor := 1000;
     elsif asset_row.symbol in ('SEOK_HYNIX', 'SAMSUNG_MICROWAVE') then
