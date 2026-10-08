@@ -173,7 +173,7 @@ const renderPosts = () => {
         <span>${post.comment_count || 0}</span>
       </div>
     </article>`;
-  }).join('') + Array.from({ length: Math.max(0, pageSize - pagePosts.length) }, () => '<div class="records-row records-row-empty"><span>&nbsp;</span><span></span><span></span><span></span></div>').join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
+  }).join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
   renderPagination();
 };
 

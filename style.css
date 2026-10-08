@@ -311,7 +311,7 @@ nav a:hover { opacity: .5; }
 .records-row-actions button, .record-comment-actions button { border: 1px solid #c9c9c9; padding: 3px 6px; background: #fff; color: #666; cursor: pointer; font: 9px var(--sans); }
 .records-row-actions button:hover, .record-comment-actions button:hover { border-color: #5578b5; background: #5578b5; color: #fff; }
 .records-notice-row .records-row-actions { position: absolute; right: 4px; }
-.records-notices, .records-list { display: block; }
+.records-notices, .records-list { display: block; padding: 0; margin: 0; }
 .records-empty { padding: 35px; border-bottom: 1px solid #e5e5e5; color: #999; text-align: center; font: 11px var(--sans); }
 .records-pagination { display: flex; justify-content: center; gap: 3px; margin: 7px 0 0; }
 .records-pagination button { min-width: 28px; border: 1px solid #c9d0dc; padding: 6px 8px; background: #fff; color: #666; cursor: pointer; font: 11px var(--sans); }
