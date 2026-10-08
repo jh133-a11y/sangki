@@ -668,6 +668,9 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
   isolation: isolate;
   background: #f5e8d3;
 }
+.sanggi-page main.has-background { background-size: cover; background-position: center; background-repeat: no-repeat; }
+.sanggi-page main.has-background > :is(.sanggi-sky, .sanggi-moon, .sanggi-city, .sanggi-street, .sanggi-lamp) { visibility: hidden; pointer-events: none; }
+.sanggi-background-preview { width: 100%; max-width: 120px; height: 80px; object-fit: cover; border-radius: 8px; }
 .sanggi-coin-display {
   position: absolute;
   top: 24px;

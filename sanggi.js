@@ -63,6 +63,10 @@
   let companionLevel = 1;
   let sanggiOutfit = localStorage.getItem(sanggiOutfitKey) || 'default';
   let companionOutfit = localStorage.getItem(companionOutfitKey) || 'default';
+  let backgroundBonus = 0n;
+  let backgroundState = null;
+  let backgroundRequest = 0;
+  let backgroundBusy = false;
   let dragState = null;
   let companionDragState = null;
   let characterPress = null;
@@ -92,7 +96,7 @@
   const companionBonus = () => companionUnlocked
     ? 100n + BigInt((companionLevel - 1) * 10)
     : 0n;
-  const clickReward = () => 1n + BigInt((breathLevel - 1) * 10) + companionBonus();
+  const clickReward = () => 1n + BigInt((breathLevel - 1) * 10) + companionBonus() + backgroundBonus;
   const autoReward = () => clickReward();
   const autoIntervalMs = () => Math.max(5000, 10000 - (autoLevel - 1) * 100);
   const upgradeCost = (level) => {
@@ -310,6 +314,89 @@
       isGuest: !session?.session_token
     };
   };
+  const backgroundImages = { old_village: 'sanggi-background-village.png', space: 'sanggi-background-space.png' };
+  const backgroundStatus = document.querySelector('#sanggi-background-status');
+  const backgroundModal = document.querySelector('#sanggi-background-modal');
+  const backgroundBackdrop = document.querySelector('#sanggi-background-backdrop');
+  const renderBackground = () => {
+    const image = backgroundImages[backgroundState?.equipped];
+    main.style.backgroundImage = image ? `url("${image}")` : '';
+    main.classList.toggle('has-background', Boolean(image));
+    document.querySelectorAll('[data-background]').forEach((button) => {
+      const type = button.dataset.background;
+      button.disabled = backgroundBusy || !backgroundState;
+      button.textContent = backgroundState?.owned.includes(type)
+        ? backgroundState.equipped === type ? '적용 해제' : '적용' : '구매하기';
+    });
+    document.querySelector('#sanggi-background-cash').textContent = backgroundState
+      ? `보유 현금 ${formatCoins(BigInt(backgroundState.cash))}원 · 보유 보너스 +${formatCoins(backgroundBonus)}원`
+      : '';
+    renderAbilities();
+  };
+  const loadBackground = async (action = 'get', type = null) => {
+    const client = shopClient();
+    const request = ++backgroundRequest;
+    backgroundBusy = true;
+    if (backgroundState?.client_id !== client.clientId) {
+      backgroundState = null;
+      backgroundBonus = 0n;
+    }
+    renderBackground();
+    backgroundStatus.textContent = '배경 정보를 확인하는 중…';
+    try {
+      if (!client.clientId) {
+        backgroundStatus.textContent = '홈 화면에서 투자 닉네임을 먼저 설정하세요.';
+        return;
+      }
+      const result = await remoteRpc('sanggi_background_action', {
+        p_client_id: client.clientId, p_nickname: client.nickname,
+        p_session_token: getSession()?.session_token || null,
+        p_action: action, p_background: type
+      });
+      if (request !== backgroundRequest || client.clientId !== shopClient().clientId) return;
+      backgroundState = result;
+      backgroundBonus = BigInt(result.bonus);
+      backgroundStatus.textContent = action === 'buy' ? '구매 완료! 보유 보너스가 적용되었습니다. 적용 버튼으로 배경을 바꿀 수 있습니다.'
+        : action === 'toggle' ? result.equipped ? '배경을 적용했습니다.' : '기본 배경으로 돌아왔습니다.' : '';
+    } catch (error) {
+      if (request === backgroundRequest) backgroundStatus.textContent = error.message.includes('sanggi_background_action')
+        ? '배경 설정이 필요합니다. Supabase SQL 편집기에서 sanggi-backgrounds.sql을 실행하세요.' : error.message;
+    } finally {
+      if (request === backgroundRequest) { backgroundBusy = false; renderBackground(); }
+    }
+  };
+  const closeBackground = () => {
+    backgroundModal.hidden = true;
+    backgroundBackdrop.hidden = true;
+    document.querySelector('#sanggi-background-button').focus();
+  };
+  document.querySelector('#sanggi-background-button').addEventListener('click', () => {
+    backgroundModal.hidden = false;
+    backgroundBackdrop.hidden = false;
+    document.querySelector('#sanggi-background-close').focus();
+    void loadBackground();
+  });
+  document.querySelector('#sanggi-background-close').addEventListener('click', closeBackground);
+  backgroundBackdrop.addEventListener('click', closeBackground);
+  backgroundModal.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeBackground();
+    if (event.key !== 'Tab') return;
+    const buttons = [...backgroundModal.querySelectorAll('button:not(:disabled)')];
+    if (event.shiftKey && document.activeElement === buttons[0]) {
+      event.preventDefault(); buttons.at(-1).focus();
+    } else if (!event.shiftKey && document.activeElement === buttons.at(-1)) {
+      event.preventDefault(); buttons[0].focus();
+    }
+  });
+  document.querySelectorAll('[data-background]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (backgroundBusy || !backgroundState) return;
+      const type = button.dataset.background;
+      const owned = backgroundState.owned.includes(type);
+      if (!owned && !window.confirm(`${type === 'old_village' ? '옛날 마을 · 현금 10억원' : '우주 · 현금 50억원'}을 구매할까요?`)) return;
+      void loadBackground(owned ? 'toggle' : 'buy', type);
+    });
+  });
   const shopCoin = document.querySelector('#sanggi-shop-coin-balance');
   const loadShopCash = async () => {
     const client = shopClient();
@@ -867,6 +954,7 @@
     if (!session?.session_token) {
       remoteReady = false;
       lastSyncedSessionToken = null;
+      if (backgroundState && backgroundState.client_id !== shopClient().clientId) void loadBackground();
       return false;
     }
     const position = getLocalPosition();
@@ -932,6 +1020,7 @@
     accountSyncing = true;
     try {
       await syncAccountState();
+      await loadBackground();
       remoteReady = true;
       loadCharacterPosition();
       renderCompanion();
@@ -1423,6 +1512,7 @@
     renderAbilities();
     renderPotions();
     scheduleAutoCoin();
+    await loadBackground();
   };
   window.addEventListener('sanggi-account-changed', () => {
     refreshAccountState(true).then(() => loadOutfits().catch((error) => {

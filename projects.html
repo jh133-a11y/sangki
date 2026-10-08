@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=90">
+  <link rel="stylesheet" href="style.css?v=91">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -48,9 +48,9 @@
         <span class="sanggi-action-icon">+</span>
         <span>동료</span>
       </button>
-      <button type="button" class="sanggi-action-button">
+      <button type="button" class="sanggi-action-button" id="sanggi-background-button">
         <span class="sanggi-action-icon">⌂</span>
-        <span>배경 구매</span>
+        <span>배경</span>
       </button>
       <button type="button" class="sanggi-action-button" id="sanggi-shop-button">
         <span class="sanggi-action-icon">▣</span>
@@ -89,6 +89,26 @@
       </button>
       <p class="sanggi-potion-effect" id="sanggi-potion-effect" role="status" hidden></p>
     </div>
+    <div class="sanggi-shop-backdrop" id="sanggi-background-backdrop" hidden></div>
+    <section class="sanggi-shop-modal" id="sanggi-background-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-background-title" hidden>
+      <button class="sanggi-ability-close" id="sanggi-background-close" type="button" aria-label="닫기">×</button>
+      <h2 id="sanggi-background-title">배경</h2>
+      <p id="sanggi-background-cash" class="sanggi-shop-cash"></p>
+      <p>보유한 배경의 보너스는 적용 여부와 관계없이 클릭·자동 획득에 합산됩니다.</p>
+      <div class="sanggi-shop-list">
+        <article class="sanggi-shop-card">
+          <img class="sanggi-background-preview" src="sanggi-background-village.png" alt="옛날 마을 배경">
+          <div><h3>옛날 마을</h3><p>클릭·자동 획득 각각 +1,000원</p><strong>현금 10억원</strong></div>
+          <button class="sanggi-shop-buy" data-background="old_village" type="button" disabled>구매하기</button>
+        </article>
+        <article class="sanggi-shop-card">
+          <img class="sanggi-background-preview" src="sanggi-background-space.png" alt="우주 배경">
+          <div><h3>우주</h3><p>클릭·자동 획득 각각 +3,000원</p><strong>현금 50억원</strong></div>
+          <button class="sanggi-shop-buy" data-background="space" type="button" disabled>구매하기</button>
+        </article>
+      </div>
+      <p id="sanggi-background-status" role="status" aria-live="polite"></p>
+    </section>
     <div class="sanggi-shop-backdrop" id="sanggi-shop-backdrop" hidden></div>
     <section class="sanggi-shop-modal" id="sanggi-shop-modal" role="dialog" aria-modal="true" aria-labelledby="sanggi-shop-title" hidden>
       <button class="sanggi-ability-close" id="sanggi-shop-close" type="button" aria-label="닫기">×</button>
@@ -252,6 +272,6 @@
       <p class="sanggi-ability-status" id="sanggi-companion-status" role="status"></p>
     </section>
   </main>
-  <script src="sanggi.js?v=58"></script>
+  <script src="sanggi.js?v=59"></script>
 </body>
 </html>
