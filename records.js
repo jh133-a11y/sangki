@@ -22,14 +22,35 @@ const hashPassword = async (password) => {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const renderPoll = (poll) => poll ? `
+const voterKey = () => {
+  const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
+  localStorage.setItem('records-voter-key', key);
+  return key;
+};
+let myPollVotes = JSON.parse(localStorage.getItem('records-poll-votes') || '{}');
+const pendingPollChoice = {};
+const saveMyPollVotes = () => localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
+
+const renderPoll = (poll) => {
+  if (!poll) return '';
+  const voted = myPollVotes[poll.id];
+  const pending = pendingPollChoice[poll.id];
+  const total = (poll.options || []).reduce((sum, option) => sum + (option.votes || 0), 0);
+  return `
   <div class="records-poll" data-poll-id="${poll.id}">
     <strong>${escapeHtml(poll.question)}</strong>
     <div class="records-poll-options">${(poll.options || []).map((option) => `
-      <button data-poll-vote="${option.id}" type="button">
-        <span>${escapeHtml(option.text)}</span><em>${option.votes || 0}</em>
+      <button class="${option.id === voted ? 'is-voted' : option.id === pending && !voted ? 'is-selected' : ''}" data-poll-select="${option.id}" type="button" ${voted ? 'disabled' : ''}>
+        <span>${option.id === voted ? '✔ ' : ''}${escapeHtml(option.text)}</span><em>${option.votes || 0}표</em>
       </button>`).join('')}</div>
-  </div>` : '';
+    <div class="records-poll-footer">
+      <small>총 ${total}표</small>
+      ${voted
+        ? '<button class="records-poll-submit is-cancel" data-poll-cancel type="button">선택 해제</button>'
+        : `<button class="records-poll-submit" data-poll-submit type="button" ${pending ? '' : 'disabled'}>투표</button>`}
+    </div>
+  </div>`;
+};
 
 const openPostDetail = (post, countView = true) => {
   if (!post) return;
@@ -205,6 +226,10 @@ const loadBoard = async () => {
   const result = await rpc('record_get_board');
   posts = Array.isArray(result.posts) ? result.posts : [];
   notices = Array.isArray(result.notices) ? result.notices : [];
+  try {
+    const mine = await rpc('record_get_my_poll_votes', { p_voter_key: voterKey() });
+    if (mine && typeof mine === 'object') { myPollVotes = mine; saveMyPollVotes(); }
+  } catch (error) { /* 서버 함수가 없으면 브라우저 저장값을 사용 */ }
   renderNotices();
   renderPosts();
   const detail = $('#records-detail-page');
@@ -351,17 +376,39 @@ document.addEventListener('click', async (event) => {
     renderPosts();
     return;
   }
+  const pollBox = button.closest('[data-poll-id]');
+  if (button.dataset.pollSelect && pollBox) {
+    pendingPollChoice[pollBox.dataset.pollId] = button.dataset.pollSelect;
+    pollBox.querySelectorAll('[data-poll-select]').forEach((item) => item.classList.toggle('is-selected', item === button));
+    pollBox.querySelector('[data-poll-submit]')?.removeAttribute('disabled');
+    return;
+  }
+  if ((button.hasAttribute('data-poll-submit') || button.hasAttribute('data-poll-cancel')) && pollBox) {
+    const pollId = pollBox.dataset.pollId;
+    try {
+      if (button.hasAttribute('data-poll-submit')) {
+        const optionId = pendingPollChoice[pollId];
+        if (!optionId) return;
+        await rpc('record_vote_poll', { p_poll_id: pollId, p_option_id: optionId, p_voter_key: voterKey() });
+        myPollVotes[pollId] = optionId;
+      } else {
+        await rpc('record_cancel_poll_vote', { p_poll_id: pollId, p_voter_key: voterKey() });
+        delete myPollVotes[pollId];
+        delete pendingPollChoice[pollId];
+      }
+      saveMyPollVotes();
+      await loadBoard();
+    } catch (error) {
+      setStatus('records-status', error.message);
+    }
+    return;
+  }
   const post = posts.find((item) => item.id === button.closest('[data-post-id]')?.dataset.postId);
   try {
     if (button.dataset.vote && post) {
       const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
       localStorage.setItem('records-voter-key', key);
       await rpc('record_vote_post', { p_post_id: post.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
-      await loadBoard();
-    } else if (button.dataset.pollVote && post) {
-      const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
-      localStorage.setItem('records-voter-key', key);
-      await rpc('record_vote_poll', { p_poll_id: button.closest('[data-poll-id]').dataset.pollId, p_option_id: button.dataset.pollVote, p_voter_key: key });
       await loadBoard();
     } else if (button.dataset.comment) {
       $('#records-comment-form').reset();

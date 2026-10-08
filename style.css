@@ -321,6 +321,13 @@ nav a:hover { opacity: .5; }
 .records-poll-options { display: grid; gap: 5px; }
 .records-poll-options button { display: flex; justify-content: space-between; gap: 12px; width: 100%; border: 1px solid #cbd3e0; padding: 7px 9px; background: #fff; color: #555; cursor: pointer; text-align: left; font: 10px var(--sans); }
 .records-poll-options button:hover { border-color: #5578b5; color: #3b5f9e; }
+.records-poll-options button.is-selected { border-color: #5578b5; background: #e8eefb; color: #3b5f9e; font-weight: 700; }
+.records-poll-options button.is-voted { border-color: #2f7d4f; background: #2f7d4f; color: #fff; font-weight: 700; opacity: 1; }
+.records-poll-options button:disabled:not(.is-voted) { opacity: .6; cursor: default; }
+.records-poll-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; color: #888; font: 10px var(--sans); }
+.records-poll-submit { border: 1px solid #5578b5; padding: 6px 18px; background: #5578b5; color: #fff; cursor: pointer; font: 700 11px var(--sans); }
+.records-poll-submit:disabled { border-color: #c9c9c9; background: #e5e5e5; color: #999; cursor: not-allowed; }
+.records-poll-submit.is-cancel { border-color: #c0392b; background: #fff; color: #c0392b; }
 .records-poll-options em { color: #5578b5; font-style: normal; }
 .record-comments { margin: 0 8px 8px 126px; }
 .record-comment { padding: 9px 12px; border-left: 2px solid #5578b5; background: #f7f8fa; }
