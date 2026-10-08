@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>기록(?) — byungsin</title>
-  <link rel="stylesheet" href="style.css?v=45">
+  <link rel="stylesheet" href="style.css?v=46">
 </head>
 <body class="records-page">
   <main class="records-shell">
@@ -46,11 +46,11 @@
   <section class="records-modal records-compose-page" id="records-post-modal" role="dialog" aria-modal="true" aria-labelledby="records-post-title" hidden>
     <button class="records-compose-back" data-close-modal type="button">목록으로</button>
     <h2 id="records-post-title">글쓰기</h2>
-    <p class="records-compose-help">게시판에 표시될 글을 작성합니다. 닉네임과 비밀번호를 입력해 주세요.</p>
+    <p class="records-compose-help" id="records-post-help">게시판에 표시될 글을 작성합니다. 닉네임과 비밀번호를 입력해 주세요.</p>
     <form id="records-post-form">
       <input type="hidden" id="records-post-id">
-      <label>닉네임<input id="records-post-nickname" maxlength="24" required></label>
-      <label>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
+      <label data-post-only>닉네임<input id="records-post-nickname" maxlength="24" required></label>
+      <label data-post-only>비밀번호<input id="records-post-password" type="password" minlength="4" maxlength="72" required></label>
       <label>제목<input id="records-post-subject" maxlength="100" required></label>
       <label>내용<textarea id="records-post-body" maxlength="5000" rows="9" required></textarea></label>
       <div class="records-image-field">
@@ -70,7 +70,7 @@
       </fieldset>
       <div class="records-compose-actions">
         <button class="records-cancel" data-close-modal type="button">취소</button>
-        <button class="records-submit" type="submit">등록하기</button>
+        <button class="records-submit" id="records-post-submit" type="submit">등록하기</button>
       </div>
       <p class="records-form-status" id="records-post-form-status"></p>
     </form>
@@ -90,22 +90,6 @@
     </form>
   </section>
 
-  <section class="records-modal records-compose-page records-notice-compose-page" id="records-notice-modal" role="dialog" aria-modal="true" aria-labelledby="records-notice-title" hidden>
-    <button class="records-compose-back" data-close-modal type="button">목록으로</button>
-    <h2 id="records-notice-title">공지 작성</h2>
-    <p class="records-compose-help">게시판 상단에 표시될 공지를 작성합니다.</p>
-    <form id="records-notice-form">
-      <input type="hidden" id="records-notice-id">
-      <label>제목<input id="records-notice-subject" maxlength="100" required></label>
-      <label>내용<textarea id="records-notice-body" maxlength="5000" rows="8" required></textarea></label>
-      <div class="records-compose-actions">
-        <button class="records-cancel" data-close-modal type="button">취소</button>
-        <button class="records-submit" type="submit">공지 저장</button>
-      </div>
-      <p class="records-form-status" id="records-notice-form-status"></p>
-    </form>
-  </section>
-
-  <script src="records.js?v=17"></script>
+  <script src="records.js?v=18"></script>
 </body>
 </html>

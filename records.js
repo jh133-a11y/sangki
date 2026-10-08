@@ -4,7 +4,7 @@ const rpcEndpoint = `${SUPABASE_URL}/rest/v1/rpc`;
 const apiHeaders = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
 const $ = (selector) => document.querySelector(selector);
 const backdrop = $('#records-backdrop');
-const modalIds = ['records-post-modal', 'records-comment-modal', 'records-notice-modal'];
+const modalIds = ['records-post-modal', 'records-comment-modal'];
 const page = document.body;
 let posts = [];
 let notices = [];
@@ -77,7 +77,7 @@ const clearPendingImages = () => {
   renderImagePreviews();
 };
 
-const uploadPostImages = async (postId, passwordHash) => {
+const uploadPostImages = async (postId, passwordHash, isNotice = false) => {
   const paths = new Array(pendingImages.length);
   let next = 0;
   const worker = async () => {
@@ -96,7 +96,10 @@ const uploadPostImages = async (postId, passwordHash) => {
     }
   };
   await Promise.all(Array.from({ length: Math.min(4, pendingImages.length) }, worker));
-  await rpc('record_set_post_images', { p_id: postId, p_password_hash: passwordHash, p_images: paths });
+  await rpc(isNotice ? 'record_set_notice_images' : 'record_set_post_images',
+    isNotice
+      ? { p_id: postId, p_admin_password: passwordHash, p_images: paths }
+      : { p_id: postId, p_password_hash: passwordHash, p_images: paths });
 };
 
 const deletePostImages = async (images) => {
@@ -130,6 +133,33 @@ const renderPoll = (poll) => {
   </div>`;
 };
 
+const imagesHtml = (images) => (Array.isArray(images) && images.length
+  ? `<div class="records-detail-images">${images.map((path) => `<a href="${imageUrl(path)}" target="_blank" rel="noopener"><img src="${imageUrl(path)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>`
+  : '');
+
+const openNoticeDetail = (notice) => {
+  if (!notice) return;
+  const detail = $('#records-detail-page');
+  detail.innerHTML = `
+    <div class="records-detail-head">
+      <button class="records-compose-back" data-close-detail type="button">목록으로</button>
+      <span>공지</span>
+    </div>
+    <article class="records-detail-card" data-notice-id="${notice.id}">
+      <div class="records-detail-meta"><strong>관리자</strong><time>${formatDate(notice.created_at)}</time></div>
+      <h1>${escapeHtml(notice.title)}</h1>
+      <div class="records-detail-body">${escapeHtml(notice.body)}</div>
+      ${imagesHtml(notice.images)}
+      ${renderPoll(notice.poll)}
+      <div class="records-row-actions">
+        <button data-notice-edit="${notice.id}" type="button">수정</button>
+        <button data-notice-delete="${notice.id}" type="button">삭제</button>
+      </div>
+    </article>`;
+  page.classList.add('records-detailing');
+  detail.hidden = false;
+};
+
 const openPostDetail = (post, countView = true) => {
   if (!post) return;
   if (countView) {
@@ -147,7 +177,7 @@ const openPostDetail = (post, countView = true) => {
       <div class="records-detail-meta"><strong>${escapeHtml(post.nickname)}</strong><time>${formatDate(post.created_at)}</time></div>
       <h1>${escapeHtml(post.title)}</h1>
       <div class="records-detail-body">${escapeHtml(post.body)}</div>
-      ${Array.isArray(post.images) && post.images.length ? `<div class="records-detail-images">${post.images.map((path) => `<a href="${imageUrl(path)}" target="_blank" rel="noopener"><img src="${imageUrl(path)}" alt="첨부 사진" loading="lazy"></a>`).join('')}</div>` : ''}
+      ${imagesHtml(post.images)}
       ${renderPoll(post.poll)}
       <div class="records-row-actions">
         <button class="${myPostVotes[post.id] === 1 ? 'is-voted-pick' : ''}" data-vote="1" type="button">추천 ${post.upvotes}</button>
@@ -186,7 +216,7 @@ const formatDate = (value) => {
 
 const openModal = (id) => {
   modalIds.forEach((modalId) => { $(`#${modalId}`).hidden = modalId !== id; });
-  const isComposer = id === 'records-post-modal' || id === 'records-notice-modal';
+  const isComposer = id === 'records-post-modal';
   if (isComposer) {
     page.classList.remove('records-detailing');
     $('#records-detail-page').hidden = true;
@@ -243,19 +273,14 @@ const renderPagination = () => {
 };
 
 const renderNotices = () => {
-  $('#records-notices').innerHTML = activeTab === 'general' ? '' : notices.map((notice, index) => `
-    <article class="records-row records-notice-row">
+  $('#records-notices').innerHTML = activeTab === 'general' ? '' : notices.map((notice) => `
+    <article class="records-row records-notice-row" data-notice-id="${notice.id}">
       <span>공지</span>
       <div class="records-title-cell">
         <strong>${escapeHtml(notice.title)}</strong>
-        <p>${escapeHtml(notice.body)}</p>
       </div>
       <span>-</span>
       <span>-</span>
-      ${adminPassword ? `<div class="records-row-actions">
-        <button data-notice-edit="${notice.id}" type="button">수정</button>
-        <button data-notice-delete="${notice.id}" type="button">삭제</button>
-      </div>` : ''}
     </article>`).join('');
 };
 
@@ -313,7 +338,12 @@ const loadBoard = async () => {
   renderPosts();
   const detail = $('#records-detail-page');
   const openId = detail.hidden ? null : detail.querySelector('[data-post-id]')?.dataset.postId;
-  if (openId) {
+  const openNoticeId = detail.hidden ? null : detail.querySelector('[data-notice-id]')?.dataset.noticeId;
+  if (openNoticeId) {
+    const openNotice = notices.find((item) => item.id === openNoticeId);
+    if (openNotice) openNoticeDetail(openNotice);
+    else { page.classList.remove('records-detailing'); detail.hidden = true; }
+  } else if (openId) {
     const openPost = posts.find((item) => item.id === openId);
     if (openPost) openPostDetail(openPost, false);
     else { page.classList.remove('records-detailing'); detail.hidden = true; }
@@ -330,11 +360,32 @@ document.querySelectorAll('.records-tabs button').forEach((button, index) => {
   });
 });
 
+let composeMode = 'post';
+let editingNoticeId = '';
+
+const setComposeMode = (mode, editing = false) => {
+  composeMode = mode;
+  const isNotice = mode === 'notice';
+  document.querySelectorAll('[data-post-only]').forEach((label) => {
+    label.hidden = isNotice;
+    label.querySelector('input').disabled = isNotice;
+  });
+  $('#records-post-title').textContent = isNotice ? (editing ? '공지 수정' : '공지 작성') : '글쓰기';
+  $('#records-post-help').textContent = isNotice
+    ? '게시판 상단에 표시될 공지를 작성합니다.'
+    : '게시판에 표시될 글을 작성합니다. 닉네임과 비밀번호를 입력해 주세요.';
+  $('#records-post-submit').textContent = isNotice ? '공지 저장' : '등록하기';
+  $('.records-image-field').hidden = editing;
+  $('#records-add-poll').hidden = editing;
+  if (editing) $('#records-poll-fieldset').hidden = true;
+};
+
 $('#records-write-button').addEventListener('click', () => {
   $('#records-post-form').reset();
   $('#records-post-id').value = '';
-  $('#records-post-title').textContent = '글쓰기';
+  editingNoticeId = '';
   resetPollForm();
+  setComposeMode('post');
   clearPendingImages();
   setStatus('records-post-form-status', '');
   openModal('records-post-modal');
@@ -386,6 +437,44 @@ $('#records-add-poll').addEventListener('click', () => {
 
 $('#records-post-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (composeMode === 'notice') {
+    const title = $('#records-post-subject').value.trim();
+    const body = $('#records-post-body').value.trim();
+    const question = $('#records-poll-question').value.trim();
+    const options = Array.from(document.querySelectorAll('.records-poll-option')).map((input) => input.value.trim()).filter(Boolean);
+    try {
+      if (editingNoticeId) {
+        await rpc('record_update_notice', { p_id: editingNoticeId, p_admin_password: adminPassword, p_title: title, p_body: body });
+      } else {
+        if (question && options.length < 2) {
+          setStatus('records-post-form-status', '투표 선택지는 2개 이상 입력하세요.');
+          return;
+        }
+        const noticeId = await rpc('record_create_notice', {
+          p_admin_password: adminPassword, p_title: title, p_body: body,
+          p_poll_question: question, p_poll_options: question ? options : []
+        });
+        if (pendingImages.length) {
+          setStatus('records-post-form-status', '사진 업로드 중...');
+          try {
+            await uploadPostImages(noticeId, adminPassword, true);
+          } catch (error) {
+            closeModals();
+            clearPendingImages();
+            await loadBoard();
+            window.alert(`공지는 등록되었지만 ${error.message}`);
+            return;
+          }
+        }
+      }
+      clearPendingImages();
+      closeModals();
+      await loadBoard();
+    } catch (error) {
+      setStatus('records-post-form-status', error.message);
+    }
+    return;
+  }
   const payload = {
     p_nickname: $('#records-post-nickname').value.trim(),
     p_password_hash: await hashPassword($('#records-post-password').value),
@@ -463,25 +552,14 @@ $('#records-notice-button').addEventListener('click', () => {
     return;
   }
   adminPassword = password;
-  $('#records-notice-form').reset();
-  $('#records-notice-id').value = '';
-  setStatus('records-notice-form-status', '');
-  openModal('records-notice-modal');
-});
-
-$('#records-notice-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  try {
-    const noticeId = $('#records-notice-id').value;
-    const payload = noticeId
-      ? { p_id: noticeId, p_admin_password: adminPassword, p_title: $('#records-notice-subject').value.trim(), p_body: $('#records-notice-body').value.trim() }
-      : { p_admin_password: adminPassword, p_title: $('#records-notice-subject').value.trim(), p_body: $('#records-notice-body').value.trim() };
-    await rpc(noticeId ? 'record_update_notice' : 'record_create_notice', payload);
-    closeModals();
-    await loadBoard();
-  } catch (error) {
-    setStatus('records-notice-form-status', error.message);
-  }
+  $('#records-post-form').reset();
+  $('#records-post-id').value = '';
+  editingNoticeId = '';
+  resetPollForm();
+  clearPendingImages();
+  setComposeMode('notice');
+  setStatus('records-post-form-status', '');
+  openModal('records-post-modal');
 });
 
 document.addEventListener('click', async (event) => {
@@ -574,7 +652,11 @@ document.addEventListener('click', async (event) => {
     } else if (button.dataset.noticeDelete) {
       const password = prompt('관리자 비밀번호를 입력하세요.');
       if (password === '8170' && confirm('공지를 삭제할까요?')) {
+        const target = notices.find((item) => item.id === button.dataset.noticeDelete);
         await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: password });
+        if (target) await deletePostImages(target.images);
+        page.classList.remove('records-detailing');
+        $('#records-detail-page').hidden = true;
         await loadBoard();
       }
     } else if (button.dataset.noticeEdit) {
@@ -582,10 +664,15 @@ document.addEventListener('click', async (event) => {
       if (password !== '8170') return;
       adminPassword = password;
       const notice = notices.find((item) => item.id === button.dataset.noticeEdit);
-      $('#records-notice-id').value = notice.id;
-      $('#records-notice-subject').value = notice.title;
-      $('#records-notice-body').value = notice.body;
-      openModal('records-notice-modal');
+      $('#records-post-form').reset();
+      resetPollForm();
+      clearPendingImages();
+      editingNoticeId = notice.id;
+      $('#records-post-subject').value = notice.title;
+      $('#records-post-body').value = notice.body;
+      setComposeMode('notice', true);
+      setStatus('records-post-form-status', '');
+      openModal('records-post-modal');
     } else if (button.dataset.commentEdit) {
       const password = prompt('댓글 비밀번호를 입력하세요.');
       const body = prompt('댓글 내용을 입력하세요.');
@@ -607,6 +694,11 @@ document.addEventListener('click', async (event) => {
 
 backdrop.addEventListener('click', closeModals);
 document.addEventListener('click', (event) => {
+  const noticeRow = event.target.closest('.records-notice-row');
+  if (noticeRow && !event.target.closest('button')) {
+    openNoticeDetail(notices.find((item) => item.id === noticeRow.dataset.noticeId));
+    return;
+  }
   const postGroup = event.target.closest('.records-post-group');
   if (!postGroup || event.target.closest('button')) return;
   openPostDetail(posts.find((post) => post.id === postGroup.dataset.postId));
