@@ -162,6 +162,7 @@ const openNoticeDetail = (notice) => {
         <button data-notice-edit="${notice.id}" type="button">수정</button>
         <button data-notice-delete="${notice.id}" type="button">삭제</button>
       </div>
+      <div class="record-entry-slot"></div>
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
@@ -200,6 +201,7 @@ const openPostDetail = (post, countView = true) => {
         <button data-edit="${post.id}" type="button">수정</button>
         <button data-delete="${post.id}" type="button">삭제</button>
       </div>
+      <div class="record-entry-slot"></div>
     </article>
     <section class="records-comments-section">
       <h3>댓글</h3>
@@ -618,7 +620,7 @@ $('#records-post-form').addEventListener('submit', async (event) => {
 let commentKind = 'post';
 document.addEventListener('submit', async (event) => {
   const form = event.target.closest('.record-inline-form');
-  if (!form) return;
+  if (!form || form.dataset.entryMode) return;
   event.preventDefault();
   const { mode, target, kind, parent, id } = form.dataset;
   const status = form.querySelector('.record-inline-status');
@@ -756,48 +758,77 @@ document.addEventListener('click', async (event) => {
       slot.querySelector('input, textarea').focus();
     } else if (button.dataset.inlineCancel !== undefined) {
       button.closest('.record-inline-slot').innerHTML = '';
-    } else if (button.dataset.delete && post) {
-      const password = prompt('게시물 비밀번호 또는 관리자 비밀번호를 입력하세요.');
-      if (password !== null && confirm('게시물을 삭제할까요?')) {
-        await rpc('record_delete_post', { p_id: post.id, p_password_hash: await hashPassword(password), p_admin_password: password });
-        await deletePostImages(post.images);
-        await loadBoard();
-      }
-    } else if (button.dataset.edit && post) {
-      const password = prompt('게시물 비밀번호를 입력하세요.');
-      if (password === null) return;
-      const title = prompt('제목을 입력하세요.', post.title);
-      const body = prompt('내용을 입력하세요.', post.body);
-      if (title !== null && body !== null) {
-        await rpc('record_update_post', { p_id: post.id, p_password_hash: await hashPassword(password), p_title: title, p_body: body });
-        await loadBoard();
-      }
-    } else if (button.dataset.noticeDelete) {
-      const password = prompt('관리자 비밀번호를 입력하세요.');
-      if (password !== null && password !== '8170') alert('관리자 비밀번호가 올바르지 않습니다.');
-      if (password === '8170' && confirm('공지를 삭제할까요?')) {
-        const target = notices.find((item) => item.id === button.dataset.noticeDelete);
-        await rpc('record_delete_notice', { p_id: button.dataset.noticeDelete, p_admin_password: password });
-        if (target) await deletePostImages(target.images);
-        hideViews();
-        leaveSub();
-        await loadBoard();
-      }
-    } else if (button.dataset.noticeEdit) {
-      const password = prompt('관리자 비밀번호를 입력하세요.');
-      if (password === null) return;
-      if (password !== '8170') { alert('관리자 비밀번호가 올바르지 않습니다.'); return; }
-      adminPassword = password;
-      const notice = notices.find((item) => item.id === button.dataset.noticeEdit);
-      const title = prompt('제목을 입력하세요.', notice.title);
-      const body = prompt('내용을 입력하세요.', notice.body);
-      if (title !== null && body !== null) {
-        await rpc('record_update_notice', { p_id: notice.id, p_admin_password: password, p_title: title, p_body: body });
-        await loadBoard();
-      }
+    } else if (button.dataset.entryCancel !== undefined) {
+      button.closest('.record-entry-slot').innerHTML = '';
+    } else if (button.dataset.delete || button.dataset.edit || button.dataset.noticeDelete || button.dataset.noticeEdit) {
+      const isNotice = Boolean(button.dataset.noticeDelete || button.dataset.noticeEdit);
+      const item = isNotice ? notice : post;
+      if (!item) return;
+      const mode = button.dataset.edit || button.dataset.noticeEdit ? 'edit' : 'delete';
+      const slot = button.closest('.records-detail-card').querySelector('.record-entry-slot');
+      if (slot.querySelector('form')?.dataset.entryMode === mode) { slot.innerHTML = ''; return; }
+      const passwordHint = isNotice ? '관리자 비밀번호' : (mode === 'edit' ? '게시물 비밀번호' : '게시물 비밀번호 또는 관리자 비밀번호');
+      slot.innerHTML = `
+        <form class="record-inline-form" data-entry-mode="${mode}" data-entry-kind="${isNotice ? 'notice' : 'post'}" data-id="${item.id}">
+          <input name="password" type="password" maxlength="72" placeholder="${passwordHint}" required>
+          ${mode === 'edit' ? `<input name="title" maxlength="80" value="${escapeHtml(item.title)}" required>
+          <textarea name="body" rows="6" required>${escapeHtml(item.body)}</textarea>` : ''}
+          <div class="record-inline-buttons">
+            <button type="submit">${mode === 'edit' ? '수정 저장' : '삭제'}</button>
+            <button type="button" data-entry-cancel>취소</button>
+          </div>
+          <p class="records-form-status record-inline-status"></p>
+        </form>`;
+      slot.querySelector('input').focus();
     }
   } catch (error) {
     $('#records-status').textContent = error.message;
+  }
+});
+
+document.addEventListener('submit', async (event) => {
+  const form = event.target.closest('[data-entry-mode]');
+  if (!form) return;
+  event.preventDefault();
+  const { entryMode: mode, entryKind: kind, id } = form.dataset;
+  const isNotice = kind === 'notice';
+  const status = form.querySelector('.record-inline-status');
+  const submit = form.querySelector('button[type="submit"]');
+  const password = form.elements.password.value;
+  const list = isNotice ? notices : posts;
+  const item = list.find((entry) => entry.id === id);
+  submit.disabled = true;
+  try {
+    if (isNotice && password !== '8170') throw new Error('관리자 비밀번호가 올바르지 않습니다.');
+    if (mode === 'edit') {
+      const title = form.elements.title.value.trim();
+      const body = form.elements.body.value.trim();
+      if (isNotice) {
+        adminPassword = password;
+        await rpc('record_update_notice', { p_id: id, p_admin_password: password, p_title: title, p_body: body });
+      } else {
+        await rpc('record_update_post', { p_id: id, p_password_hash: await hashPassword(password), p_title: title, p_body: body });
+      }
+      const card = form.closest('.records-detail-card');
+      card.querySelector('h1').textContent = title;
+      card.querySelector('.records-detail-body').textContent = body;
+      if (item) { item.title = title; item.body = body; }
+      form.closest('.record-entry-slot').innerHTML = '';
+      loadBoard();
+    } else {
+      if (isNotice) {
+        await rpc('record_delete_notice', { p_id: id, p_admin_password: password });
+      } else {
+        await rpc('record_delete_post', { p_id: id, p_password_hash: await hashPassword(password), p_admin_password: password });
+      }
+      if (item) await deletePostImages(item.images);
+      hideViews();
+      leaveSub();
+      await loadBoard();
+    }
+  } catch (error) {
+    status.textContent = error.message;
+    submit.disabled = false;
   }
 });
 
