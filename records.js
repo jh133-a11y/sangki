@@ -33,6 +33,9 @@ const renderPoll = (poll) => poll ? `
 
 const openPostDetail = (post) => {
   if (!post) return;
+  post.view_count = (post.view_count || 0) + 1;
+  rpc('record_increment_view', { p_post_id: post.id }).catch(() => {});
+  renderPosts();
   const detail = $('#records-detail-page');
   detail.innerHTML = `
     <div class="records-detail-head">

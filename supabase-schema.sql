@@ -3815,6 +3815,23 @@ create table if not exists public.record_poll_votes (
  primary key (poll_id, voter_key)
 );
 
+alter table public.record_posts add column if not exists view_count bigint not null default 0;
+
+create or replace function public.record_increment_view(p_post_id uuid)
+returns bigint
+language sql
+security definer
+set search_path = public
+as $$
+  update public.record_posts
+  set view_count = view_count + 1
+  where id = p_post_id
+  returning view_count;
+$$;
+
+revoke all on function public.record_increment_view(uuid) from public;
+grant execute on function public.record_increment_view(uuid) to anon, authenticated;
+
 alter table public.record_posts enable row level security;
 alter table public.record_comments enable row level security;
 alter table public.record_votes enable row level security;
@@ -3837,7 +3854,7 @@ as $$
       select jsonb_agg(to_jsonb(p) order by p.created_at desc)
       from (
         select rp.id, rp.nickname, rp.title, rp.body, rp.upvotes, rp.downvotes,
-               rp.created_at, rp.edited_at,
+               rp.created_at, rp.edited_at, rp.view_count,
                (select count(*) from public.record_comments rc where rc.post_id = rp.id) as comment_count,
                (
                  select jsonb_build_object(
