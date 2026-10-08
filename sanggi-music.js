@@ -2,17 +2,46 @@
   const audio = document.getElementById('sanggi-background-music');
   const button = document.getElementById('sanggi-music-button');
   const status = document.getElementById('sanggi-music-status');
+  const volumeInput = document.getElementById('sanggi-music-volume');
+  const volumeLabel = document.getElementById('sanggi-music-volume-label');
   const preferenceKey = 'sanggi-background-music-enabled';
+  const volumeKey = 'sanggi-background-music-volume';
+  let volume = 25;
   let enabled = true;
   let starting = false;
   let failed = false;
 
   try {
     enabled = localStorage.getItem(preferenceKey) !== 'false';
+    const savedVolume = localStorage.getItem(volumeKey);
+    if (savedVolume !== null) {
+      const parsedVolume = Number(savedVolume);
+      if (savedVolume.trim() !== '' && Number.isFinite(parsedVolume) && parsedVolume >= 0 && parsedVolume <= 100) {
+        volume = Math.round(parsedVolume);
+      } else {
+        console.warn('저장된 배경음악 음량이 올바르지 않습니다.', savedVolume);
+      }
+    }
   } catch (error) {
     console.warn('배경음악 설정을 불러올 수 없습니다.', error);
   }
-  audio.volume = 0.25;
+  function applyVolume() {
+    audio.volume = volume / 100;
+    volumeInput.value = String(volume);
+    volumeLabel.textContent = `${volume}%`;
+    volumeInput.setAttribute('aria-valuetext', `${volume}%`);
+  }
+  applyVolume();
+
+  volumeInput.addEventListener('input', () => {
+    volume = Number(volumeInput.value);
+    applyVolume();
+    try {
+      localStorage.setItem(volumeKey, String(volume));
+    } catch (error) {
+      console.warn('배경음악 음량을 저장할 수 없습니다.', error);
+    }
+  });
 
   function render() {
     button.setAttribute('aria-pressed', String(enabled));

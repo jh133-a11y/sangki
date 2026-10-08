@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Sanggi</title>
-  <link rel="stylesheet" href="style.css?v=93">
+  <link rel="stylesheet" href="style.css?v=94">
 </head>
 <body class="placeholder-page sanggi-page">
   <main aria-label="Sanggi street scene">
@@ -21,6 +21,10 @@
     </div>
     <audio id="sanggi-background-music" src="sanggi-daily-rpg.mp3?v=4" preload="auto" loop></audio>
     <button class="sanggi-music-button" id="sanggi-music-button" type="button" aria-pressed="true">배경음악 켜짐</button>
+    <div class="sanggi-music-volume">
+      <label for="sanggi-music-volume">음량 <output id="sanggi-music-volume-label" for="sanggi-music-volume">25%</output></label>
+      <input id="sanggi-music-volume" type="range" min="0" max="100" step="1" value="25" aria-label="배경음악 음량" aria-valuetext="25%">
+    </div>
     <span id="sanggi-music-status" class="sanggi-music-status" role="status"></span>
     <a class="sanggi-home-button" href="index.html" aria-label="Home" title="Home">
       <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -276,6 +280,6 @@
     </section>
   </main>
   <script src="sanggi.js?v=59"></script>
-  <script src="sanggi-music.js?v=1"></script>
+  <script src="sanggi-music.js?v=2"></script>
 </body>
 </html>

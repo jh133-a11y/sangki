@@ -1060,13 +1060,34 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 }
 .sanggi-music-status {
   position: absolute;
-  top: 130px;
+  top: 210px;
   right: 24px;
   z-index: 6;
   max-width: 160px;
   color: #000;
   font: 700 11px var(--sans);
   text-shadow: -1px -1px #fff, 1px -1px #fff, -1px 1px #fff, 1px 1px #fff;
+}
+.sanggi-music-volume {
+  position: absolute;
+  top: 132px;
+  right: 24px;
+  z-index: 6;
+  width: 140px;
+  padding: 6px 10px;
+  border: 2px solid #302a35;
+  background: #fff7dc;
+  color: #2a2730;
+  font: 700 12px var(--sans);
+}
+.sanggi-music-volume label { display: flex; justify-content: space-between; }
+.sanggi-music-volume input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: #302a35;
+  cursor: pointer;
 }
 .sanggi-sky,
 .sanggi-moon,
