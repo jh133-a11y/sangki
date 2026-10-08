@@ -4976,6 +4976,10 @@ begin
     raise exception '상기 키우기 정보를 먼저 동기화하세요.';
   end if;
 
+  insert into public.investment_shop_items(client_id, item_type, quantity)
+  values (p_client_id, p_item_type, 0)
+  on conflict (client_id, item_type) do nothing;
+
   select quantity into v_owned_quantity
   from public.investment_shop_items
   where client_id = p_client_id and item_type = p_item_type
@@ -4993,10 +4997,9 @@ begin
   where client_id = p_client_id
   returning coins into v_coins;
 
-  insert into public.investment_shop_items(client_id, item_type, quantity)
-  values (p_client_id, p_item_type, p_quantity)
-  on conflict (client_id, item_type)
-  do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
+  update public.investment_shop_items
+  set quantity = quantity + p_quantity
+  where client_id = p_client_id and item_type = p_item_type;
 
   return jsonb_build_object(
     'message', v_name || ' ' || p_quantity || '개를 구매했습니다.',
