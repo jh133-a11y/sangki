@@ -1,6 +1,8 @@
 -- 중국산 미사일 추가
 
 alter table public.investment_shop_items
+  drop constraint if exists investment_shop_items_item_type_check;
+alter table public.investment_shop_items
   add constraint investment_shop_items_item_type_check
   check (item_type in (
     'low_missile',
@@ -105,14 +107,140 @@ $$;
 
 create or replace function public.shop_purchase(
   p_client_id uuid,
-  p_item_type text
+  p_item_type text,
+  p_quantity bigint
 )
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select public.shop_purchase(p_client_id, p_item_type, 1::bigint);
+declare
+  v_price bigint;
+  v_name text;
+  v_cash bigint;
+  v_owned_quantity bigint;
+  v_limit_date date;
+  v_daily_quantity bigint;
+begin
+  select price, name into v_price, v_name
+  from (values
+    ('low_missile', 20000000::bigint, '하급 미사일'),
+    ('mid_missile', 50000000::bigint, '중급 미사일'),
+    ('high_missile', 150000000::bigint, '고급 미사일'),
+    ('nuclear_missile', 10000000000::bigint, '핵 미사일'),
+    ('china_missile', 1000000::bigint, '중국산 미사일'),
+    ('missile_shield', 10000000::bigint, '미사일 방어막'),
+    ('nickname_ticket', 5000000000::bigint, '닉네임 변경권'),
+    ('megaphone', 50000::bigint, '확성기'),
+    ('normal_potion', 10000000::bigint, '일반 물약'),
+    ('advanced_potion', 100000000::bigint, '고급 물약'),
+    ('legendary_potion', 1000000000::bigint, '전설 물약'),
+    ('sanggi_hanbok', 1000000::bigint, '상기 한복'),
+    ('sanggi_spacesuit', 10000000::bigint, '상기 우주복'),
+    ('juseong_hanbok', 2000000::bigint, '주성 한복'),
+    ('juseong_spacesuit', 20000000::bigint, '주성 우주복'),
+    ('letter', 10000::bigint, '편지')
+    ,('gambling_box', 1::bigint, '도박 중독자 상자')
+  ) items(item_type, price, name)
+  where item_type = p_item_type;
+
+  if v_price is null then
+    raise exception '존재하지 않는 상품입니다.';
+  end if;
+  if p_quantity is null or p_quantity < 1 then
+    raise exception '구매 수량은 1개 이상이어야 합니다.';
+  end if;
+
+  if p_item_type = 'gambling_box' then
+    v_limit_date := (now() at time zone 'Asia/Seoul')::date;
+
+    insert into public.investment_shop_daily_limits (
+      client_id,
+      limit_date,
+      gambling_box_quantity
+    )
+    values (p_client_id, v_limit_date, 0)
+    on conflict (client_id, limit_date) do nothing;
+
+    select gambling_box_quantity
+    into v_daily_quantity
+    from public.investment_shop_daily_limits
+    where client_id = p_client_id
+      and limit_date = v_limit_date
+    for update;
+
+    if v_daily_quantity + p_quantity > 3 then
+      raise exception '도박 중독자 상자는 하루에 최대 3개까지만 구매할 수 있습니다. 현재 남은 구매 가능 수량: %개.',
+        greatest(0, 3 - v_daily_quantity);
+    end if;
+  end if;
+
+  select quantity
+  into v_owned_quantity
+  from public.investment_shop_items
+  where client_id = p_client_id
+    and item_type = p_item_type
+  for update;
+
+  if coalesce(v_owned_quantity, 0) + p_quantity > 100 then
+    raise exception '아이템은 한 종류당 최대 100개까지 보유할 수 있습니다.';
+  end if;
+  if p_item_type in ('sanggi_hanbok', 'sanggi_spacesuit', 'juseong_hanbok', 'juseong_spacesuit')
+    and coalesce(v_owned_quantity, 0) >= 1 then
+    raise exception '이미 구매한 의상입니다.';
+  end if;
+
+  select cash into v_cash
+  from public.investment_users
+  where client_id = p_client_id
+  for update;
+
+  if v_cash is null then
+    raise exception '먼저 투자 닉네임을 설정하세요.';
+  end if;
+  if v_cash < v_price * p_quantity then
+    raise exception '보유 현금이 부족합니다.';
+  end if;
+
+  update public.investment_users
+  set cash = cash - v_price * p_quantity
+  where client_id = p_client_id;
+
+  insert into public.investment_shop_items(client_id, item_type, quantity)
+  values (p_client_id, p_item_type, p_quantity)
+  on conflict (client_id, item_type)
+  do update set quantity = public.investment_shop_items.quantity + excluded.quantity;
+
+  if p_item_type = 'gambling_box' then
+    update public.investment_shop_daily_limits
+    set gambling_box_quantity = gambling_box_quantity + p_quantity
+    where client_id = p_client_id
+      and limit_date = v_limit_date;
+  end if;
+
+  if p_item_type = 'normal_potion' then
+    insert into public.sanggi_game_states (account_id, normal_potions)
+    values (p_client_id, p_quantity)
+    on conflict (account_id) do update
+      set normal_potions = least(100, public.sanggi_game_states.normal_potions + excluded.normal_potions),
+          updated_at = now();
+  elsif p_item_type = 'advanced_potion' then
+    insert into public.sanggi_game_states (account_id, advanced_potions)
+    values (p_client_id, p_quantity)
+    on conflict (account_id) do update
+      set advanced_potions = least(100, public.sanggi_game_states.advanced_potions + excluded.advanced_potions),
+          updated_at = now();
+  elsif p_item_type = 'legendary_potion' then
+    insert into public.sanggi_game_states (account_id, legendary_potions)
+    values (p_client_id, p_quantity)
+    on conflict (account_id) do update
+      set legendary_potions = least(100, public.sanggi_game_states.legendary_potions + excluded.legendary_potions),
+          updated_at = now();
+  end if;
+
+  return jsonb_build_object('message', v_name || ' ' || p_quantity || '개를 구매했습니다.');
+end;
 $$;
 
 create or replace function public.shop_use_missile(

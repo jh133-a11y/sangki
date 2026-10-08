@@ -2113,6 +2113,13 @@ const renderComment = (item, isReply = false) => {
   if (item.author_account_id) {
     article.querySelector('[data-action="edit"]').remove();
   }
+  const applyMyCommentVote = () => {
+    const mine = Number(JSON.parse(localStorage.getItem('sangki-my-comment-votes') || '{}')[item.id]) || 0;
+    article.querySelectorAll('[data-vote]').forEach((voteButton) => {
+      voteButton.classList.toggle('is-selected', Number(voteButton.dataset.vote) === mine);
+    });
+  };
+  applyMyCommentVote();
   article.querySelectorAll('[data-vote]').forEach((button) => {
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -2126,9 +2133,11 @@ const renderComment = (item, isReply = false) => {
         item.downvotes = result.downvotes;
         article.querySelector('[data-vote="1"] span').textContent = result.upvotes;
         article.querySelector('[data-vote="-1"] span').textContent = result.downvotes;
-        article.querySelectorAll('[data-vote]').forEach((voteButton) => {
-          voteButton.classList.toggle('is-selected', Number(voteButton.dataset.vote) === Number(result.vote));
-        });
+        const myVotes = JSON.parse(localStorage.getItem('sangki-my-comment-votes') || '{}');
+        if (result.vote) myVotes[item.id] = Number(result.vote);
+        else delete myVotes[item.id];
+        localStorage.setItem('sangki-my-comment-votes', JSON.stringify(myVotes));
+        applyMyCommentVote();
       } catch (error) {
         window.alert(error.message);
       } finally {

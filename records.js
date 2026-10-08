@@ -28,6 +28,7 @@ const voterKey = () => {
   return key;
 };
 let myPollVotes = JSON.parse(localStorage.getItem('records-poll-votes') || '{}');
+const myPostVotes = JSON.parse(localStorage.getItem('records-post-votes') || '{}');
 const pendingPollChoice = {};
 const saveMyPollVotes = () => localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
 
@@ -71,8 +72,8 @@ const openPostDetail = (post, countView = true) => {
       <div class="records-detail-body">${escapeHtml(post.body)}</div>
       ${renderPoll(post.poll)}
       <div class="records-row-actions">
-        <button data-vote="1" type="button">추천 ${post.upvotes}</button>
-        <button data-vote="-1" type="button">비추천 ${post.downvotes}</button>
+        <button class="${myPostVotes[post.id] === 1 ? 'is-voted-pick' : ''}" data-vote="1" type="button">추천 ${post.upvotes}</button>
+        <button class="${myPostVotes[post.id] === -1 ? 'is-voted-pick' : ''}" data-vote="-1" type="button">비추천 ${post.downvotes}</button>
         <button data-comment="${post.id}" type="button">댓글 ${post.comment_count}</button>
         <button data-edit="${post.id}" type="button">수정</button>
         <button data-delete="${post.id}" type="button">삭제</button>
@@ -409,7 +410,9 @@ document.addEventListener('click', async (event) => {
       const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
       localStorage.setItem('records-voter-key', key);
       await rpc('record_vote_post', { p_post_id: post.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
-      await loadBoard();
+            myPostVotes[post.id] = Number(button.dataset.vote);
+            localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
+            await loadBoard();
     } else if (button.dataset.comment) {
       $('#records-comment-form').reset();
       $('#records-comment-post-id').value = button.dataset.comment;
