@@ -771,10 +771,9 @@ document.addEventListener('click', async (event) => {
       slot.innerHTML = `
         <form class="record-inline-form" data-entry-mode="${mode}" data-entry-kind="${isNotice ? 'notice' : 'post'}" data-id="${item.id}">
           <input name="password" type="password" maxlength="72" placeholder="${passwordHint}" required>
-          ${mode === 'edit' ? `<input name="title" maxlength="80" value="${escapeHtml(item.title)}" required>
-          <textarea name="body" rows="6" required>${escapeHtml(item.body)}</textarea>` : ''}
+          <div class="record-edit-fields"></div>
           <div class="record-inline-buttons">
-            <button type="submit">${mode === 'edit' ? '수정 저장' : '삭제'}</button>
+            <button type="submit">${mode === 'edit' ? '확인' : '삭제'}</button>
             <button type="button" data-entry-cancel>취소</button>
           </div>
           <p class="records-form-status record-inline-status"></p>
@@ -800,6 +799,19 @@ document.addEventListener('submit', async (event) => {
   submit.disabled = true;
   try {
     if (isNotice && password !== '8170') throw new Error('관리자 비밀번호가 올바르지 않습니다.');
+    if (mode === 'edit' && !form.elements.title) {
+      if (!isNotice && item) {
+        await rpc('record_update_post', { p_id: id, p_password_hash: await hashPassword(password), p_title: item.title, p_body: item.body });
+      }
+      form.elements.password.readOnly = true;
+      form.querySelector('.record-edit-fields').innerHTML = `
+        <input name="title" maxlength="80" value="${escapeHtml(item.title)}" required>
+        <textarea name="body" rows="6" required>${escapeHtml(item.body)}</textarea>`;
+      submit.textContent = '수정 저장';
+      submit.disabled = false;
+      form.elements.title.focus();
+      return;
+    }
     if (mode === 'edit') {
       const title = form.elements.title.value.trim();
       const body = form.elements.body.value.trim();
