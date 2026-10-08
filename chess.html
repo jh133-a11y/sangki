@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>체스 — byungsin</title>
+  <link rel="stylesheet" href="chess.css?v=1">
+</head>
+<body>
+  <main class="chess-shell">
+    <div class="chess-top">
+      <a class="chess-logo" href="index.html">byungsin<span>.</span></a>
+      <a class="chess-home" href="index.html">← 메인으로</a>
+    </div>
+
+    <section class="chess-menu" id="chess-menu">
+      <h1>CHESS</h1>
+      <p>모드와 색을 고르고 시작하세요.</p>
+      <div class="chess-field">
+        <span>모드</span>
+        <div class="chess-seg" data-group="mode">
+          <button type="button" data-value="ai" class="is-on">컴퓨터와 대결</button>
+          <button type="button" data-value="local">2인 대결</button>
+        </div>
+      </div>
+      <div class="chess-field" id="field-side">
+        <span>내 색</span>
+        <div class="chess-seg" data-group="side">
+          <button type="button" data-value="w" class="is-on">백 (선공)</button>
+          <button type="button" data-value="b">흑</button>
+        </div>
+      </div>
+      <div class="chess-field" id="field-level">
+        <span>난이도</span>
+        <div class="chess-seg" data-group="level">
+          <button type="button" data-value="1">쉬움</button>
+          <button type="button" data-value="2" class="is-on">보통</button>
+          <button type="button" data-value="3">어려움</button>
+        </div>
+      </div>
+      <button class="chess-start" id="chess-start" type="button">게임 시작</button>
+    </section>
+
+    <section class="chess-game" id="chess-game" hidden>
+      <div class="chess-board-wrap">
+        <div class="chess-player" id="chess-top-player"></div>
+        <div class="chess-board" id="chess-board" role="grid" aria-label="체스판"></div>
+        <div class="chess-player" id="chess-bottom-player"></div>
+      </div>
+      <aside class="chess-side">
+        <div class="chess-status" id="chess-status"></div>
+        <div class="chess-moves" id="chess-moves"></div>
+        <div class="chess-buttons">
+          <button type="button" id="chess-undo">무르기</button>
+          <button type="button" id="chess-flip">판 뒤집기</button>
+          <button type="button" id="chess-new">새 게임</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="chess-backdrop" id="chess-promo-backdrop" hidden></div>
+  <section class="chess-modal" id="chess-promo" role="dialog" aria-modal="true" aria-labelledby="chess-promo-title" hidden>
+    <div class="chess-modal-head"><h2 id="chess-promo-title">프로모션</h2></div>
+    <div class="chess-promo-choices" id="chess-promo-choices"></div>
+  </section>
+
+  <section class="chess-modal" id="chess-result" role="dialog" aria-modal="true" aria-labelledby="chess-result-title" hidden>
+    <div class="chess-modal-head"><h2 id="chess-result-title">게임 종료</h2></div>
+    <p id="chess-result-text"></p>
+    <div class="chess-modal-actions">
+      <button type="button" id="chess-result-close">판 보기</button>
+      <button type="button" id="chess-result-new">새 게임</button>
+    </div>
+  </section>
+
+  <script src="chess.js?v=1"></script>
+</body>
+</html>
