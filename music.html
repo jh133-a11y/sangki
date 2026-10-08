@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>음악 — byungsin</title>
   <link rel="stylesheet" href="chess.css?v=1">
-  <link rel="stylesheet" href="music.css?v=2">
-  <script type="module" src="music.js?v=2"></script>
+  <link rel="stylesheet" href="music.css?v=3">
+  <script type="module" src="music.js?v=3"></script>
 </head>
 <body>
   <main class="chess-shell">
@@ -28,8 +28,9 @@
     </section>
     <p id="music-status" role="status" aria-live="polite"></p>
     <div class="music-layout">
-      <aside class="music-panel">
-        <h2>음악 올리기</h2>
+      <div class="music-sidebar">
+      <section class="music-panel music-upload" aria-labelledby="upload-title">
+        <header class="music-panel-heading"><h2 id="upload-title">음악 올리기</h2></header>
         <form id="upload-form">
           <label>음악 이름 <input id="upload-name" required maxlength="100" placeholder="음악 이름을 입력하세요"></label>
           <label>음악 파일 <input id="upload-file" required type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.webm,.aac"></label>
@@ -37,18 +38,24 @@
           <button type="submit" id="upload-submit" disabled>음악 올리기</button>
           <button type="button" id="upload-retry" hidden>업로드 완료 처리 재시도</button>
         </form>
-        <h2>내 재생목록</h2>
+      </section>
+      <section class="music-panel music-playlists" aria-labelledby="playlists-title">
+        <header class="music-panel-heading"><h2 id="playlists-title">내 재생목록</h2></header>
+        <p class="music-hint">나만의 목록을 만들고 아래에서 선택하세요.</p>
         <form id="playlist-form" class="music-inline">
           <label>재생목록 이름 <input id="playlist-name" required maxlength="100"></label>
           <button type="submit" id="playlist-submit" disabled>만들기</button>
         </form>
         <nav id="playlist-list" aria-label="재생목록"></nav>
-      </aside>
-      <section class="music-panel" aria-labelledby="library-title">
-        <div class="music-inline">
+        <p id="playlist-empty" class="music-hint" hidden>아직 재생목록이 없습니다.</p>
+      </section>
+      </div>
+      <section class="music-panel music-library" aria-labelledby="library-title">
+        <header class="music-panel-heading">
           <h2 id="library-title">모든 음악</h2>
           <button type="button" id="refresh">새로고침</button>
-        </div>
+        </header>
+        <nav id="library-nav" aria-label="전체 음악 목록"></nav>
         <label>음악 이름 검색 <input id="music-search" type="search" placeholder="현재 목록에서 검색"></label>
         <div class="music-inline music-actions">
           <button type="button" id="play-all" disabled>목록 전체 재생</button>

@@ -1,4 +1,4 @@
-import { nextTrackIndex, tracksForPlaylist, searchTracks, uploadType } from './music-queue.mjs';
+import { nextTrackIndex, recoveryTrackIndex, stalledAtEnd, tracksForPlaylist, searchTracks, uploadType } from './music-queue.mjs?v=2';
 
 const SUPABASE_URL = 'https://ejrwrwjsgizzxhqybtff.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Mr64z4NO3wlqeKObCxLbBQ_HlhvG7D8';
@@ -21,6 +21,11 @@ const nativePlayer = typeof window.SangkiAndroid?.command === 'function'
   && typeof window.SangkiAndroid?.state === 'function' ? window.SangkiAndroid : null;
 let nativePlaying = false;
 let nativeError = '';
+const playbackFailures = new Map();
+let lastPosition = 0;
+let lastProgressAt = performance.now();
+let recoveryTimer = null;
+let completing = false;
 
 const nativeCommand = (action, details = {}) => {
   try {
@@ -205,7 +210,9 @@ const render = () => {
     render();
   });
   all.setAttribute('aria-pressed', String(!selectedPlaylistId));
-  $('#playlist-list').replaceChildren(all, ...playlists.map((playlist) => {
+  $('#library-nav').replaceChildren(all);
+  $('#playlist-empty').hidden = playlists.length > 0;
+  $('#playlist-list').replaceChildren(...playlists.map((playlist) => {
     const item = button(`${playlist.name} (${playlist.track_ids.length})`, () => {
       selectedPlaylistId = playlist.id;
       $('#music-search').value = '';
@@ -251,6 +258,11 @@ const play = async () => {
 };
 
 const loadTrack = (index) => {
+  clearTimeout(recoveryTimer);
+  recoveryTimer = null;
+  completing = false;
+  lastPosition = 0;
+  lastProgressAt = performance.now();
   queueIndex = index;
   if (nativePlayer) {
     nativeCommand('queue', {
@@ -274,6 +286,7 @@ const loadTrack = (index) => {
 
 const startQueue = (items, index = 0) => {
   if (!items.length) return;
+  playbackFailures.clear();
   queue = [...items];
   queueName = currentPlaylist()?.name || '모든 음악';
   loadTrack(index);
@@ -292,10 +305,28 @@ const advance = (direction = 1, ended = false) => {
     }
     return;
   }
-  if (index === queueIndex) {
-    audio.currentTime = 0;
-    void play();
-  } else loadTrack(index);
+  loadTrack(index);
+};
+
+const recoverPlayback = () => {
+  if (nativePlayer || recoveryTimer !== null || !queue[queueIndex]) return;
+  playbackFailures.set(queueIndex, (playbackFailures.get(queueIndex) || 0) + 1);
+  const next = recoveryTrackIndex(queue.length, queueIndex, repeatMode(), playbackFailures);
+  if (next < 0) {
+    audio.pause();
+    notify('음악 파일 또는 연결 오류로 자동 재생을 중단했습니다. 곡을 다시 선택하거나 연결 상태를 확인하세요.', true);
+    return;
+  }
+  notify(next === queueIndex
+    ? '재생 오류가 발생하여 현재 곡을 다시 재생합니다.'
+    : '재생 오류가 발생하여 다음 재생 가능한 곡으로 넘어갑니다.', true);
+  recoveryTimer = setTimeout(() => loadTrack(next), 500);
+};
+
+const completePlayback = () => {
+  if (completing || recoveryTimer !== null || !queue[queueIndex]) return;
+  completing = true;
+  advance(1, true);
 };
 
 const refresh = async () => {
@@ -401,8 +432,30 @@ $('#refresh').addEventListener('click', () => void run(async () => {
   await refresh();
   notify('목록을 새로 불러왔습니다.');
 }));
-audio.addEventListener('ended', () => advance(1, true));
-audio.addEventListener('error', () => notify('음악을 재생할 수 없습니다. 파일 형식 또는 연결 상태를 확인하세요. 다음 곡 버튼으로 이동할 수 있습니다.', true));
+audio.addEventListener('ended', completePlayback);
+audio.addEventListener('error', recoverPlayback);
+audio.addEventListener('playing', () => {
+  lastPosition = audio.currentTime;
+  lastProgressAt = performance.now();
+});
+audio.addEventListener('seeked', () => {
+  lastPosition = audio.currentTime;
+  lastProgressAt = performance.now();
+});
+audio.addEventListener('timeupdate', () => {
+  if (audio.currentTime > lastPosition + 0.05) {
+    lastProgressAt = performance.now();
+    if (audio.currentTime >= 1) playbackFailures.clear();
+  }
+  lastPosition = audio.currentTime;
+});
+if (!nativePlayer) setInterval(() => {
+  if (!audio.paused && !audio.seeking && !audio.error
+    && stalledAtEnd(audio.duration, audio.currentTime, performance.now() - lastProgressAt)) {
+    notify('곡 끝에서 재생이 멈춰 반복 설정에 따라 다음 재생으로 넘어갑니다.');
+    completePlayback();
+  }
+}, 1000);
 ['play', 'pause', 'loadedmetadata', 'timeupdate', 'ratechange'].forEach((event) => {
   audio.addEventListener(event, updateMediaSession);
 });

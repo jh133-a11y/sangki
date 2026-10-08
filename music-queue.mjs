@@ -6,6 +6,26 @@ export function nextTrackIndex(length, index, repeat, direction = 1, ended = fal
   return repeat === 'all' ? (next + length) % length : -1;
 }
 
+export function stalledAtEnd(duration, position, idleMilliseconds) {
+  return Number.isFinite(duration) && duration > 0 && position > 0
+    && duration - position <= 0.5 && idleMilliseconds >= 4000;
+}
+
+export function recoveryTrackIndex(length, index, repeat, failures) {
+  if (index < 0 || index >= length) return -1;
+  if ((repeat === 'one' || (repeat === 'all' && length === 1))
+    && (failures.get(index) || 0) === 1) return index;
+  for (let step = 1; step <= length; step += 1) {
+    let next = index + step;
+    if (next >= length) {
+      if (repeat === 'off') return -1;
+      next %= length;
+    }
+    if (!failures.has(next)) return next;
+  }
+  return -1;
+}
+
 export function tracksForPlaylist(tracks, playlist) {
   if (!playlist) return tracks;
   const byId = new Map(tracks.map((track) => [track.id, track]));

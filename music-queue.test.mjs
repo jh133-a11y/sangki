@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextTrackIndex, tracksForPlaylist, searchTracks, uploadType } from './music-queue.mjs';
+import { nextTrackIndex, recoveryTrackIndex, stalledAtEnd, tracksForPlaylist, searchTracks, uploadType } from './music-queue.mjs';
 
 test('sequential playback stops at the end without repeat', () => {
   assert.equal(nextTrackIndex(3, 0, 'off', 1, true), 1);
@@ -21,6 +21,31 @@ test('empty or invalid queues never navigate', () => {
   assert.equal(nextTrackIndex(0, -1, 'all'), -1);
   assert.equal(nextTrackIndex(2, -1, 'one', 1, true), -1);
   assert.equal(nextTrackIndex(2, 2, 'off'), -1);
+});
+test('end watchdog only advances a stalled final half-second', () => {
+  assert.equal(stalledAtEnd(60, 59.5, 4000), true);
+  assert.equal(stalledAtEnd(60, 59.5, 3999), false);
+  assert.equal(stalledAtEnd(60, 59.4, 10000), false);
+  assert.equal(stalledAtEnd(Infinity, 60, 10000), false);
+  assert.equal(stalledAtEnd(NaN, 60, 10000), false);
+  assert.equal(stalledAtEnd(0, 0, 10000), false);
+});
+test('playback errors retry repeat-one once, skip failed tracks and stop boundedly', () => {
+  const failures = new Map([[0, 1]]);
+  assert.equal(recoveryTrackIndex(3, 0, 'one', failures), 0);
+  failures.set(0, 2);
+  assert.equal(recoveryTrackIndex(3, 0, 'one', failures), 1);
+  failures.set(1, 2);
+  assert.equal(recoveryTrackIndex(3, 1, 'all', failures), 2);
+  failures.set(2, 2);
+  assert.equal(recoveryTrackIndex(3, 2, 'all', failures), -1);
+  assert.equal(recoveryTrackIndex(3, 2, 'one', failures), -1);
+  assert.equal(recoveryTrackIndex(3, 2, 'off', new Map([[2, 1]])), -1);
+  assert.equal(recoveryTrackIndex(1, 0, 'one', new Map([[0, 1]])), 0);
+  assert.equal(recoveryTrackIndex(1, 0, 'one', new Map([[0, 2]])), -1);
+  assert.equal(recoveryTrackIndex(1, 0, 'all', new Map([[0, 1]])), 0);
+  assert.equal(recoveryTrackIndex(1, 0, 'all', new Map([[0, 2]])), -1);
+  assert.equal(recoveryTrackIndex(0, -1, 'all', failures), -1);
 });
 const tracks = [
   { id: 'a', name: '봄 노래' }, { id: 'b', name: 'Night SONG' }, { id: 'c', name: '봄비' }
