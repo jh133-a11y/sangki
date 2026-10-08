@@ -110,7 +110,66 @@ const deletePostImages = async (images) => {
     body: JSON.stringify({ prefixes: images })
   }).catch(() => {});
 };
-const saveMyPollVotes = () => localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
+const recordsAccountSession = () => {
+  try {
+    return JSON.parse(localStorage.getItem('sangki-auth-session')
+      || sessionStorage.getItem('sangki-auth-session-tab') || 'null');
+  } catch {
+    return null;
+  }
+};
+const isPlainObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+let recordsAccountSaveTimer = null;
+const saveRecordsAccountState = async () => {
+  const session = recordsAccountSession();
+  if (!session?.session_token) return;
+  const current = await rpc('site_get_account_state', { p_session_token: session.session_token });
+  await rpc('site_save_account_state', {
+    p_session_token: session.session_token,
+    p_state: {
+      ...(isPlainObject(current) ? current : {}),
+      records_voter_key: localStorage.getItem('records-voter-key') || null,
+      records_poll_votes: myPollVotes,
+      records_post_votes: myPostVotes
+    }
+  });
+};
+const scheduleRecordsAccountSave = () => {
+  if (!recordsAccountSession()?.session_token) return;
+  window.clearTimeout(recordsAccountSaveTimer);
+  recordsAccountSaveTimer = window.setTimeout(() => {
+    saveRecordsAccountState().catch((error) => console.warn('records account save failed:', error.message));
+  }, 400);
+};
+const restoreRecordsAccountState = async () => {
+  const session = recordsAccountSession();
+  if (!session?.session_token) return;
+  try {
+    const state = await rpc('site_get_account_state', { p_session_token: session.session_token });
+    if (typeof state?.records_voter_key === 'string' && state.records_voter_key.length >= 16) {
+      localStorage.setItem('records-voter-key', state.records_voter_key);
+    }
+    if (isPlainObject(state?.records_poll_votes)) {
+      myPollVotes = { ...myPollVotes, ...state.records_poll_votes };
+      localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
+    }
+    if (isPlainObject(state?.records_post_votes)) {
+      Object.assign(myPostVotes, state.records_post_votes);
+      localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
+    }
+    if (!state?.records_voter_key || !isPlainObject(state?.records_poll_votes)
+      || !isPlainObject(state?.records_post_votes)) {
+      voterKey();
+      scheduleRecordsAccountSave();
+    }
+  } catch (error) {
+    console.warn('records account restore failed:', error.message);
+  }
+};
+const saveMyPollVotes = () => {
+  localStorage.setItem('records-poll-votes', JSON.stringify(myPollVotes));
+  scheduleRecordsAccountSave();
+};
 
 const renderPoll = (poll) => {
   if (!poll) return '';
@@ -739,6 +798,7 @@ document.addEventListener('click', async (event) => {
       await rpc('record_vote_notice', { p_notice_id: notice.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
       myPostVotes[notice.id] = Number(button.dataset.vote);
       localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
+      scheduleRecordsAccountSave();
       await loadBoard();
     } else if (button.dataset.vote && post) {
       const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
@@ -746,6 +806,7 @@ document.addEventListener('click', async (event) => {
       await rpc('record_vote_post', { p_post_id: post.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
             myPostVotes[post.id] = Number(button.dataset.vote);
             localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
+            scheduleRecordsAccountSave();
             await loadBoard();
     } else if (button.dataset.comment) {
       document.querySelector('.records-comments-section > .record-inline-form [name="body"]')?.focus();
@@ -862,7 +923,7 @@ document.addEventListener('click', (event) => {
   if (!postGroup || event.target.closest('button')) return;
   openPostDetail(posts.find((post) => post.id === postGroup.dataset.postId));
 });
-loadBoard().catch((error) => {
+restoreRecordsAccountState().then(loadBoard).catch((error) => {
   $('#records-status').textContent = error.message;
   $('#records-list').innerHTML = '<p class="records-empty">게시판을 불러오지 못했습니다. Supabase SQL 적용 여부를 확인하세요.</p>';
 });

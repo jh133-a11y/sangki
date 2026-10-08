@@ -59,7 +59,13 @@ const sanggiLocalStateKeys = [
   'sanggi-player-level',
   'sanggi-normal-potions',
   'sanggi-advanced-potions',
-  'sanggi-legendary-potions'
+  'sanggi-legendary-potions',
+  'sanggi-outfit',
+  'sanggi-companion-outfit',
+  'sangki-my-comment-votes',
+  'records-poll-votes',
+  'records-post-votes',
+  'records-voter-key'
 ];
 const clearSanggiLocalState = () => {
   sanggiLocalStateKeys.forEach((key) => localStorage.removeItem(key));
@@ -82,10 +88,26 @@ const callSiteStateRpc = async (name, payload) => {
   if (!response.ok) throw new Error(result.message || result.hint || '계정 상태를 저장하지 못했습니다.');
   return result;
 };
+const accountScopedJsonKeys = {
+  my_comment_votes: 'sangki-my-comment-votes',
+  records_poll_votes: 'records-poll-votes',
+  records_post_votes: 'records-post-votes'
+};
+const readLocalJsonObject = (key) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || '{}');
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+};
 const getSiteStateSnapshot = () => ({
   notifications_enabled: localStorage.getItem(siteStateStorageKeys.notifications) !== 'false',
   watched_comments: getWatchedComments(),
-  comment_voter_key: localStorage.getItem(siteStateStorageKeys.commentVoter) || null
+  comment_voter_key: localStorage.getItem(siteStateStorageKeys.commentVoter) || null,
+  records_voter_key: localStorage.getItem('records-voter-key') || null,
+  ...Object.fromEntries(Object.entries(accountScopedJsonKeys)
+    .map(([field, key]) => [field, readLocalJsonObject(key)]))
 });
 const saveSiteAccountState = async () => {
   if (!accountSession?.session_token) return;
@@ -124,6 +146,19 @@ const loadSiteAccountState = async () => {
     localStorage.setItem(siteStateStorageKeys.commentVoter, state.comment_voter_key);
     commentVoterKey = state.comment_voter_key;
   }
+  if (typeof state.records_voter_key === 'string' && state.records_voter_key.length >= 16) {
+    localStorage.setItem('records-voter-key', state.records_voter_key);
+  }
+  let hasMissingField = !state.records_voter_key;
+  Object.entries(accountScopedJsonKeys).forEach(([field, key]) => {
+    const value = state[field];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      localStorage.setItem(key, JSON.stringify({ ...readLocalJsonObject(key), ...value }));
+    } else {
+      hasMissingField = true;
+    }
+  });
+  if (hasMissingField) scheduleSiteAccountStateSave();
 };
 const accountButton = document.querySelector('#account-button');
 const accountModal = document.querySelector('#account-modal');
@@ -605,6 +640,14 @@ const bagUseDescription = document.querySelector('#bag-use-description');
 const bagUseButton = document.querySelector('#bag-use-button');
 const bagDiscardQuantity = document.querySelector('#bag-discard-quantity');
 const bagDiscardButton = document.querySelector('#bag-discard-button');
+const bagOpenAllButton = document.querySelector('#bag-open-all-button');
+const bagOpenLog = document.querySelector('#bag-open-log');
+const bagOpenLogTitle = document.querySelector('#bag-open-log-title');
+const bagOpenLogSummary = document.querySelector('#bag-open-log-summary');
+const bagOpenLogList = document.querySelector('#bag-open-log-list');
+const openableBoxTypes = new Set(['cash_box', 'weird_cash_box', 'gambling_box']);
+let bulkOpenRunning = false;
+let bulkOpenStopRequested = false;
 let selectedShopItem = null;
 let bagTargets = [];
 const messageButton = document.querySelector('#message-button');
@@ -726,6 +769,7 @@ const resetBagSelection = () => {
   document.querySelector('#bag-letter-message').value = '';
   bagDiscardQuantity.value = '1';
   bagDiscardButton.hidden = false;
+  bagOpenAllButton.hidden = true;
   bagDiscardQuantity.closest('.bag-discard-label').hidden = false;
   document.querySelectorAll('.bag-slot.is-selected').forEach((selected) => {
     selected.classList.remove('is-selected');
@@ -782,13 +826,20 @@ const selectShopItem = (item) => {
     ? '모든 유저에게 보낼 메시지를 입력하세요'
     : '전하고 싶은 메시지를 입력하세요';
   bagUseButton.disabled = isShield;
+  const isGamblingBox = item.item_type === 'gambling_box';
   bagUseButton.textContent = isShield
     ? '자동 방어 아이템'
-    : isCashBox ? (bagTarget.value ? '선물하기' : '개봉') : '사용하기';
+    : isGamblingBox ? '1개 개봉'
+    : isCashBox ? (bagTarget.value ? '선물하기' : '1개 개봉') : '사용하기';
+  bagOpenAllButton.hidden = !openableBoxTypes.has(item.item_type)
+    || (isCashBox && Boolean(bagTarget.value));
+  bagOpenAllButton.textContent = `모두 개봉 (${item.quantity}개)`;
   bagStatus.textContent = isShield
     ? '다른 유저의 미사일이 명중하면 필요한 수량이 자동으로 소모되어 방어합니다.'
+    : isGamblingBox
+    ? '1개씩 개봉하거나, 모두 개봉으로 보유한 상자를 한꺼번에 열 수 있습니다.'
     : isCashBox
-    ? '유저를 선택하면 상자를 선물하고, 선택하지 않으면 내 계정에서 바로 개봉합니다.'
+    ? '유저를 선택하면 상자를 선물하고, 선택하지 않으면 1개씩 또는 모두 개봉할 수 있습니다.'
     : isMegaphone
     ? '모든 유저에게 보낼 메시지를 입력한 뒤 사용하기를 누르세요.'
     : isNicknameTicket
@@ -802,7 +853,8 @@ const selectShopItem = (item) => {
 bagTarget.addEventListener('change', () => {
   if (!selectedShopItem
     || !['cash_box', 'weird_cash_box'].includes(selectedShopItem.item_type)) return;
-  bagUseButton.textContent = bagTarget.value ? '선물하기' : '개봉';
+  bagUseButton.textContent = bagTarget.value ? '선물하기' : '1개 개봉';
+  bagOpenAllButton.hidden = Boolean(bagTarget.value);
 });
 
 const loadBag = async () => {
@@ -831,11 +883,7 @@ const loadBag = async () => {
         slot.title = `${item.name} ${item.quantity}개 · 인벤토리에서 사용할 수 없습니다.`;
       }
       slot.innerHTML = `<span class="bag-slot-icon">${shopItemIcons[item.item_type] || '◆'}</span><span class="bag-slot-count">${item.quantity}</span><span class="bag-slot-name">${item.name}</span>`;
-      if (item.item_type === 'gambling_box') {
-        slot.addEventListener('click', () => {
-          useShopItem(item.item_type);
-        });
-      } else if (!nonInteractiveBagItemTypes.has(item.item_type)) {
+      if (!nonInteractiveBagItemTypes.has(item.item_type)) {
         slot.addEventListener('click', () => {
           selectShopItem(item);
           slot.classList.add('is-selected');
@@ -1182,6 +1230,139 @@ const closeMessages = () => {
 messageClose.addEventListener('click', closeMessages);
 messageBackdrop.addEventListener('click', closeMessages);
 
+const formatSignedPercent = (value) => `${value >= 0 ? '+' : ''}${Number(value.toFixed(2))}%`;
+
+const openAllBoxes = async () => {
+  if (bulkOpenRunning) {
+    bulkOpenStopRequested = true;
+    bagOpenAllButton.textContent = '중단 요청됨...';
+    return;
+  }
+  const item = selectedShopItem;
+  if (!item || !openableBoxTypes.has(item.item_type)) return;
+  const total = Number(item.quantity) || 0;
+  if (total < 1) return;
+  if (!await siteConfirm(`${item.name} ${total}개를 모두 개봉하시겠습니까? 상자마다 기존 규칙대로 하나씩 개봉되며, 중간에 중단할 수 있습니다.`)) return;
+
+  bulkOpenRunning = true;
+  bulkOpenStopRequested = false;
+  bagUseButton.disabled = true;
+  bagDiscardButton.disabled = true;
+  bagTarget.disabled = true;
+  bagOpenAllButton.textContent = '중단';
+  bagOpenLog.hidden = false;
+  bagOpenLogTitle.textContent = `${item.name} 일괄 개봉`;
+  bagOpenLogList.replaceChildren();
+
+  let clientId;
+  let startCash = null;
+  try {
+    clientId = await resolveShopClientId();
+    const before = await callInvestmentRpc('shop_get_state', {
+      p_client_id: clientId,
+      p_nickname: investorNickname.value.trim()
+        || localStorage.getItem('sangki-investor-nickname')
+        || null
+    });
+    startCash = Number(before.cash);
+  } catch (error) {
+    bagStatus.textContent = error.message;
+  }
+
+  let opened = 0;
+  let cashGained = 0;
+  let factor = 1;
+  let ups = 0;
+  let downs = 0;
+  let failure = null;
+  const renderSummary = (done) => {
+    const lines = [`${done ? '완료' : '진행 중'}: ${opened} / ${total}개 개봉`];
+    if (item.item_type === 'cash_box') {
+      lines.push(`받은 현금 합계: ${formatWon(cashGained)}`);
+    } else {
+      lines.push(`상승 ${ups}회 · 하락 ${downs}회`);
+      lines.push(`누적 자산 변화: ${formatSignedPercent((factor - 1) * 100)} (×${Number(factor.toFixed(4))})`);
+    }
+    bagOpenLogSummary.textContent = lines.join('\n');
+    bagStatus.textContent = done ? '' : `${item.name} 개봉 중... (${opened}/${total})`;
+  };
+  renderSummary(false);
+
+  for (let index = 0; index < total && clientId; index += 1) {
+    if (bulkOpenStopRequested) break;
+    try {
+      const result = item.item_type === 'gambling_box'
+        ? await callInvestmentRpc('shop_use_gambling_box', { p_client_id: clientId })
+        : await callInvestmentRpc('shop_use_cash_box', {
+          p_client_id: clientId,
+          p_item_type: item.item_type,
+          p_target_client_id: null,
+          p_quantity: '1'
+        });
+      opened += 1;
+      const entry = document.createElement('li');
+      if (item.item_type === 'cash_box') {
+        const amount = Number(result.amount) || 0;
+        cashGained += amount;
+        entry.className = 'is-up';
+        entry.textContent = `+${formatWon(amount)} (누적 ${formatWon(cashGained)})`;
+      } else {
+        const percent = Number(result.percent) || 0;
+        factor *= 1 + percent / 100;
+        if (percent >= 0) ups += 1; else downs += 1;
+        entry.className = percent >= 0 ? 'is-up' : 'is-down';
+        entry.textContent = `${formatSignedPercent(percent)} → 누적 ${formatSignedPercent((factor - 1) * 100)}`;
+      }
+      bagOpenLogList.append(entry);
+      entry.scrollIntoView({ block: 'nearest' });
+      renderSummary(false);
+    } catch (error) {
+      failure = error.message;
+      break;
+    }
+  }
+
+  let endCash = null;
+  try {
+    await loadBag();
+    if (investmentState) await loadInvestmentState();
+    const after = await callInvestmentRpc('shop_get_state', {
+      p_client_id: clientId,
+      p_nickname: investorNickname.value.trim()
+        || localStorage.getItem('sangki-investor-nickname')
+        || null
+    });
+    endCash = Number(after.cash);
+  } catch (error) {
+    console.warn('bulk open refresh failed:', error.message);
+  }
+
+  renderSummary(true);
+  const resultLines = [];
+  if (startCash !== null && endCash !== null) {
+    resultLines.push(`보유 현금: ${formatWon(startCash)} → ${formatWon(endCash)} (${endCash - startCash >= 0 ? '+' : '-'}${formatWon(Math.abs(endCash - startCash))})`);
+  }
+  if (bulkOpenStopRequested && opened < total) resultLines.push(`사용자 요청으로 ${opened}개 개봉 후 중단했습니다.`);
+  if (failure) resultLines.push(`${opened + 1}번째 개봉 중 오류로 중단: ${failure}`);
+  if (resultLines.length) {
+    bagOpenLogSummary.textContent += `\n${resultLines.join('\n')}`;
+  }
+  bagStatus.textContent = `${item.name} ${opened}개 개봉을 마쳤습니다.`;
+
+  bulkOpenRunning = false;
+  bulkOpenStopRequested = false;
+  bagUseButton.disabled = false;
+  bagDiscardButton.disabled = false;
+  bagTarget.disabled = false;
+  if (selectedShopItem?.item_type === item.item_type) {
+    bagOpenAllButton.textContent = `모두 개봉 (${selectedShopItem.quantity}개)`;
+  } else {
+    bagOpenAllButton.textContent = '모두 개봉';
+  }
+};
+
+bagOpenAllButton.addEventListener('click', openAllBoxes);
+
 bagUseButton.addEventListener('click', async () => {
   if (!selectedShopItem) {
     bagStatus.textContent = '먼저 사용할 아이템을 선택하세요.';
@@ -1197,6 +1378,7 @@ bagButton.addEventListener('click', async () => {
   bagModal.hidden = false;
   bagBackdrop.hidden = false;
   resetBagSelection();
+  if (!bulkOpenRunning) bagOpenLog.hidden = true;
   bagStatus.textContent = '';
   try {
     await loadBag();
@@ -2133,6 +2315,7 @@ const renderComment = (item, isReply = false) => {
         if (result.vote) myVotes[item.id] = Number(result.vote);
         else delete myVotes[item.id];
         localStorage.setItem('sangki-my-comment-votes', JSON.stringify(myVotes));
+        scheduleSiteAccountStateSave();
         applyMyCommentVote();
       } catch (error) {
         window.alert(error.message);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="byungsin — 이상한 것들을 위한 디지털 스튜디오">
   <title>byungsin — 이상한 것들의 기록</title>
-  <link rel="stylesheet" href="style.css?v=65">
+  <link rel="stylesheet" href="style.css?v=66">
 </head>
 <body>
   <div class="noise"></div>
@@ -125,9 +125,15 @@
         <input id="bag-discard-quantity" type="text" inputmode="numeric" pattern="[0-9]+" value="1">
       </label>
       <button class="bag-use-button" id="bag-use-button" type="button">사용하기</button>
+      <button class="bag-open-all-button" id="bag-open-all-button" type="button" hidden>모두 개봉</button>
       <button class="bag-discard-button" id="bag-discard-button" type="button">아이템 버리기</button>
     </div>
     <p class="bag-status" id="bag-status" role="status"></p>
+    <section class="bag-open-log" id="bag-open-log" aria-live="polite" hidden>
+      <strong id="bag-open-log-title">일괄 개봉</strong>
+      <p id="bag-open-log-summary"></p>
+      <ol id="bag-open-log-list"></ol>
+    </section>
   </section>
 
   <main>
@@ -335,6 +341,6 @@
     </section>
   </main>
   <footer><div class="wrap eyebrow"><span>byungsin studio</span><span>made with curiosity</span></div></footer>
-  <script src="app.js?v=126"></script>
+  <script src="app.js?v=127"></script>
 </body>
 </html>

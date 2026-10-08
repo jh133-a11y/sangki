@@ -123,6 +123,15 @@ nav a:hover { opacity: .5; }
 .bag-discard-button:hover { background: #a32626; color: #fff; }
 .bag-discard-button:disabled { cursor: wait; opacity: .5; }
 .bag-status { min-height: 18px; color: var(--orange); }
+.bag-open-all-button { grid-column: 1 / -1; border: 1px solid var(--ink); padding: 10px; background: var(--orange); color: var(--ink); cursor: pointer; font: 11px var(--mono); }
+.bag-open-all-button:hover { background: var(--ink); color: var(--paper); }
+.bag-open-all-button[hidden] { display: none; }
+.bag-open-log { margin-top: 10px; padding: 12px; border: 2px solid var(--ink); background: #fff; color: var(--ink); font: 11px var(--mono); }
+.bag-open-log[hidden] { display: none; }
+.bag-open-log p { margin: 6px 0; line-height: 1.6; white-space: pre-line; }
+.bag-open-log ol { max-height: 220px; margin: 8px 0 0; padding-left: 28px; overflow-y: auto; line-height: 1.7; }
+.bag-open-log li.is-up { color: #1d7a32; }
+.bag-open-log li.is-down { color: #a32626; }
 .shop-page { min-height: 100vh; padding: 38px 24px 70px; background: #fff; color: var(--ink); }
 .shop-shell { width: min(1120px, 100%); margin: 0 auto; }
 .shop-top { display: flex; justify-content: space-between; gap: 20px; align-items: center; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
