@@ -126,3 +126,38 @@ test('AI speed patch matches the full migration and retains bounded server compu
   assert.match(patch, /limit 6 loop/);
   assert.match(patch, /revoke all on function public\.chess_search_fast/);
 });
+test('player move is rendered before even an immediate server opponent response', async () => {
+  let finishDisplay;
+  const renders = [];
+  const initial = newState();
+  const playerMove = legalMoves(initial).find((m) => m.from === 52 && m.to === 36);
+  const serverResponse = { id: 'game', result: null };
+  const turnContext = vm.createContext({
+    gameId: 1, serverGame: { id: 'game' }, history: [], state: initial,
+    legalCache: legalMoves(initial), positionCounts: {}, thinking: false,
+    selected: 52, lastMove: null, sanFor: () => 'e4', applyMove, legalMoves,
+    playSound: () => {}, setStatus: () => {}, accountPayload: () => ({}),
+    rpc: async () => serverResponse,
+    setTimeout: (callback, delay) => {
+      assert.equal(delay, 350);
+      finishDisplay = callback;
+    },
+    refresh: () => renders.push(turnContext.state.board[36]),
+    restoreServerGame: (game) => {
+      assert.equal(game, serverResponse);
+      renders.push('opponent');
+    },
+    loadProfile: async () => {}
+  });
+  const body = source.slice(source.indexOf('  const submitServerMove ='), source.indexOf('  const startGame ='));
+  vm.runInContext(body + '\nglobalThis.submit=submitServerMove;', turnContext);
+  const pending = turnContext.submit(playerMove);
+  await Promise.resolve();
+  assert.deepEqual(renders, ['P']);
+  assert.equal(turnContext.state.board[52], ' ');
+  assert.equal(turnContext.thinking, true);
+  finishDisplay();
+  await pending;
+  assert.deepEqual(renders, ['P', 'opponent', 'P']);
+  assert.equal(turnContext.thinking, false);
+});

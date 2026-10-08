@@ -704,10 +704,13 @@
     setStatus('컴퓨터 생각 중…');
     refresh();
     try {
-      const game = await rpc('chess_move', {
-        ...accountPayload(), p_game_id: previousGame.id, p_ply: ply,
-        p_from: move.from, p_to: move.to, p_promo: move.promo || null
-      });
+      const [game] = await Promise.all([
+        rpc('chess_move', {
+          ...accountPayload(), p_game_id: previousGame.id, p_ply: ply,
+          p_from: move.from, p_to: move.to, p_promo: move.promo || null
+        }),
+        new Promise((resolve) => setTimeout(resolve, 350))
+      ]);
       if (id !== gameId) return;
       restoreServerGame(game);
       if (game.result) await loadProfile();
