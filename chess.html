@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>체스 — byungsin</title>
-  <link rel="stylesheet" href="chess.css?v=1">
+  <link rel="stylesheet" href="chess.css?v=2">
 </head>
 <body>
   <main class="chess-shell">
@@ -53,7 +53,8 @@
         <div class="chess-buttons">
           <button type="button" id="chess-undo">무르기</button>
           <button type="button" id="chess-flip">판 뒤집기</button>
-          <button type="button" id="chess-new">새 게임</button>
+          <button type="button" id="chess-new">다시 시작</button>
+          <button type="button" id="chess-exit">나가기</button>
         </div>
       </aside>
     </section>
@@ -70,10 +71,11 @@
     <p id="chess-result-text"></p>
     <div class="chess-modal-actions">
       <button type="button" id="chess-result-close">판 보기</button>
-      <button type="button" id="chess-result-new">새 게임</button>
+      <button type="button" id="chess-result-new">다시 시작</button>
+      <button type="button" id="chess-result-exit">나가기</button>
     </div>
   </section>
 
-  <script src="chess.js?v=1"></script>
+  <script src="chess.js?v=3"></script>
 </body>
 </html>

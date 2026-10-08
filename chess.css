@@ -35,8 +35,9 @@ button { font: inherit; color: inherit; }
 .chess-player strong { letter-spacing: .06em; }
 .chess-captured { font-size: 18px; letter-spacing: -2px; }
 
-.chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; aspect-ratio: 1; border: 2px solid var(--ink); user-select: none; }
-.chess-sq { position: relative; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 0; padding: 0; cursor: pointer; font-size: clamp(28px, 7.4vw, 54px); line-height: 1; }
+.chess-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: 100%; aspect-ratio: 1; overflow: hidden; container-type: inline-size; border: 2px solid var(--ink); user-select: none; }
+.chess-sq { position: relative; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 0; padding: 0; cursor: pointer; font-size: 9cqw; line-height: 1; min-width: 0; min-height: 0; overflow: hidden; aspect-ratio: 1; }
+.chess-points { margin-left: 8px; font-size: 12px; letter-spacing: 0; }
 .chess-sq.light { background: var(--light); }
 .chess-sq.dark { background: var(--dark); }
 .chess-sq.is-last { box-shadow: inset 0 0 0 100px rgba(217, 255, 54, .45); }

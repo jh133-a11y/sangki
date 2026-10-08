@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const $ = (selector) => document.querySelector(selector);
   const GLYPH = { k: '\u265A', q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E', p: '\u265F' };
   const VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
@@ -280,6 +280,7 @@
   /* ---------- UI ---------- */
   const humanTurn = () => settings.mode === 'local' || state.turn === settings.side;
 
+  const POINTS = { p: 1, n: 3, b: 3, r: 5, q: 9 };
   const capturedFor = (color) => {
     const initial = { p: 8, n: 2, b: 2, r: 2, q: 1 };
     const count = {};
@@ -287,10 +288,40 @@
       if (piece !== ' ' && colorOf(piece) !== color) count[typeOf(piece)] = (count[typeOf(piece)] || 0) + 1;
     });
     let text = '';
+    let points = 0;
     ['q', 'r', 'b', 'n', 'p'].forEach((type) => {
-      text += GLYPH[type].repeat(Math.max(0, initial[type] - (count[type] || 0)));
+      const lost = Math.max(0, initial[type] - (count[type] || 0));
+      text += GLYPH[type].repeat(lost);
+      points += lost * POINTS[type];
     });
-    return text;
+    return { text, points };
+  };
+
+  let audioCtx = null;
+  const playSound = (capture) => {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime;
+      const tone = (freq, end, dur, vol, type) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(end, t + dur);
+        gain.gain.setValueAtTime(vol, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+      };
+      if (capture) {
+        tone(220, 60, 0.22, 0.5, 'triangle');
+        tone(900, 200, 0.08, 0.3, 'square');
+      } else {
+        tone(520, 180, 0.09, 0.35, 'triangle');
+      }
+    } catch (error) { /* 소리 재생 실패는 무시 */ }
   };
 
   const renderPlayers = () => {
@@ -303,7 +334,10 @@
     };
     const fill = (target, color) => {
       const turnMark = !gameOver && state.turn === color ? ' ◀' : '';
-      target.innerHTML = `<strong>${name(color)}${turnMark}</strong><span class="chess-captured">${capturedFor(color === 'w' ? 'b' : 'w').replace(/./gu, (glyph) => `${glyph}\uFE0E`)}</span>`;
+      const mine = capturedFor(color === 'w' ? 'b' : 'w');
+      const theirs = capturedFor(color);
+      const lead = mine.points - theirs.points;
+      target.innerHTML = `<strong>${name(color)}${turnMark}</strong><span class="chess-captured">${mine.text.replace(/./gu, (glyph) => `${glyph}\uFE0E`)}<b class="chess-points">${mine.points}점${lead > 0 ? ` (+${lead})` : ''}</b></span>`;
     };
     fill($('#chess-top-player'), top);
     fill($('#chess-bottom-player'), bottom);
@@ -427,8 +461,10 @@
   const commitMove = (move) => {
     const moves = legalCache.length ? legalCache : legalMoves(state);
     const san = sanFor(state, move, moves);
+    const before = state.board.filter((x) => x !== ' ').length;
     history.push({ state, move, san, counts: { ...positionCounts } });
     state = applyMove(state, move);
+    playSound(state.board.filter((x) => x !== ' ').length < before);
     lastMove = move;
     selected = -1;
     const key = positionKey(state);
@@ -544,18 +580,16 @@
   });
   $('#chess-undo').addEventListener('click', undo);
   $('#chess-flip').addEventListener('click', () => { flipped = !flipped; refresh(); });
-  $('#chess-new').addEventListener('click', () => {
+  const leaveGame = () => {
     gameId += 1;
     thinking = false;
+    closeResult();
     $('#chess-game').hidden = true;
     $('#chess-menu').hidden = false;
-    closeResult();
-  });
+  };
+  $('#chess-new').addEventListener('click', startGame);
+  $('#chess-exit').addEventListener('click', leaveGame);
   $('#chess-result-close').addEventListener('click', closeResult);
-  $('#chess-result-new').addEventListener('click', () => {
-    gameId += 1;
-    closeResult();
-    $('#chess-game').hidden = true;
-    $('#chess-menu').hidden = false;
-  });
+  $('#chess-result-new').addEventListener('click', startGame);
+  $('#chess-result-exit').addEventListener('click', leaveGame);
 })();
