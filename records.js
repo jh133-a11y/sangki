@@ -152,13 +152,21 @@ const openNoticeDetail = (notice) => {
       ${imagesHtml(notice.images)}
       ${renderPoll(notice.poll)}
       <div class="records-row-actions">
+        <button class="${myPostVotes[notice.id] === 1 ? 'is-voted-pick' : ''}" data-vote="1" type="button">추천 ${notice.upvotes || 0}</button>
+        <button class="${myPostVotes[notice.id] === -1 ? 'is-voted-pick' : ''}" data-vote="-1" type="button">비추천 ${notice.downvotes || 0}</button>
+        <button data-comment="${notice.id}" data-kind="notice" type="button">댓글 ${notice.comment_count || 0}</button>
         <button data-notice-edit="${notice.id}" type="button">수정</button>
         <button data-notice-delete="${notice.id}" type="button">삭제</button>
       </div>
-    </article>`;
-  pushSub();
+    </article>
+    <section class="records-comments-section">
+      <h3>댓글</h3>
+      <div class="record-comments" id="comments-detail-${notice.id}"></div>
+    </section>`;
+  pushSub(`#notice=${notice.id}`);
   page.classList.add('records-detailing');
   detail.hidden = false;
+  loadComments(notice.id, `comments-detail-${notice.id}`, 'notice');
 };
 
 const openPostDetail = (post, countView = true) => {
@@ -187,9 +195,12 @@ const openPostDetail = (post, countView = true) => {
         <button data-edit="${post.id}" type="button">수정</button>
         <button data-delete="${post.id}" type="button">삭제</button>
       </div>
+    </article>
+    <section class="records-comments-section">
+      <h3>댓글</h3>
       <div class="record-comments" id="comments-detail-${post.id}"></div>
-    </article>`;
-  pushSub();
+    </section>`;
+  pushSub(`#post=${post.id}`);
   page.classList.add('records-detailing');
   detail.hidden = false;
   loadComments(post.id, `comments-detail-${post.id}`);
@@ -217,10 +228,15 @@ const formatDate = (value) => {
 };
 
 let subOpen = false;
-const pushSub = () => {
-  if (subOpen) return;
+let pendingDetail = null;
+const basePath = location.pathname + location.search;
+const pushSub = (hash = '') => {
+  if (subOpen) {
+    history.replaceState(history.state, '', basePath + hash);
+    return;
+  }
   subOpen = true;
-  history.pushState({ records: 'sub' }, '');
+  history.pushState({ records: 'sub' }, '', basePath + hash);
 };
 const leaveSub = () => {
   if (subOpen) history.back();
@@ -231,8 +247,17 @@ const hideViews = () => {
   page.classList.remove('records-writing', 'records-detailing');
   $('#records-detail-page').hidden = true;
 };
-history.replaceState({ records: 'root' }, '');
-history.pushState({ records: 'list' }, '');
+{
+  const initialHash = location.hash;
+  const match = initialHash.match(/^#(post|notice)=([0-9a-f-]{36})$/);
+  history.replaceState({ records: 'root' }, '', basePath);
+  history.pushState({ records: 'list' }, '', basePath);
+  if (match) {
+    pendingDetail = [match[1], match[2]];
+    subOpen = true;
+    history.pushState({ records: 'sub' }, '', basePath + initialHash);
+  }
+}
 window.addEventListener('popstate', (event) => {
   const state = event.state && event.state.records;
   if (state === 'sub') return;
@@ -331,9 +356,10 @@ const renderPosts = () => {
   renderPagination();
 };
 
-const loadComments = async (postId, containerId = `comments-${postId}`) => {
+const loadComments = async (targetId, containerId = `comments-${targetId}`, kind = 'post') => {
   try {
-    const comments = await rpc('record_get_comments', { p_post_id: postId });
+    const comments = await rpc(kind === 'notice' ? 'record_get_notice_comments' : 'record_get_comments',
+      kind === 'notice' ? { p_notice_id: targetId } : { p_post_id: targetId });
     const container = $(`#${containerId}`);
     if (!container) return;
     const render = (parentId, depth = 0) => comments
@@ -343,7 +369,7 @@ const loadComments = async (postId, containerId = `comments-${postId}`) => {
           <div><strong>${escapeHtml(comment.nickname)}</strong><time>${formatDate(comment.created_at)}</time></div>
           <p>${escapeHtml(comment.body)}</p>
           <div class="record-comment-actions">
-            <button data-reply="${postId}" data-parent="${comment.id}" type="button">답글</button>
+            <button data-reply="${targetId}" data-kind="${kind}" data-parent="${comment.id}" type="button">답글</button>
             <button data-comment-edit="${comment.id}" type="button">수정</button>
             <button data-comment-delete="${comment.id}" type="button">삭제</button>
           </div>
@@ -376,6 +402,13 @@ const loadBoard = async () => {
     const openPost = posts.find((item) => item.id === openId);
     if (openPost) openPostDetail(openPost, false);
     else { page.classList.remove('records-detailing'); detail.hidden = true; }
+  } else if (pendingDetail) {
+    const [kind, id] = pendingDetail;
+    pendingDetail = null;
+    const target = kind === 'notice' ? notices.find((item) => item.id === id) : posts.find((item) => item.id === id);
+    if (!target) leaveSub();
+    else if (kind === 'notice') openNoticeDetail(target);
+    else openPostDetail(target, false);
   }
 };
 
@@ -556,17 +589,19 @@ $('#records-post-form').addEventListener('submit', async (event) => {
   }
 });
 
+let commentKind = 'post';
 $('#records-comment-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const isNotice = commentKind === 'notice';
   const payload = {
-    p_post_id: $('#records-comment-post-id').value,
+    [isNotice ? 'p_notice_id' : 'p_post_id']: $('#records-comment-post-id').value,
     p_parent_id: $('#records-comment-parent-id').value || null,
     p_nickname: $('#records-comment-nickname').value.trim(),
     p_password_hash: await hashPassword($('#records-comment-password').value),
     p_body: $('#records-comment-body').value.trim()
   };
   try {
-    await rpc('record_create_comment', payload);
+    await rpc(isNotice ? 'record_create_notice_comment' : 'record_create_comment', payload);
     closeModals();
     await loadBoard();
   } catch (error) {
@@ -644,8 +679,15 @@ document.addEventListener('click', async (event) => {
     return;
   }
   const post = posts.find((item) => item.id === button.closest('[data-post-id]')?.dataset.postId);
+  const notice = notices.find((item) => item.id === button.closest('[data-notice-id]')?.dataset.noticeId);
   try {
-    if (button.dataset.vote && post) {
+    if (button.dataset.vote && notice) {
+      const key = voterKey();
+      await rpc('record_vote_notice', { p_notice_id: notice.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
+      myPostVotes[notice.id] = Number(button.dataset.vote);
+      localStorage.setItem('records-post-votes', JSON.stringify(myPostVotes));
+      await loadBoard();
+    } else if (button.dataset.vote && post) {
       const key = localStorage.getItem('records-voter-key') || crypto.randomUUID();
       localStorage.setItem('records-voter-key', key);
       await rpc('record_vote_post', { p_post_id: post.id, p_voter_key: key, p_vote: Number(button.dataset.vote) });
@@ -656,11 +698,13 @@ document.addEventListener('click', async (event) => {
       $('#records-comment-form').reset();
       $('#records-comment-post-id').value = button.dataset.comment;
       $('#records-comment-parent-id').value = '';
+      commentKind = button.dataset.kind || 'post';
       openModal('records-comment-modal');
     } else if (button.dataset.reply) {
       $('#records-comment-form').reset();
       $('#records-comment-post-id').value = button.dataset.reply;
       $('#records-comment-parent-id').value = button.dataset.parent;
+      commentKind = button.dataset.kind || 'post';
       openModal('records-comment-modal');
     } else if (button.dataset.delete && post) {
       const password = prompt('게시물 비밀번호 또는 관리자 비밀번호를 입력하세요.');
