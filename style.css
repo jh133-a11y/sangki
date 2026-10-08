@@ -1594,12 +1594,12 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .site-form-backdrop{position:fixed;inset:0;z-index:80;background:rgba(23,23,23,.5)}
 .site-form-modal,#records-comment-modal{position:fixed;top:50%;left:50%;z-index:81;width:min(440px,calc(100% - 30px));max-height:88vh;overflow:auto;transform:translate(-50%,-50%);padding:0;border:2px solid var(--ink);background:var(--paper);color:var(--ink);box-shadow:none}
 .site-form-modal[hidden],.site-form-backdrop[hidden]{display:none!important}
-.site-form-modal header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ink)}
+.site-form-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ink)}
 .site-form-modal h2,#records-comment-modal h2{margin:0;padding:15px 20px;font:700 12px var(--mono);letter-spacing:.08em;text-transform:uppercase}
 #records-comment-modal h2{border-bottom:1px solid var(--ink);padding-right:56px}
-.site-form-modal header button,#records-comment-modal .records-modal-close{width:50px;height:100%;border:0;border-left:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;font:20px/1 var(--mono)}
+.site-form-head button,#records-comment-modal .records-modal-close{width:50px;height:100%;border:0;border-left:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;font:20px/1 var(--mono)}
 #records-comment-modal .records-modal-close{position:absolute;top:0;right:0;height:46px}
-.site-form-modal header button:hover,#records-comment-modal .records-modal-close:hover{background:var(--ink);color:var(--paper)}
+.site-form-head button:hover,#records-comment-modal .records-modal-close:hover{background:var(--ink);color:var(--paper)}
 .site-form-modal form,#records-action-body{display:block;padding:20px}
 #form-fields,.record-inline-form{display:grid;gap:14px}
 .site-form-modal label{display:grid;gap:6px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
@@ -1622,3 +1622,18 @@ footer { padding: 18px 0; background: var(--ink); color: var(--paper); font: 10p
 .comment-form button{width:100%;justify-self:stretch;padding:15px 18px;letter-spacing:.1em}
 .comment-form button:hover:not(:disabled){background:var(--paper);color:var(--ink)}
 .comment-form .comment-field{grid-column:1/-1}
+
+/* 창 가독성 정리 */
+.site-form-head{display:flex;align-items:stretch;justify-content:space-between;border-bottom:1px solid var(--ink);background:var(--paper)}
+.site-form-head button{flex:0 0 50px;width:50px;height:auto;min-height:46px;border:0;border-left:1px solid var(--ink)}
+.site-form-modal h2,#records-comment-modal h2{margin:0;padding:15px 20px;font:700 12px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;border:0}
+#records-comment-modal{padding:0}
+#records-comment-modal h2{border-bottom:1px solid var(--ink)}
+.site-form-modal form,#records-action-body{padding:22px 22px 24px}
+#form-fields,.record-inline-form{gap:18px}
+.site-form-modal label,.record-inline-form label{gap:8px;line-height:1.4}
+.site-form-modal input,.site-form-modal textarea,.record-inline-form input,.record-inline-form textarea{line-height:1.6}
+.site-form-modal input:focus,.site-form-modal textarea:focus,.record-inline-form input:focus,.record-inline-form textarea:focus{box-shadow:none;outline:2px solid var(--ink);outline-offset:-2px}
+.site-form-note{padding-bottom:2px;color:#444}
+.site-form-actions,.record-inline-buttons{margin-top:22px}
+.record-inline-buttons{margin-top:6px}
