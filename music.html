@@ -6,7 +6,7 @@
   <title>음악 — byungsin</title>
   <link rel="stylesheet" href="chess.css?v=1">
   <link rel="stylesheet" href="music.css?v=2">
-  <script type="module" src="music.js?v=1"></script>
+  <script type="module" src="music.js?v=2"></script>
 </head>
 <body>
   <main class="chess-shell">
@@ -17,7 +17,7 @@
     <section class="music-heading">
       <h1>MUSIC</h1>
       <p>이름을 붙여 음악을 공유하고, 나만의 재생목록을 만들어 보세요.</p>
-      <p>이 음악 탭을 열어 두면 다른 탭에서도 재생이 계속됩니다.</p>
+      <p id="music-background-note">이 음악 탭을 열어 두면 다른 탭에서도 재생이 계속됩니다.</p>
       <p id="account-state">로그인 상태 확인 중…</p>
       <form id="login-form" class="music-inline" hidden>
         <label>아이디 <input id="login-username" required autocomplete="username" maxlength="24"></label>
@@ -62,6 +62,17 @@
       <strong id="now-playing" aria-live="polite">재생할 음악을 선택하세요.</strong>
       <p id="queue-label">재생 대기열 없음</p>
       <audio id="music-audio" controls preload="auto"></audio>
+      <div id="native-player" hidden>
+        <div class="music-inline">
+          <button type="button" id="native-play" disabled>재생</button>
+          <button type="button" id="native-stop">재생 종료</button>
+          <span id="native-time">0:00 / 0:00</span>
+        </div>
+        <label>재생 위치
+          <input id="native-seek" type="range" min="0" max="0" value="0" disabled>
+        </label>
+        <p class="music-hint">앱 전용 플레이어 · 화면을 끄거나 다른 메뉴로 이동해도 재생됩니다. 알림에서 재생을 제어하거나 종료할 수 있습니다.</p>
+      </div>
       <div class="music-inline">
         <button type="button" id="previous-track" disabled>이전 곡</button>
         <button type="button" id="next-track" disabled>다음 곡</button>
@@ -73,7 +84,7 @@
           </select>
         </label>
       </div>
-      <p class="music-hint">전체 재생은 검색 결과가 아닌 현재 목록의 모든 곡을 순서대로 재생합니다. 다른 목록으로 이동해도 재생 대기열은 유지됩니다. 탭을 닫으면 재생이 멈춥니다. 모바일 절전 모드나 브라우저 정책에 따라 백그라운드 재생이 제한될 수 있습니다.</p>
+      <p id="browser-playback-note" class="music-hint">전체 재생은 검색 결과가 아닌 현재 목록의 모든 곡을 순서대로 재생합니다. 다른 목록으로 이동해도 재생 대기열은 유지됩니다. 탭을 닫으면 재생이 멈춥니다. 모바일 절전 모드나 브라우저 정책에 따라 백그라운드 재생이 제한될 수 있습니다.</p>
     </section>
   </main>
 </body>

@@ -17,6 +17,23 @@ let busy = false;
 let pendingUpload = null;
 let playbackRequest = 0;
 let accountChangePending = false;
+const nativePlayer = typeof window.SangkiAndroid?.command === 'function'
+  && typeof window.SangkiAndroid?.state === 'function' ? window.SangkiAndroid : null;
+let nativePlaying = false;
+let nativeError = '';
+
+const nativeCommand = (action, details = {}) => {
+  try {
+    nativePlayer.command(JSON.stringify({ action, ...details }));
+  } catch (error) {
+    notify(`앱 플레이어 요청에 실패했습니다. ${error.message}`, true);
+  }
+};
+
+const timeLabel = (milliseconds) => {
+  const seconds = Math.floor(Math.max(0, milliseconds) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+};
 
 const notify = (message, error = false) => {
   status.textContent = message;
@@ -219,6 +236,10 @@ const updateMediaSession = () => {
 };
 
 const play = async () => {
+  if (nativePlayer) {
+    nativeCommand('play');
+    return;
+  }
   const request = ++playbackRequest;
   try {
     await audio.play();
@@ -231,6 +252,15 @@ const play = async () => {
 
 const loadTrack = (index) => {
   queueIndex = index;
+  if (nativePlayer) {
+    nativeCommand('queue', {
+      queue: queue.map((track) => ({ ...track, url: trackUrl(track.storage_path) })),
+      index, name: queueName, repeat: repeatMode()
+    });
+    renderPlayer();
+    renderTracks();
+    return;
+  }
   audio.src = trackUrl(queue[index].storage_path);
   if ('mediaSession' in navigator && 'MediaMetadata' in window) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -250,6 +280,10 @@ const startQueue = (items, index = 0) => {
 };
 
 const advance = (direction = 1, ended = false) => {
+  if (nativePlayer) {
+    nativeCommand(direction === 1 ? 'next' : 'previous');
+    return;
+  }
   const index = nextTrackIndex(queue.length, queueIndex, repeatMode(), direction, ended);
   if (index < 0) {
     if (ended) {
@@ -359,7 +393,10 @@ $('#music-search').addEventListener('input', renderTracks);
 $('#play-all').addEventListener('click', () => startQueue(currentTracks()));
 $('#previous-track').addEventListener('click', () => advance(-1));
 $('#next-track').addEventListener('click', () => advance());
-$('#repeat-mode').addEventListener('change', renderPlayer);
+$('#repeat-mode').addEventListener('change', () => {
+  if (nativePlayer) nativeCommand('repeat', { repeat: repeatMode() });
+  renderPlayer();
+});
 $('#refresh').addEventListener('click', () => void run(async () => {
   await refresh();
   notify('목록을 새로 불러왔습니다.');
@@ -369,7 +406,7 @@ audio.addEventListener('error', () => notify('음악을 재생할 수 없습니�
 ['play', 'pause', 'loadedmetadata', 'timeupdate', 'ratechange'].forEach((event) => {
   audio.addEventListener(event, updateMediaSession);
 });
-if ('mediaSession' in navigator) {
+if (!nativePlayer && 'mediaSession' in navigator) {
   const handlers = {
     play: () => void play(), pause: () => audio.pause(),
     previoustrack: () => advance(-1), nexttrack: () => advance(),
@@ -383,6 +420,44 @@ if ('mediaSession' in navigator) {
       console.info(`Media Session action is not supported: ${action}`);
     }
   });
+}
+if (nativePlayer) {
+  audio.hidden = true;
+  $('#native-player').hidden = false;
+  $('#music-background-note').textContent = '앱 전용 백그라운드 플레이어로 화면을 끄거나 다른 메뉴로 이동해도 음악이 계속 재생됩니다.';
+  $('#browser-playback-note').textContent = '전체 재생은 검색 결과가 아닌 현재 목록의 모든 곡을 순서대로 재생합니다. 다른 목록이나 메뉴로 이동해도 재생 대기열은 유지됩니다. 앱 강제 종료나 기기의 배터리 제한 시 재생이 중단될 수 있습니다.';
+  $('#native-play').addEventListener('click', () => nativeCommand(nativePlaying ? 'pause' : 'play'));
+  $('#native-stop').addEventListener('click', () => nativeCommand('stop'));
+  $('#native-seek').addEventListener('change', () => nativeCommand('seek', {
+    position: Number($('#native-seek').value)
+  }));
+  window.sangkiNativeState = (state) => {
+    const incoming = state.queue || [];
+    const changed = queueIndex !== state.index || queueName !== (state.name || '')
+      || queue.map((track) => track.id).join(',') !== incoming.map((track) => track.id).join(',');
+    queue = incoming;
+    queueIndex = state.index;
+    queueName = state.name || '';
+    nativePlaying = Boolean(state.playing);
+    if (incoming.length) $('#repeat-mode').value = state.repeat || repeatMode();
+    $('#native-play').textContent = nativePlaying ? '일시정지' : '재생';
+    $('#native-play').disabled = queueIndex < 0;
+    $('#native-seek').max = state.duration || 0;
+    $('#native-seek').disabled = !(state.duration > 0);
+    if (document.activeElement !== $('#native-seek')) {
+      $('#native-seek').value = state.position || 0;
+    }
+    $('#native-time').textContent = `${timeLabel(state.position || 0)} / ${timeLabel(state.duration || 0)}`;
+    renderPlayer();
+    if (changed) renderTracks();
+    if (state.error && state.error !== nativeError) notify(state.error, true);
+    nativeError = state.error || '';
+  };
+  try {
+    window.sangkiNativeState(JSON.parse(nativePlayer.state()));
+  } catch (error) {
+    notify(`앱 재생 상태를 읽지 못했습니다. ${error.message}`, true);
+  }
 }
 const syncAccount = async () => {
   if (!localStorage.getItem('sangki-auth-session')) sessionStorage.removeItem('sangki-auth-session-tab');
