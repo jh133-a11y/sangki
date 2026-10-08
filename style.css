@@ -222,6 +222,16 @@ nav a:hover { opacity: .5; }
 .records-detail-card h1 { margin: 0; padding: 18px 16px 10px; color: #333; font: 700 21px var(--sans); }
 .records-detail-body { min-height: 180px; padding: 10px 16px 24px; color: #444; white-space: pre-wrap; font: 12px/1.8 var(--sans); }
 .records-detail-card > .records-row-actions { border-top: 1px solid #e5e5e5; }
+.records-page.records-detailing { background: #fff; }
+.records-detail-page { width: calc(100% - 32px); max-width: none; min-height: 100vh; padding: 16px 0 50px; }
+.records-detail-card .records-poll { margin: 8px 16px 16px; }
+.records-row-empty { background: #fff; }
+.records-board .records-row { border-bottom: 1px solid #d9dde5; }
+.records-board .records-row:nth-child(even) { background: #fafbfd; }
+.records-post-group:nth-child(even) .records-row { background: #fafbfd; }
+.records-post-group { cursor: pointer; }
+.records-post-group:hover .records-row { background: #eef3fb; }
+.records-pagination { display: flex; }
 .records-notice-compose-page[hidden] { display: none !important; }
 .records-compose-page h2 { margin: 0 0 8px; color: #3b5f9e; font: 700 28px var(--sans); }
 .records-compose-help { margin: 0 0 28px; color: #888; font: 11px var(--sans); }

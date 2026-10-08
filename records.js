@@ -31,11 +31,13 @@ const renderPoll = (poll) => poll ? `
       </button>`).join('')}</div>
   </div>` : '';
 
-const openPostDetail = (post) => {
+const openPostDetail = (post, countView = true) => {
   if (!post) return;
-  post.view_count = (post.view_count || 0) + 1;
-  rpc('record_increment_view', { p_post_id: post.id }).catch(() => {});
-  renderPosts();
+  if (countView) {
+    post.view_count = (post.view_count || 0) + 1;
+    rpc('record_increment_view', { p_post_id: post.id }).catch(() => {});
+    renderPosts();
+  }
   const detail = $('#records-detail-page');
   detail.innerHTML = `
     <div class="records-detail-head">
@@ -134,7 +136,7 @@ const resetPollForm = () => {
 const renderPagination = () => {
   const totalPages = Math.max(1, Math.ceil(filteredPosts().length / pageSize));
   if (currentPage > totalPages) currentPage = totalPages;
-  $('#records-pagination').innerHTML = totalPages <= 1 ? '' : Array.from({ length: totalPages }, (_, index) => {
+  $('#records-pagination').innerHTML = Array.from({ length: totalPages }, (_, index) => {
     const pageNumber = index + 1;
     return `<button class="${pageNumber === currentPage ? 'is-active' : ''}" data-page="${pageNumber}" type="button">${pageNumber}</button>`;
   }).join('');
@@ -171,7 +173,7 @@ const renderPosts = () => {
         <span>${post.comment_count || 0}</span>
       </div>
     </article>`;
-  }).join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
+  }).join('') + Array.from({ length: Math.max(0, pageSize - pagePosts.length) }, () => '<div class="records-row records-row-empty"><span>&nbsp;</span><span></span><span></span><span></span></div>').join('') : '<p class="records-empty">표시할 게시물이 없습니다.</p>';
   renderPagination();
 };
 
@@ -205,6 +207,13 @@ const loadBoard = async () => {
   notices = Array.isArray(result.notices) ? result.notices : [];
   renderNotices();
   renderPosts();
+  const detail = $('#records-detail-page');
+  const openId = detail.hidden ? null : detail.querySelector('[data-post-id]')?.dataset.postId;
+  if (openId) {
+    const openPost = posts.find((item) => item.id === openId);
+    if (openPost) openPostDetail(openPost, false);
+    else { page.classList.remove('records-detailing'); detail.hidden = true; }
+  }
 };
 
 document.querySelectorAll('.records-tabs button').forEach((button, index) => {
