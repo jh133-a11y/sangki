@@ -1,5 +1,5 @@
 import { WEAPONS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=3';
-import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=4';
+import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryCharacters(state) {

@@ -1,11 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=14';
-import { CHARACTERS } from './soldier-characters.mjs?v=4';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=15';
+import { CHARACTERS } from './soldier-characters.mjs?v=5';
 
 export { idlePose };
 
 export async function createHomeViewer(canvas, status) {
-  status.textContent = '기본 3D 모델을 불러오는 중입니다 (약 11 MB)…';
+  status.textContent = '기본 리깅 3D 모델을 불러오는 중입니다…';
   let rig = await loadHomeRig(), characterId = 'black-water', loading = false, loadSequence = 0;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setClearColor(0, 0); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -30,7 +30,7 @@ export async function createHomeViewer(canvas, status) {
     canvas.dataset.motion = visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
     canvas.dataset.yaw = yaw.toFixed(5);
     canvas.dataset.seconds = seconds.toFixed(3);
-    canvas.dataset.rig = 'articulated';
+    canvas.dataset.rig = 'supplied-skeleton';
     canvas.dataset.model = 'supplied-glb';
     canvas.dataset.character = characterId;
     canvas.dataset.loading = String(loading);
@@ -115,7 +115,7 @@ export async function createHomeViewer(canvas, status) {
     if (!CHARACTERS[id]) throw new Error('3D 캐릭터가 올바르지 않습니다.');
     if (id === characterId && !loading) return;
     const sequence = ++loadSequence;
-    loading = true; status.textContent = `${CHARACTERS[id].name} 모델을 불러오는 중입니다 (약 11 MB)…`; draw();
+    loading = true; status.textContent = `${CHARACTERS[id].name} 리깅 모델을 불러오는 중입니다…`; draw();
     let next;
     try {
       next = await loadHomeRig(id);

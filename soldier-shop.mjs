@@ -1,4 +1,4 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=4';
+import { CHARACTERS } from './soldier-characters.mjs?v=5';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'normal', name: '일반보급함', price: 3, description: 'D클래스 이상의 무기 1개 획득' },

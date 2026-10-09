@@ -1,7 +1,7 @@
 export const CHARACTERS = {
-  'black-water': { name: 'Black Water', image: 'soldier-character-black-water.webp', model: 'soldier-home-model.glb?v=4', price: 0 },
-  'fsb-agent': { name: 'FSB Agent', image: 'soldier-character-fsb-agent.webp', model: 'soldier-fsb-agent.glb?v=1', price: 125 },
-  'roka-swc': { name: 'ROKA-SWC', image: 'soldier-character-roka-swc.webp', model: 'soldier-roka-swc.glb?v=1', price: 125 }
+  'black-water': { name: 'Black Water', image: 'soldier-character-black-water.webp', model: 'soldier-home-model.glb?v=5', price: 0 },
+  'fsb-agent': { name: 'FSB Agent', image: 'soldier-character-fsb-agent.webp', model: 'soldier-fsb-agent.glb?v=2', price: 125 },
+  'roka-swc': { name: 'ROKA-SWC', image: 'soldier-character-roka-swc.webp', model: 'soldier-roka-swc.glb?v=2', price: 125 }
 };
 export const CHARACTER_MAX_LEVEL = 10;
 export const CHARACTER_UPGRADE_COST = 10000;

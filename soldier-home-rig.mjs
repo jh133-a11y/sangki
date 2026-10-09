@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=4';
+import { CHARACTERS } from './soldier-characters.mjs?v=5';
 
 export const HOME_MODEL = 'soldier-home-model.glb';
 
@@ -40,216 +40,98 @@ export async function loadHomeRig(id = 'black-water') {
   return rig;
 }
 
-const smooth = (min, max, value) => THREE.MathUtils.smoothstep(value, min, max);
-
-export function chestExpansion(x, y, z, width = 1) {
-  const mask = smooth(.62, .69, y) * (1 - smooth(.78, .83, y))
-    * (1 - smooth(.07 * width, .115 * width, Math.abs(x)));
-  return [x * .008 * mask, 0, THREE.MathUtils.clamp(z * .03, -.0025, .0025) * mask];
-}
-
-// The supplied GLB has no skin. Blend inferred joints across all mesh regions,
-// rather than cutting its geometry or replacing the supplied silhouette/textures.
-export const JOINT_NAMES = ['hips', 'spine', 'chest', 'neck', 'head',
-  'leftShoulder', 'leftElbow', 'leftWrist', 'rightShoulder', 'rightElbow', 'rightWrist',
-  'leftHip', 'leftKnee', 'leftAnkle', 'leftToe', 'rightHip', 'rightKnee', 'rightAnkle', 'rightToe'];
-
-export function jointWeights(x, y, z = 0, width = 1, armRegion) {
-  const neck = smooth(.81, .86, y);
-  const head = smooth(.89, .94, y);
-  const torso = smooth(.49, .59, y);
-  const chest = smooth(.66, .73, y);
-  const lateral = smooth(.097 * width, .137 * width, Math.abs(x)) * (1 - smooth(.79, .83, y)) * smooth(.42, .48, y);
-  const blend = smooth(.58, .68, y);
-  const arm = armRegion === undefined ? lateral : armRegion * (1 - blend) + lateral * blend;
-  const elbow = 1 - smooth(.60, .67, y);
-  const wrist = 1 - smooth(.53, .59, y);
-  const leg = (1 - neck) * (1 - arm) * (1 - smooth(.42, .49, y));
-  const knee = 1 - smooth(.26, .34, y);
-  const ankle = 1 - smooth(.10, .18, y);
-  const toe = (1 - smooth(.04, .08, y)) * smooth(.02, .07, z);
-  const body = (1 - neck) * (1 - arm) - leg;
-  const shoulderIndex = x < 0 ? 5 : 8;
-  const hipIndex = x < 0 ? 11 : 15;
-  const weights = [
-    [0, body * (1 - torso)],
-    [1, body * torso * (1 - chest)],
-    [2, body * torso * chest],
-    [3, neck * (1 - head)],
-    [4, neck * head],
-    [shoulderIndex, (1 - neck) * arm * (1 - elbow)],
-    [shoulderIndex + 1, (1 - neck) * arm * elbow * (1 - wrist)],
-    [shoulderIndex + 2, (1 - neck) * arm * elbow * wrist],
-    [hipIndex, leg * (1 - knee)],
-    [hipIndex + 1, leg * knee * (1 - ankle)],
-    [hipIndex + 2, leg * knee * ankle * (1 - toe)],
-    [hipIndex + 3, leg * knee * ankle * toe]
-  ].filter(([, weight]) => weight > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const sum = weights.reduce((total, [, weight]) => total + weight, 0);
-  return weights.map(([index, weight]) => [index, weight / sum]);
-}
-
-// Follow the surface from elbow/torso seeds, not proximity: resting hands can
-// sit beside the thighs but must never pull their vertices into the arm chain.
-export function armRegions(geometry, width) {
-  const positions = geometry.attributes.position, nodes = [], lookup = new Map();
-  const vertices = new Uint32Array(positions.count);
-  for (let i = 0; i < positions.count; i++) {
-    const point = new THREE.Vector3().fromBufferAttribute(positions, i);
-    const key = point.toArray().map(value => value.toFixed(5)).join(',');
-    if (!lookup.has(key)) {
-      lookup.set(key, nodes.length);
-      nodes.push({ point, edges: new Set(), cost: Infinity, arm: false });
-    }
-    vertices[i] = lookup.get(key);
-  }
-  const indices = geometry.index?.array || Uint32Array.from({ length: positions.count }, (_, i) => i);
-  for (let i = 0; i < indices.length; i += 3) {
-    for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
-      const first = vertices[indices[i + a]], second = vertices[indices[i + b]];
-      nodes[first].edges.add(second); nodes[second].edges.add(first);
-    }
-  }
-  const queue = [];
-  function push(index, cost) {
-    const entry = { index, cost }; let i = queue.length; queue.push(entry);
-    while (i > 0) {
-      const parent = (i - 1) >> 1;
-      if (queue[parent].cost <= cost) break;
-      queue[i] = queue[parent]; i = parent;
-    }
-    queue[i] = entry;
-  }
-  function pop() {
-    const first = queue[0], last = queue.pop();
-    if (queue.length) {
-      let i = 0;
-      while (i * 2 + 1 < queue.length) {
-        let child = i * 2 + 1;
-        if (child + 1 < queue.length && queue[child + 1].cost < queue[child].cost) child++;
-        if (queue[child].cost >= last.cost) break;
-        queue[i] = queue[child]; i = child;
-      }
-      queue[i] = last;
-    }
-    return first;
-  }
-  nodes.forEach((node, index) => {
-    const { x, y } = node.point;
-    const arm = y >= .60 && y <= .68 && Math.abs(x) >= .135 * width;
-    const body = y < .38 || (y < .68 && Math.abs(x) < .085 * width);
-    if (arm || body) {
-      node.cost = 0; node.arm = arm; push(index, 0);
-    }
-  });
-  while (queue.length) {
-    const { index, cost } = pop(), node = nodes[index];
-    if (cost !== node.cost) continue;
-    for (const next of node.edges) {
-      const neighbor = nodes[next];
-      // Do not take a shortcut from the elbow through the shoulders/head.
-      if (neighbor.point.y > .69) continue;
-      const distance = cost + node.point.distanceTo(neighbor.point);
-      if (distance < neighbor.cost) {
-        neighbor.cost = distance; neighbor.arm = node.arm; push(next, distance);
-      }
-    }
-  }
-  return Uint8Array.from(vertices, index => {
-    const node = nodes[index];
-    if (Number.isFinite(node.cost)) return Number(node.arm);
-    return Number(Math.abs(node.point.x) > .16 * width && node.point.y > .42);
-  });
-}
+const REQUIRED_JOINTS = ['Hips', 'Spine2', 'Neck', 'Head',
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+  'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot'];
 
 export function createHomeRig(source) {
   if (!source?.isObject3D) throw new Error('3D 캐릭터 장면이 필요합니다.');
-  source.updateMatrixWorld(true);
-  const bounds = new THREE.Box3().setFromObject(source);
-  const height = bounds.max.y - bounds.min.y;
-  if (!Number.isFinite(height) || height <= 0) throw new Error('3D 캐릭터 크기가 올바르지 않습니다.');
-  const center = bounds.getCenter(new THREE.Vector3());
-  const width = (bounds.max.x - bounds.min.x) / height / .41;
-  const root = new THREE.Group(); root.name = 'supplied-home-character';
-  const joints = {}, bones = [], meshes = [], materials = new Set();
-  function joint(name, parent, x, y, z = 0) {
-    const bone = new THREE.Bone(); bone.name = name; bone.position.set(x, y, z);
-    parent.add(bone); bones.push(bone); joints[name] = bone; return bone;
+  const model = source.clone(true), clones = new Map(), meshes = [], skeletons = new Set(), materials = new Set();
+  function pair(original, copy) {
+    clones.set(original, copy);
+    original.children.forEach((child, index) => pair(child, copy.children[index]));
   }
-  const hips = joint('hips', root, 0, .5);
-  const spine = joint('spine', hips, 0, .12);
-  const chest = joint('chest', spine, 0, .09);
-  const neck = joint('neck', chest, 0, .13);
-  joint('head', neck, 0, .09);
-  for (const sign of [-1, 1]) {
-    const side = sign < 0 ? 'left' : 'right';
-    const shoulder = joint(`${side}Shoulder`, chest, sign * .125 * width, .05, -.02);
-    const elbow = joint(`${side}Elbow`, shoulder, sign * .04 * width, -.135);
-    joint(`${side}Wrist`, elbow, sign * .015 * width, -.105, .005);
-  }
-  for (const sign of [-1, 1]) {
-    const side = sign < 0 ? 'left' : 'right';
-    const hip = joint(`${side}Hip`, hips, sign * .075 * width, -.05);
-    const knee = joint(`${side}Knee`, hip, sign * .015 * width, -.18);
-    const ankle = joint(`${side}Ankle`, knee, sign * .01 * width, -.195);
-    joint(`${side}Toe`, ankle, 0, -.05, .06);
-  }
-  root.updateMatrixWorld(true);
-  const skeleton = new THREE.Skeleton(bones);
-  source.traverse(part => {
-    if (!part.isMesh) return;
-    const geometry = part.geometry.clone().applyMatrix4(part.matrixWorld);
-    geometry.translate(-center.x, -bounds.min.y, -center.z);
-    geometry.scale(1 / height, 1 / height, 1 / height);
-    const positions = geometry.attributes.position;
-    const regions = armRegions(geometry, width);
-    const indices = new Uint16Array(positions.count * 4);
-    const weights = new Float32Array(positions.count * 4);
-    const expansion = new Float32Array(positions.count * 3);
-    for (let i = 0; i < positions.count; i++) {
-      expansion.set(chestExpansion(positions.getX(i), positions.getY(i), positions.getZ(i), width), i * 3);
-      jointWeights(positions.getX(i), positions.getY(i), positions.getZ(i), width, regions[i]).forEach(([bone, weight], slot) => {
-        indices[i * 4 + slot] = bone; weights[i * 4 + slot] = weight;
-      });
+  pair(source, model);
+  // Object3D.clone keeps a SkinnedMesh's original skeleton reference.
+  // Rebind every joint to this instance, retaining the supplied inverse bind matrices.
+  source.traverse(original => {
+    if (!original.isMesh) return;
+    const mesh = clones.get(original);
+    mesh.geometry = original.geometry.clone();
+    mesh.material = Array.isArray(original.material)
+      ? original.material.map(material => material.clone()) : original.material.clone();
+    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) materials.add(material);
+    if (original.isSkinnedMesh) {
+      const bones = original.skeleton.bones.map(bone => clones.get(bone));
+      if (bones.some(bone => !bone?.isBone)) throw new Error('캐릭터 뼈대 연결을 확인할 수 없습니다.');
+      mesh.skeleton = new THREE.Skeleton(bones, original.skeleton.boneInverses.map(matrix => matrix.clone()));
+      mesh.bindMatrix.copy(original.bindMatrix);
+      mesh.bindMatrixInverse.copy(original.bindMatrixInverse);
+      skeletons.add(mesh.skeleton);
     }
-    geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
-    geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
-    geometry.morphTargetsRelative = true;
-    geometry.morphAttributes.position = [new THREE.Float32BufferAttribute(expansion, 3)];
-    const material = Array.isArray(part.material) ? part.material.map(m => m.clone()) : part.material.clone();
-    for (const m of Array.isArray(material) ? material : [material]) materials.add(m);
-    const mesh = new THREE.SkinnedMesh(geometry, material); mesh.name = part.name || 'supplied-soldier';
-    // Small idle deformations stay inside the camera frame; avoid per-frame bounds
-    // recomputation over all supplied vertices.
     mesh.frustumCulled = false;
-    root.add(mesh); mesh.bind(skeleton); meshes.push(mesh);
+    meshes.push(mesh);
   });
-  if (!meshes.length) throw new Error('3D 캐릭터에 표시할 메시가 없습니다.');
+  function release() {
+    for (const mesh of meshes) mesh.geometry.dispose();
+    for (const material of materials) material.dispose();
+    for (const skeleton of skeletons) skeleton.dispose();
+  }
+  const joints = {};
+  model.traverse(part => {
+    if (part.isBone) joints[part.name.replace(/^mixamorig[:_]?/, '')] = part;
+  });
+  if (!skeletons.size || REQUIRED_JOINTS.some(name => !joints[name])) {
+    release();
+    throw new Error('제공된 캐릭터의 스킨과 필수 관절이 없습니다. 리깅된 GLB가 필요합니다.');
+  }
+  model.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const height = bounds.max.y - bounds.min.y;
+  if (!Number.isFinite(height) || height <= 0) {
+    release();
+    throw new Error('3D 캐릭터 크기가 올바르지 않습니다.');
+  }
+  const center = bounds.getCenter(new THREE.Vector3());
+  const root = new THREE.Group(); root.name = 'supplied-home-character';
+  const normalized = new THREE.Group();
+  normalized.scale.setScalar(1 / height);
+  normalized.position.set(-center.x / height, -bounds.min.y / height, -center.z / height);
+  normalized.add(model); root.add(normalized);
+  root.updateMatrixWorld(true);
+  const rest = new Map();
+  for (const bone of Object.values(joints)) {
+    const inverseWorld = bone.getWorldQuaternion(new THREE.Quaternion()).invert();
+    rest.set(bone, {
+      rotation: bone.quaternion.clone(),
+      x: new THREE.Vector3(1, 0, 0).applyQuaternion(inverseWorld),
+      z: new THREE.Vector3(0, 0, 1).applyQuaternion(inverseWorld)
+    });
+  }
+  const rotation = new THREE.Quaternion();
+  function rotate(name, x, z = 0) {
+    const bone = joints[name], bind = rest.get(bone);
+    bone.quaternion.copy(bind.rotation)
+      .multiply(rotation.setFromAxisAngle(bind.x, x))
+      .multiply(rotation.setFromAxisAngle(bind.z, z));
+  }
   function animate(seconds) {
     const { breath, stretch } = idlePose(seconds);
-    const breathing = breath, loosening = stretch;
-    for (const mesh of meshes) mesh.morphTargetInfluences[0] = breathing;
-    joints.neck.rotation.set(breathing * .008 + loosening * .1,
-      loosening * .12 * Math.sin(seconds * .8), loosening * .07);
-    for (const sign of [-1, 1]) {
-      const side = sign < 0 ? 'left' : 'right';
-      joints[`${side}Shoulder`].position.y = .05 + breathing * .004;
-      joints[`${side}Shoulder`].rotation.set(-breathing * .09 - loosening * .07,
-        0, sign * (breathing * .075 + loosening * .08));
-      joints[`${side}Elbow`].rotation.set(-breathing * .085 - loosening * .24, 0,
-        sign * breathing * .045);
-      joints[`${side}Wrist`].rotation.set(breathing * .035 + loosening * .045, 0,
-        -sign * breathing * .012);
+    // Rotate existing joints only: no inferred weights, scaling or mesh expansion.
+    rotate('Spine2', -breath * .006);
+    rotate('Neck', breath * .004 + stretch * .06, stretch * .04);
+    for (const side of ['Left', 'Right']) {
+      const sign = side === 'Left' ? 1 : -1;
+      rotate(`${side}Shoulder`, -breath * .012, sign * breath * .012);
+      rotate(`${side}Arm`, -breath * .035 - stretch * .04, sign * (breath * .04 + stretch * .045));
+      rotate(`${side}ForeArm`, -breath * .045 - stretch * .12);
+      rotate(`${side}Hand`, breath * .012 + stretch * .025);
     }
     root.userData.motion = stretch > .001 ? 'stretch' : 'breathe';
   }
   animate(0);
-  return { root, joints, meshes, skeleton, materials: [...materials], animate,
-    dispose() {
-      root.removeFromParent();
-      for (const mesh of meshes) mesh.geometry.dispose();
-      for (const material of materials) material.dispose();
-      skeleton.dispose();
-    },
+  return { root, joints, meshes, skeleton: [...skeletons][0], materials: [...materials], animate,
+    dispose() { root.removeFromParent(); release(); },
     setYaw(yaw) { root.rotation.y = yaw; } };
 }
