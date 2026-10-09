@@ -1,10 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=10';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=14';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=6';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=11';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=15';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=7';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=1';
 import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=3';
 import { createShop } from './soldier-shop.mjs?v=3';
-import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
+import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
 const endpoint = 'https://ejrwrwjsgizzxhqybtff.supabase.co/rest/v1/rpc';
@@ -19,9 +20,8 @@ function save(key, value) {
 }
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
-let equipment = {};
+let equipment = {}, weaponItems = [];
 let characterState = { characters: {}, equipped: 'black-water' }, shopReady = false, characterBusy = false;
-const artwork = { k2: 'soldier-weapon-k2.webp?v=2', shotgun: 'soldier-weapon-shotgun.webp?v=2', stick: 'soldier-weapon-stick.webp?v=2' };
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
     throw new Error('서버 장비 정보를 확인할 수 없습니다.');
@@ -37,19 +37,9 @@ function updateEquipment(result) {
   identity.gold = result.gold; updateWallet(identity);
   inventory.refresh();
 }
-function fillWeaponCard(card, id) {
-  const level = weaponLevel(equipment[id]?.level);
-  const grade = equipment[id]?.grade || 'D';
-  card.dataset.grade = grade;
-  card.querySelector('.grade-frame').src = `soldier-grade-${grade.toLowerCase()}.webp`;
-  card.querySelector('.grade-frame').alt = `${grade}급`;
-  card.querySelector('.weapon-level').textContent = weaponLevelLabel(level);
-  const image = card.querySelector('.weapon-image');
-  image.hidden = !artwork[id];
-  if (artwork[id]) image.src = artwork[id];
-  else image.removeAttribute('src');
-  image.alt = WEAPONS[id].name;
-  card.querySelector('.weapon-name').textContent = WEAPONS[id].name;
+function fillWeaponCard(card, id, item) {
+  fillCard(card, id, item || weaponItems.find(entry => entry.weapon === id && entry.equipped)
+    || equipment[id] || { grade: 'D', level: 1 });
 }
 function renderWeaponCard(slot) {
   fillWeaponCard($(slot).querySelector('.equipment-card'), loadout[slot]);
@@ -59,14 +49,30 @@ for (const slot of Object.keys(loadout)) {
 }
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
+  getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
-  renderCard(id) {
+  renderCard(id, item) {
     if (CHARACTERS[id]) return characterCard(id, characterState.characters[id]?.level || 1);
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
-    fillWeaponCard(card, id); return card;
+    fillWeaponCard(card, id, item); return card;
   }
 });
+async function changeWeaponItem(action = 'read', item = null, weapon = null) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  const result = await rpc('soldier_weapon_items_api', {
+    p_token: identity.token, p_action: action, p_item: item?.id || null,
+    p_level: action === 'upgrade' ? item.level : null, p_weapon: weapon
+  });
+  const items = validateWeaponItems(result);
+  for (const slot of ['primary', 'secondary', 'melee']) {
+    if (inventoryWeapons(equipment, slot).length + items.filter(entry => WEAPONS[entry.weapon].slot === slot).length > INVENTORY_LIMIT) {
+      throw new Error('분류별 최대 보유 인벤토리 50개를 초과했습니다.');
+    }
+  }
+  weaponItems = items; identity.gold = result.gold; updateWallet(identity);
+  Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
+}
 const shop = createShop({
   getState: () => characterState, isReady: () => shopReady,
   buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters()
@@ -142,6 +148,11 @@ async function connect() {
       console.error('장비 불러오기 오류', error);
     }
     Object.keys(loadout).forEach(renderWeaponCard);
+    try { await changeWeaponItem(); }
+    catch (error) {
+      $('equipment-status').textContent += ` 보상 장비 불러오기 실패: ${error.message} soldier-weapon-rewards.sql 실행 후 새로고침하세요.`;
+      console.error('보상 장비 불러오기 오류', error);
+    }
     try { await refreshCharacters(); }
     catch (error) {
       $('shop-status').textContent = `상점 연결 실패: ${error.message} soldier-shop.sql 실행 후 새로고침하세요.`;

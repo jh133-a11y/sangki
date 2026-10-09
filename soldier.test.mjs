@@ -25,20 +25,20 @@ test('home displays weapon cards and saved levels without level-up buttons', () 
   assert.doesNotMatch(html, /weapon-upgrade|>레벨업</);
   assert.doesNotMatch(html, /<select id="(?:primary|secondary|melee)"/);
   assert.doesNotMatch(client, /sanggi-soldier-loadout/);
-  assert.doesNotMatch(client, /p_weapon:|p_level:/);
+  assert.match(client, /rpc\('soldier_weapon_items_api'/);
   assert.match(client, /rpc\('soldier_equipment_api', \{ p_token: identity.token \}\)/);
 });
 test('weapon names use a shared separate label rather than lettering baked into artwork', () => {
-  const client = readFileSync(new URL('./soldier.js', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('./soldier-weapon-items.mjs', import.meta.url), 'utf8');
   const css = readFileSync(new URL('./soldier.css', import.meta.url), 'utf8');
-  assert.match(client, /card\.querySelector\('\.weapon-name'\)\.textContent = WEAPONS\[id\]\.name/);
+  assert.match(client, /card\.querySelector\('\.weapon-name'\)\.textContent = WEAPONS\[weapon\]\.name/);
   const style = css.match(/\.weapon-level, \.weapon-name \{([^}]+)\}/)[1];
   for (const declaration of ['font-weight: 900', 'font-style: italic', 'color: white']) {
     assert.ok(style.includes(declaration));
   }
   const position = css.match(/\n\.weapon-name \{([^}]+)\}/)[1];
   assert.ok(position.includes('text-align: center') && position.includes('bottom: 5%'));
-  assert.match(client, /card\.querySelector\('\.weapon-level'\)\.textContent = weaponLevelLabel\(level\)/);
+  assert.match(client, /card\.querySelector\('\.weapon-level'\)\.textContent = weaponLevelLabel\(item\.level\)/);
   assert.doesNotMatch(css, /\.weapon-image[^}]+\+\s*\.weapon-name\s*\{\s*display:\s*none/);
   assert.ok(Object.values(WEAPONS).every(weapon => typeof weapon.name === 'string' && weapon.name.length > 0));
 });

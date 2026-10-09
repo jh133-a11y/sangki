@@ -104,6 +104,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-comparison { display: flex; flex-direction: column; justify-content: center; }
 .inventory-comparison > p { margin: auto; padding: 18px; border: 2px solid #b5bcc4; background: #e1e4e8; color: #66717a; font-size: clamp(16px, 2.4vw, 32px); font-weight: 900; text-align: center; }
 .inventory-item-detail { display: grid; grid-template-columns: minmax(90px, 28%) 1fr; gap: 16px; align-items: start; }
+.inventory-item-detail > .weapon-item-action { grid-column: 2; justify-self: end; }
 .inventory-item-detail dl { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; margin: 0; font-size: clamp(12px, 1.3vw, 18px); font-weight: 700; }
 .inventory-item-detail dt { padding: 3px; }
 .inventory-item-detail dd { margin: 0; padding: 3px 8px; text-align: center; background: #515563; color: #fff; border-radius: 4px; }

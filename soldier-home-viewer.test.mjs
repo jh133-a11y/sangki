@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from './vendor/three.module.min.js';
-import { createHomeRig, idlePose, jointWeights, HOME_MODEL } from './soldier-home-rig.mjs';
+import { createHomeRig, idlePose, jointWeights, JOINT_NAMES, HOME_MODEL } from './soldier-home-rig.mjs';
 import { CHARACTERS } from './soldier-characters.mjs';
 
 const modelFixtures = [
@@ -88,13 +88,17 @@ test(`${file} receives fresh joints and actual breathing/stretch deformation`, (
   for (const time of [1.125, 7]) {
     rig.animate(time); rig.root.updateMatrixWorld(true); rig.skeleton.update();
     const moved = { chest: 0, leftArm: 0, rightArm: 0, head: 0 };
+    const hands = { left: [], right: [] };
     for (const { mesh, index: i, position: resting } of rest) {
       const position = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i);
       const actual = mesh.applyBoneTransform(i, position.clone());
       const displacement = actual.distanceTo(resting);
       assert.ok(Number.isFinite(displacement));
       if (position.y < .4) assert.ok(displacement < 1e-6);
-      if (displacement <= .001) continue;
+      if (time === 1.125 && position.y > .46 && position.y < .55 && Math.abs(position.x) > .14) {
+        hands[position.x < 0 ? 'left' : 'right'].push(actual.y - resting.y);
+      }
+      if (displacement <= .0002) continue;
       if (position.y > .86) moved.head++;
       else if (position.y > .5 && position.y < .75) {
         if (position.x < -.14) moved.leftArm++;
@@ -103,6 +107,12 @@ test(`${file} receives fresh joints and actual breathing/stretch deformation`, (
       }
     }
     for (const region of ['chest', 'leftArm', 'rightArm']) assert.ok(moved[region] > 20, `${time}: ${region}=${moved[region]}`);
+    if (time === 1.125) {
+      for (const values of Object.values(hands)) {
+        assert.ok(values.length > 20);
+        assert.ok(values.reduce((sum, value) => sum + value, 0) / values.length > .002, `${file}: hands must lift during inhalation`);
+      }
+    }
     if (time === 7) assert.ok(moved.head > 20);
   }
 });
@@ -120,12 +130,18 @@ test('all character IDs select their own models and independent rigs release GPU
   assert.equal(geometryDisposed, 1); assert.equal(materialDisposed, 1);
 });
 
-test('runtime rig preserves supplied vertices, UVs, indices and material while adding seven bones', () => {
+test('runtime rig preserves supplied vertices, UVs, indices and material while adding nineteen articulated bones', () => {
   const source = fixture(), original = source.children[0];
   const rig = createHomeRig(source), mesh = rig.meshes[0];
   assert.ok(mesh.isSkinnedMesh);
-  assert.equal(rig.skeleton.bones.length, 7);
+  assert.deepEqual(rig.skeleton.bones.map(bone => bone.name), JOINT_NAMES);
   assert.equal(rig.joints.leftElbow.parent, rig.joints.leftShoulder);
+  assert.equal(rig.joints.leftWrist.parent, rig.joints.leftElbow);
+  assert.equal(rig.joints.rightWrist.parent, rig.joints.rightElbow);
+  for (const side of ['left', 'right']) {
+    assert.equal(rig.joints[`${side}Ankle`].parent, rig.joints[`${side}Knee`]);
+    assert.equal(rig.joints[`${side}Toe`].parent, rig.joints[`${side}Ankle`]);
+  }
   const bounds = new THREE.Box3().setFromObject(source), center = bounds.getCenter(new THREE.Vector3());
   for (let i = 0; i < original.geometry.attributes.position.count; i++) {
     const expected = new THREE.Vector3().fromBufferAttribute(original.geometry.attributes.position, i);
@@ -144,14 +160,15 @@ test('runtime rig preserves supplied vertices, UVs, indices and material while a
 });
 
 test('weight regions keep feet fixed, separate left/right arms and blend smoothly at joints', () => {
-  assert.deepEqual(jointWeights(.1, .25), [[0, 1]]);
-  assert.deepEqual(jointWeights(0, .96), [[2, 1]]);
-  assert.deepEqual(jointWeights(-.18, .55), [[4, 1]]);
-  assert.deepEqual(jointWeights(.18, .55), [[6, 1]]);
+  assert.deepEqual(jointWeights(.1, .20), [[16, 1]]);
+  assert.deepEqual(jointWeights(0, .96), [[4, 1]]);
+  assert.deepEqual(jointWeights(-.18, .50), [[7, 1]]);
+  assert.deepEqual(jointWeights(.18, .50), [[10, 1]]);
+  assert.deepEqual(jointWeights(.1, .02, .1), [[18, 1]]);
   for (const x of [-.18, -.12, 0, .12, .18]) {
-    let previous = new Array(7).fill(0);
+    let previous = new Array(JOINT_NAMES.length).fill(0);
     for (let y = 0; y <= 1; y += .001) {
-      const values = new Array(7).fill(0);
+      const values = new Array(JOINT_NAMES.length).fill(0);
       const weights = jointWeights(x, y);
       assert.ok(weights.length <= 4);
       assert.ok(Math.abs(weights.reduce((sum, [, weight]) => sum + weight, 0) - 1) < 1e-10);
@@ -173,16 +190,17 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   }
   const foot = vertex(0), chest = vertex(4), head = vertex(5), arm = vertex(2);
   rig.animate(1);
-  assert.ok(vertex(4).distanceTo(chest) > .003);
+  assert.ok(vertex(4).distanceTo(chest) > .0005);
   assert.ok(vertex(2).distanceTo(arm) > .003);
   assert.ok(Math.abs(rig.joints.leftShoulder.rotation.x) > .02);
-  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .015);
+  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .1);
+  assert.ok(Math.abs(rig.joints.leftWrist.rotation.x) > .02);
   assert.ok(vertex(0).distanceTo(foot) < 1e-7);
   rig.animate(17);
   assert.equal(rig.root.userData.motion, 'stretch');
   assert.ok(vertex(5).distanceTo(head) > .0001);
   assert.ok(vertex(2).distanceTo(arm) > .0001);
-  assert.ok(rig.joints.leftElbow.rotation.x > .1);
+  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .05);
   assert.ok(vertex(0).distanceTo(foot) < 1e-7);
   for (let time = 0; time < 48; time += .02) {
     assert.ok(Math.abs(idlePose(time).stretch - idlePose(time + .02).stretch) < .02);
@@ -195,6 +213,23 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   }
   assert.equal(idlePose(7).stretch, 1);
   assert.equal(idlePose(17).stretch, 1);
+});
+
+test('breathing rotates limb joints without scaling the waist, arms or hands', () => {
+  const rig = createHomeRig(fixture());
+  const shoulder = new THREE.Vector3(), elbow = new THREE.Vector3(), wrist = new THREE.Vector3();
+  let upperLength, foreLength;
+  for (let seconds = 0; seconds < 20; seconds += .1) {
+    rig.animate(seconds); rig.root.updateMatrixWorld(true);
+    for (const bone of rig.skeleton.bones) assert.deepEqual(bone.scale.toArray(), [1, 1, 1]);
+    rig.joints.leftShoulder.getWorldPosition(shoulder);
+    rig.joints.leftElbow.getWorldPosition(elbow);
+    rig.joints.leftWrist.getWorldPosition(wrist);
+    upperLength ??= shoulder.distanceTo(elbow);
+    foreLength ??= elbow.distanceTo(wrist);
+    assert.ok(Math.abs(shoulder.distanceTo(elbow) - upperLength) < 1e-10);
+    assert.ok(Math.abs(elbow.distanceTo(wrist) - foreLength) < 1e-10);
+  }
 });
 
 test('invalid model input produces an explicit error', () => {

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=10';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=11';
 import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export { idlePose };

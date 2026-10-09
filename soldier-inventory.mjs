@@ -1,4 +1,4 @@
-import { WEAPONS, weaponLevelLabel } from './soldier-core.mjs?v=3';
+import { WEAPONS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=3';
 import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export const INVENTORY_LIMIT = 50;
@@ -26,11 +26,12 @@ export function characterInventoryStats(id) {
   ];
 }
 
-export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard }) {
+export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard,
+  getWeaponItems = () => [], changeWeaponItem }) {
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
-  let slot = 'primary', sorted = false, keyboardOpened = false;
+  let slot = 'primary', sorted = false, keyboardOpened = false, weaponBusy = false;
   function updateWallet() {
     const wallet = $('inventory-wallet');
     wallet.replaceChildren(...[...document.querySelectorAll('.currency-bar .currency')].map(currency => {
@@ -57,9 +58,42 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     }
     return list;
   }
-  function content(id) {
+  function weaponAction(label, action, item, weapon) {
+    const button = document.createElement('button'); button.type = 'button';
+    button.className = 'weapon-item-action';
+    button.textContent = label; button.disabled = weaponBusy;
+    button.addEventListener('click', async () => {
+      if (weaponBusy) return;
+      if (action === 'upgrade' && !window.confirm(`${WEAPONS[item.weapon].name} ${item.grade}급을 ${weaponUpgradeCost(item.grade, item.level).toLocaleString('ko-KR')}골드로 강화할까요? 전투 수치는 변경되지 않습니다.`)) return;
+      weaponBusy = true; render();
+      $('inventory-status').textContent = '무기 정보를 저장하는 중입니다…';
+      try {
+        await changeWeaponItem(action, item, weapon);
+        $('inventory-status').textContent = action === 'upgrade'
+          ? '무기 레벨을 강화했습니다. 등급별 전투 보너스는 아직 적용되지 않습니다.'
+          : '무기 카드를 장착했습니다.';
+      } catch (error) {
+        $('inventory-status').textContent = `무기 변경 실패: ${error.message}`;
+        console.error('무기 변경 오류', error);
+        try { await changeWeaponItem('read'); }
+        catch (refreshError) {
+          $('inventory-status').textContent += ` 장비 재확인 실패: ${refreshError.message} 새로고침하세요.`;
+          console.error('무기 재확인 오류', refreshError);
+        }
+      } finally { weaponBusy = false; render(); updateWallet(); }
+    });
+    return button;
+  }
+  function content(id, item) {
     const body = document.createElement('div'); body.className = 'inventory-item-detail';
-    body.append(renderCard(id), stats(id));
+    body.append(renderCard(id, item), stats(id));
+    if (item && changeWeaponItem) {
+      const cost = weaponUpgradeCost(item.grade, item.level);
+      if (cost !== null) body.append(weaponAction(`강화 · ${cost.toLocaleString('ko-KR')}골드`, 'upgrade', item));
+      else {
+        const max = document.createElement('p'); max.textContent = '최대 레벨 (MAX)'; body.append(max);
+      }
+    }
     if (CHARACTERS[id]) {
       body.classList.add('character-item-detail');
       const specialty = document.createElement('p'); specialty.className = 'character-specialty';
@@ -74,13 +108,14 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   function render() {
     const equipment = getEquipment(), loadout = getLoadout();
     const current = slot === 'character' ? getCharacters().equipped : loadout[slot];
+    const currentItem = getWeaponItems().find(item => item.weapon === current && item.equipped);
     dialog.classList.toggle('character-inventory', slot === 'character');
     for (const tab of tabs) {
       const selected = tab.dataset.equipmentTab === slot;
       tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
     }
     $('equipment-panel').setAttribute('aria-labelledby', `tab-${slot}`);
-    $('inventory-level').textContent = weaponLevelLabel(slot === 'character' ? getCharacters().characters[current]?.level || 1 : equipment[current]?.level || 1);
+    $('inventory-level').textContent = weaponLevelLabel(slot === 'character' ? getCharacters().characters[current]?.level || 1 : currentItem?.level || equipment[current]?.level || 1);
     if (slot === 'character') {
       const level = getCharacters().characters[current]?.level || 1;
       const progress = document.createElement('span'); progress.className = 'character-level-bar';
@@ -91,7 +126,10 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       }
       $('inventory-level').append(progress);
     }
-    $('inventory-current').replaceChildren(content(current));
+    $('inventory-current').replaceChildren(content(current, currentItem));
+    if (currentItem && changeWeaponItem) {
+      $('inventory-current').append(weaponAction('기본 D급 무기 장착', 'restore', null, current));
+    }
     if (slot === 'character' && current !== 'black-water') {
       const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = '기본 캐릭터 장착';
       restore.className = 'character-restore';
@@ -105,23 +143,32 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     }
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);
-    let ids = slot === 'character' ? Object.keys(getCharacters().characters) : inventoryWeapons(equipment, slot);
-    if (sorted) ids = ids.sort((a, b) => (WEAPONS[a]?.name || CHARACTERS[a]?.name || a).localeCompare(WEAPONS[b]?.name || CHARACTERS[b]?.name || b, 'ko'));
-    $('inventory-count').textContent = `${ids.length} / ${INVENTORY_LIMIT}`;
+    let entries = slot === 'character'
+      ? Object.keys(getCharacters().characters).map(id => ({ id }))
+      : [
+        ...inventoryWeapons(equipment, slot).map(id => ({ id })),
+        ...getWeaponItems().filter(item => WEAPONS[item.weapon].slot === slot).map(item => ({ id: item.weapon, item }))
+      ];
+    if (sorted) entries.sort((a, b) => (WEAPONS[a.id]?.name || CHARACTERS[a.id]?.name || a.id).localeCompare(WEAPONS[b.id]?.name || CHARACTERS[b.id]?.name || b.id, 'ko'));
+    $('inventory-count').textContent = `${entries.length} / ${INVENTORY_LIMIT}`;
     $('inventory-items').replaceChildren();
-    if (!ids.length) {
+    if (!entries.length) {
       const empty = document.createElement('p');
       empty.textContent = '보유 장비가 없습니다.';
       $('inventory-items').append(empty);
     }
-    for (const id of ids) {
+    for (const { id, item } of entries) {
       const button = document.createElement('button'); button.type = 'button';
-      button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || CHARACTERS[id]?.name} 비교`);
-      button.append(renderCard(id));
+      button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || CHARACTERS[id]?.name}${item ? ` ${item.grade}급 ${weaponLevelLabel(item.level)}` : ''} 비교`);
+      button.disabled = weaponBusy;
+      button.append(renderCard(id, item));
       button.addEventListener('click', () => {
         const title = document.createElement('h2');
-        title.textContent = id === current ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
-        $('inventory-comparison').replaceChildren(title, content(id));
+        title.textContent = (item ? item.equipped : id === current && !currentItem) ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
+        $('inventory-comparison').replaceChildren(title, content(id, item));
+        if (item && !item.equipped && changeWeaponItem) {
+          $('inventory-comparison').append(weaponAction('무기 장착', 'equip', item));
+        }
         if (slot === 'character' && id !== current) {
           const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 장착';
           equip.addEventListener('click', async () => {
