@@ -102,8 +102,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .grade-frame { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
 .weapon-level { position: absolute; top: 8%; right: 10%; font-size: clamp(9px, 1.3vw, 17px); font-weight: 900; font-style: italic; color: white; text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 2px #000; }
 .weapon-image { position: absolute; width: 88%; height: 70%; object-fit: contain; left: 6%; top: 23%; }
-.weapon-name { position: absolute; left: 4%; bottom: 5%; width: 92%; text-align: center; font-size: 10px; font-weight: bold; color: white; text-shadow: 0 1px 3px #000; }
-.weapon-image:not([hidden]) + .weapon-name { display: none; }
+.weapon-name { position: absolute; left: 4%; bottom: 5%; width: 92%; text-align: center; font-size: clamp(9px, 1.2vw, 16px); font-weight: 900; font-style: italic; color: white; text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 2px #000; }
 #home .equipment-slot select { display: block; width: 100%; min-height: 28px; padding: 3px 0; margin-top: 3px; font-size: 10px; }
 .equipment-slot:focus-within { outline: 2px solid #ffe39c; }
 #equipment-status { grid-column: 1 / -1; margin: 0; font-size: 9px; overflow-wrap: anywhere; }

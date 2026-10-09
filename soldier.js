@@ -17,7 +17,7 @@ function save(key, value) {
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
 let equipment = {};
-const artwork = { k2: 'soldier-weapon-k2.webp', shotgun: 'soldier-weapon-shotgun.webp', stick: 'soldier-weapon-stick.webp' };
+const artwork = { k2: 'soldier-weapon-k2.webp?v=2', shotgun: 'soldier-weapon-shotgun.webp?v=2', stick: 'soldier-weapon-stick.webp?v=2' };
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
     throw new Error('서버 장비 정보를 확인할 수 없습니다.');

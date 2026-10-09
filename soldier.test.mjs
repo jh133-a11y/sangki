@@ -28,6 +28,17 @@ test('home displays weapon cards and saved levels without level-up buttons', () 
   assert.doesNotMatch(client, /p_weapon:|p_level:/);
   assert.match(client, /rpc\('soldier_equipment_api', \{ p_token: identity.token \}\)/);
 });
+test('weapon names use a shared separate label rather than lettering baked into artwork', () => {
+  const client = readFileSync(new URL('./soldier.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('./soldier.css', import.meta.url), 'utf8');
+  assert.match(client, /card\.querySelector\('\.weapon-name'\)\.textContent = WEAPONS\[id\]\.name/);
+  const style = css.match(/\.weapon-name \{([^}]+)\}/)[1];
+  for (const declaration of ['text-align: center', 'bottom: 5%', 'font-weight: 900', 'font-style: italic', 'color: white']) {
+    assert.ok(style.includes(declaration));
+  }
+  assert.doesNotMatch(css, /\.weapon-image[^}]+\+\s*\.weapon-name\s*\{\s*display:\s*none/);
+  assert.ok(Object.values(WEAPONS).every(weapon => typeof weapon.name === 'string' && weapon.name.length > 0));
+});
 test('all ten weapons match server-authoritative specifications', () => {
   assert.equal(Object.keys(WEAPONS).length, 10);
   for (const [id, spec] of Object.entries(WEAPONS)) {
