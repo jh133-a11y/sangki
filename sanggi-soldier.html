@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
-  <link rel="preload" as="image" href="soldier-home-model-preview.webp" fetchpriority="high">
   <link rel="preload" as="fetch" href="soldier-home-model.glb?v=1" crossorigin>
   <link rel="stylesheet" href="soldier.css?v=9">
 </head>
@@ -13,7 +12,6 @@
   <canvas id="world" aria-label="3D 캐릭터 및 게임 화면"></canvas>
   <main id="home">
     <div class="home-atmosphere" aria-hidden="true"></div>
-    <img id="home-character-preview" class="home-character home-character-preview" src="soldier-home-model-preview.webp" width="512" height="722" alt="3D 캐릭터 미리보기" fetchpriority="high">
     <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="Black Water 관절형 3D 캐릭터. 드래그 또는 좌우 방향키로 회전"></canvas>
     <p id="character-status" class="character-rotate-hint" role="status">3D 캐릭터 모델 불러오는 중</p>
     <div class="currency-bar" aria-label="보유 재화">

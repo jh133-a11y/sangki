@@ -129,12 +129,9 @@ test('home has automatic motion without pose or motion buttons', () => {
   assert.ok(!css.includes('.home-character:focus-visible { outline:'));
 });
 
-test('home displays a lightweight model preview before loading without reducing GLB quality', () => {
+test('home starts loading the model without displaying a stationary preview', () => {
   const html = readFileSync('sanggi-soldier.html', 'utf8');
-  assert.ok(html.includes('id="home-character-preview"'));
-  assert.ok(html.includes('as="image" href="soldier-home-model-preview.webp"'));
+  assert.ok(!html.includes('id="home-character-preview"'));
+  assert.ok(!html.includes('soldier-home-model-preview.webp'));
   assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=1" crossorigin'));
-  assert.ok(readFileSync('soldier-home-model-preview.webp').length < 250000);
-  const viewer = readFileSync('soldier-home-viewer.mjs', 'utf8');
-  assert.ok(viewer.indexOf("sync(); canvas.dataset.viewReady = 'true'") < viewer.indexOf('preview.hidden = true'));
 });
