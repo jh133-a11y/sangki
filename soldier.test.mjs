@@ -42,6 +42,16 @@ test('weapon names use a shared separate label rather than lettering baked into 
   assert.doesNotMatch(css, /\.weapon-image[^}]+\+\s*\.weapon-name\s*\{\s*display:\s*none/);
   assert.ok(Object.values(WEAPONS).every(weapon => typeof weapon.name === 'string' && weapon.name.length > 0));
 });
+test('home offers equipment inventory and icon-only initial zero balances', () => {
+  const html = readFileSync(new URL('./sanggi-soldier.html', import.meta.url), 'utf8');
+  assert.match(html, /id="gold">0</);
+  assert.match(html, /id="gems">0</);
+  assert.doesNotMatch(html, /class="currency-name"/);
+  assert.match(html, /id="equipment-dialog"/);
+  for (const slot of ['primary', 'secondary', 'melee', 'character']) {
+    assert.ok(html.includes(`data-equipment-tab="${slot}"`));
+  }
+});
 test('all ten weapons match server-authoritative specifications', () => {
   assert.equal(Object.keys(WEAPONS).length, 10);
   for (const [id, spec] of Object.entries(WEAPONS)) {

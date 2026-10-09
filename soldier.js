@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=13';
+import { createEquipmentInventory } from './soldier-inventory.mjs?v=1';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
@@ -28,9 +29,9 @@ function updateEquipment(result) {
   }
   equipment = result.equipment;
   identity.gold = result.gold; updateWallet(identity);
+  inventory.refresh();
 }
-function renderWeaponCard(slot) {
-  const id = loadout[slot], card = $(slot).querySelector('.equipment-card');
+function fillWeaponCard(card, id) {
   const level = weaponLevel(equipment[id]?.level);
   const grade = equipment[id]?.grade || 'D';
   card.dataset.grade = grade;
@@ -38,13 +39,30 @@ function renderWeaponCard(slot) {
   card.querySelector('.grade-frame').alt = `${grade}급`;
   card.querySelector('.weapon-level').textContent = weaponLevelLabel(level);
   const image = card.querySelector('.weapon-image');
-  image.hidden = !artwork[id]; image.src = artwork[id] || '';
+  image.hidden = !artwork[id];
+  if (artwork[id]) image.src = artwork[id];
+  else image.removeAttribute('src');
   image.alt = WEAPONS[id].name;
   card.querySelector('.weapon-name').textContent = WEAPONS[id].name;
+}
+function renderWeaponCard(slot) {
+  fillWeaponCard($(slot).querySelector('.equipment-card'), loadout[slot]);
 }
 for (const slot of Object.keys(loadout)) {
   renderWeaponCard(slot);
 }
+const inventory = createEquipmentInventory({
+  getEquipment: () => equipment, getLoadout: () => loadout,
+  renderCard(id) {
+    if (id === 'character') {
+      const card = $('character').cloneNode(true);
+      card.removeAttribute('id'); card.removeAttribute('role'); card.removeAttribute('tabindex'); card.removeAttribute('aria-haspopup');
+      return card;
+    }
+    const card = $('primary').querySelector('.equipment-card').cloneNode(true);
+    fillWeaponCard(card, id); return card;
+  }
+});
 let identity = null, room = null, myId = null, mode = 'home', online = false;
 let ready = false, networkBusy = false, networkErrors = 0, lastNet = 0, lobbyTimer = null;
 let entities = [], matchEnds = 0, lastFrame = performance.now(), slot = 'primary';
@@ -115,12 +133,15 @@ function updateRank(xp) {
 }
 function updateWallet(profile) {
   if (profile.home_version !== 2) {
-    $('gold').textContent = '—'; $('gems').textContent = '—'; return;
+    $('gold').textContent = '0'; $('gems').textContent = '0';
+    for (const name of ['gold', 'gems']) $(name).title = '재화 정보 미연결: soldier-home-upgrade.sql 실행 필요';
+    return;
   }
   for (const name of ['gold', 'gems']) {
     const value = String(profile[name]);
     if (!/^\d+$/.test(value)) throw new Error('재화 정보를 확인할 수 없습니다.');
     $(name).textContent = BigInt(value).toLocaleString('ko-KR');
+    $(name).removeAttribute('title');
     identity[name] = value;
   }
   identity.wins = Number(profile.wins);
