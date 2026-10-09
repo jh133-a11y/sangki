@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { createSoldierModel, createHomeCharacter, loadCharacterTextures } from './soldier-character.mjs?v=3';
+import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=1';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
@@ -133,6 +134,7 @@ function renderRankDetail() {
 $('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
 let renderer, scene, camera, homeCharacter, characterTextures, hand, flash;
 try {
+  homeCharacter = await createHomeViewer($('home-character'), $('character-status'), [...document.querySelectorAll('[data-character-view]')]);
   characterTextures = await loadCharacterTextures();
   renderer = new THREE.WebGLRenderer({ canvas: $('world'), antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
@@ -149,7 +151,6 @@ try {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(110, 110), new THREE.MeshStandardMaterial({ color: '#778569', roughness: 1 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
   makeMap();
-  homeCharacter = createHomeCharacter($('home-character'), $('character-status'), characterTextures);
   scene.add(camera);
   hand = new THREE.Group(); camera.add(hand);
   flash = new THREE.PointLight('#ffc67b', 0, 4); flash.position.set(.3, -.2, -.9); camera.add(flash);
@@ -616,7 +617,6 @@ function frame(time) {
   const dt = Math.min(.05, (time - lastFrame) / 1000), now = time / 1000; lastFrame = time;
   if (mode !== 'game') {
     hand.visible = false;
-    if (!$('home').hidden) homeCharacter.render();
     return;
   } else {
     if (!online && now >= matchEnds) { finish(); return; }

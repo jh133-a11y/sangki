@@ -4,19 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
-  <link rel="stylesheet" href="soldier.css?v=5">
+  <link rel="stylesheet" href="soldier.css?v=6">
 </head>
 <body>
+  <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
   <canvas id="world" aria-label="3D 캐릭터 및 게임 화면"></canvas>
   <main id="home">
     <div class="home-atmosphere" aria-hidden="true"></div>
-    <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="사진 기반 Black Water 입체 캐릭터. 드래그 또는 좌우 방향키로 회전, Home 키로 정면 복귀"></canvas>
-    <p id="character-status" class="character-rotate-hint" role="status">드래그하여 360° 회전 · 좌우 방향키 · Home 정면</p>
+    <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="Black Water 고화질 원본 사진. 드래그 또는 좌우 방향키로 사진 전환"></canvas>
+    <div class="character-view-controls" role="group" aria-label="캐릭터 사진 각도">
+      <button data-character-view="0" type="button" aria-pressed="true">정면</button>
+      <button data-character-view="1" type="button" aria-pressed="false">측후면</button>
+      <button data-character-view="2" type="button" aria-pressed="false">뒷면</button>
+    </div>
+    <p id="character-status" class="character-rotate-hint" role="status">고화질 캐릭터 사진 불러오는 중</p>
     <div class="currency-bar" aria-label="보유 재화">
       <div class="currency gold"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="#dfa92a" stroke="#9b6a0e" stroke-width="2"/><circle cx="16" cy="16" r="9" fill="#f7d659" stroke="#fff0a1"/><path d="m16 8 2 5 5 1-4 4 1 5-4-3-4 3 1-5-4-4 5-1Z" fill="#bc8416"/></svg><span class="currency-name">골드</span><strong id="gold">—</strong></div>
       <div class="currency gems"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m8 7 16 0 5 8-13 14L3 15Z" fill="#c1e4eb" stroke="#8eb4c3"/><path d="m8 7 8 22 8-22M3 15h26M8 7l8 8 8-8" fill="none" stroke="#f3fdff"/></svg><span class="currency-name">보석</span><strong id="gems">—</strong></div>
     </div>
     <div class="home-top-actions"><a href="index.html" aria-label="홈으로">⌂</a><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
+    <div class="soldier-music-controls">
+      <button id="soldier-music-toggle" type="button" aria-pressed="true">음악 켜짐</button>
+      <label for="soldier-music-volume">음량 <output id="soldier-music-volume-label" for="soldier-music-volume">25%</output></label>
+      <input id="soldier-music-volume" type="range" min="0" max="100" step="1" value="25" aria-label="솔져 홈 음악 음량" aria-valuetext="25%">
+      <span id="soldier-music-status" role="status"></span>
+    </div>
     <header class="profile">
       <button id="rank-open" class="rank-badge" type="button" aria-label="계급 및 승급 정보"><svg id="rank-badge" viewBox="0 0 64 64" role="img" aria-label="이등병 계급"></svg></button>
       <div class="profile-copy"><strong id="nickname">투자 닉네임 확인 중</strong><p id="rank">이등병 · 0 XP</p><div class="rank-meter" role="progressbar" id="rank-meter" aria-label="다음 계급 경험치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="rank-fill"></span></div><small id="rank-percent">0%</small></div>
@@ -75,6 +87,7 @@
   <dialog id="rank-dialog"><h2>계급 정보</h2><button class="close" data-close type="button" aria-label="닫기">×</button><p id="rank-detail"></p><p id="rank-next"></p><p id="rank-wins"></p><p>온라인 처치당 20 XP, 단독 1위 승리 시 추가 100 XP. 승급에 필요한 경험치는 단계마다 약 1.5배 증가합니다. AI 연습과 공동 1위는 승리 보너스에 반영되지 않습니다.</p></dialog>
   <dialog id="result"><h2>경기 종료</h2><div id="result-scores"></div><p>온라인 처치당 20 XP · 단독 1위 승리 보너스 100 XP · AI 연습은 계급에 반영되지 않습니다.</p><button id="result-close" type="button">홈으로</button></dialog>
   <div id="rotate" role="status">휴대폰을 가로로 돌려 주세요.<br>상기 솔져는 가로 화면으로 플레이합니다.</div>
-  <script type="module" src="soldier.js?v=6"></script>
+  <script src="soldier-music.js?v=1"></script>
+  <script type="module" src="soldier.js?v=7"></script>
 </body>
 </html>

@@ -62,10 +62,18 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 /* Preserve the supplied character artwork without cropping the equipment card. */
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
-.home-character { position: absolute; height: 88%; width: 37%; bottom: 3%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
+.home-character { position: absolute; height: 81%; width: 37%; bottom: 10%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
 .home-character:active { cursor: grabbing; }
 .home-character:focus-visible { outline: 2px solid #b8d5e8; outline-offset: -4px; }
 .character-rotate-hint { position: absolute; left: 51%; bottom: 0; transform: translateX(-50%); width: 37%; margin: 0; padding: 4px; font-size: 10px; color: #cfdae5; text-shadow: 0 1px 3px #000; text-align: center; }
+.character-view-controls { position: absolute; left: 51%; bottom: 4%; transform: translateX(-50%); display: flex; gap: 3px; width: 35%; justify-content: center; }
+.character-view-controls button { flex: 1; max-width: 90px; min-width: 0; padding: 3px; font-size: 11px; background: #172331da; }
+.character-view-controls button[aria-pressed="true"] { border-color: #c1d5eb; background: #3b536dda; }
+@media (max-height: 420px) {
+  .home-character { height: 76%; bottom: 15%; }
+  .character-view-controls { bottom: 3%; }
+  .character-rotate-hint { font-size: 8px; padding: 0; }
+}
 .currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
 .currency { display: flex; gap: 5px; align-items: center; min-width: 0; flex: 1; height: 32px; background: linear-gradient(#3e495acc, #151e29e0); border-radius: 18px; border: 1px solid #75869855; box-shadow: 0 2px 4px #0008; padding: 3px 10px 3px 3px; }
 .currency svg { width: 26px; height: 26px; flex-shrink: 0; }
@@ -73,6 +81,12 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .currency strong { text-align: right; margin-left: auto; font-size: clamp(12px, 1.6vw, 18px); overflow: hidden; text-overflow: ellipsis; }
 .home-top-actions { position: absolute; top: 8px; right: 14px; display: flex; gap: 10px; pointer-events: auto; }
 .home-top-actions button, .home-top-actions a { display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; color: #bbc9e2; font-size: 30px; padding: 0; min-width: 44px; min-height: 44px; text-decoration: none; }
+.soldier-music-controls { position: absolute; right: 2%; top: 65px; width: 28%; max-width: 290px; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; align-items: center; padding: 5px; background: #101c2bd9; font-size: 11px; pointer-events: auto; }
+.soldier-music-controls button { grid-row: span 2; font-size: 11px; padding: 4px; }
+.soldier-music-controls label { display: flex; justify-content: space-between; }
+.soldier-music-controls input { width: 100%; min-width: 0; min-height: 24px; padding: 0; }
+.soldier-music-controls span { grid-column: 1 / -1; font-size: 10px; }
+.soldier-music-controls span:empty { display: none; }
 #home .profile { display: flex; gap: 10px; top: 17%; left: 2.3%; width: 30%; max-width: 380px; padding: 0; background: linear-gradient(90deg, #111b2799, transparent); border: 0; border-radius: 0; align-items: center; }
 .rank-badge { flex-shrink: 0; width: clamp(44px, 6vw, 72px); height: clamp(44px, 6vw, 72px); padding: 2px; border: 1px solid #b4b7ad; border-radius: 0; background: linear-gradient(140deg, #314954, #293329 70%, #897545); box-shadow: inset 0 0 5px #000, 0 0 5px #000; }
 .rank-badge svg { width: 100%; height: 100%; }
