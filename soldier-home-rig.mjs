@@ -48,26 +48,58 @@ export async function loadRigTextures() {
   }));
 }
 
+export function textureWeights(nx, nz) {
+  const front = Math.max(0, nz) ** 6;
+  const back = Math.max(0, -nz) ** 6;
+  const side = Math.abs(nx) ** 6;
+  const sum = Math.max(.000001, front + back + side);
+  return [front / sum, back / sum, side / sum];
+}
+
 function volume(name, rings, materials) {
   const positions = [], sectors = 40;
-  for (const [cx, cy, rx, rz] of rings) {
+  const sections = [];
+  for (let row = 0; row < rings.length - 1; row++) {
+    for (let step = 0; step < 4; step++) {
+      const t = step / 4;
+      const values = rings[row].map((value, channel) => {
+        const a = rings[Math.max(0, row - 1)][channel] ?? 0;
+        const b = value, c = rings[row + 1][channel] ?? 0;
+        const d = rings[Math.min(rings.length - 1, row + 2)][channel] ?? 0;
+        return .5 * ((2*b) + (-a+c)*t + (2*a-5*b+4*c-d)*t*t + (-a+3*b-3*c+d)*t*t*t);
+      });
+      sections.push(values);
+    }
+  }
+  sections.push(rings.at(-1));
+  for (const [cx, cy, rx, rz, cz = 0] of sections) {
     for (let i = 0; i <= sectors; i++) {
       const angle = i / sectors * Math.PI * 2;
-      positions.push(cx + Math.sin(angle) * rx, cy, Math.cos(angle) * rz);
+      let z = cz + Math.cos(angle) * Math.max(.001, rz);
+      if (name === 'head') {
+        const nose = Math.exp(-(((cy - .105) / .014) ** 2)) *
+          Math.exp(-((Math.sin(angle) / .19) ** 2)) * Math.max(0, Math.cos(angle));
+        z += nose * .009;
+      }
+      positions.push(cx + Math.sin(angle) * Math.max(.001, rx), cy, z);
     }
   }
   const geometry = new THREE.BufferGeometry();
   // Give each face its own UVs so front/back and side projections cannot blend across seams.
-  const expanded = [], mapped = [], frontMapped = [], backMapped = [], sideMapped = [], sideRear = [];
+  const expanded = [], mapped = [], frontMapped = [], backMapped = [], sideMapped = [], sideRear = [], weights = [];
   const add = (a, b, c, material) => {
     const start = expanded.length / 3;
     for (const vertex of [a, b, c]) {
       const x = positions[vertex * 3], y = positions[vertex * 3 + 1], z = positions[vertex * 3 + 2];
       expanded.push(x, y, z);
+      const sector = vertex % (sectors + 1);
+      const angle = sector / sectors * Math.PI * 2;
+      weights.push(...textureWeights(Math.sin(angle), Math.cos(angle)));
       const imageX = material === 2 || material === 3 ? .5 - z / .38 : .5 + x / .84 * (material === 1 ? -1 : 1);
       mapped.push(imageX, 1 - y);
-      frontMapped.push(.5 + x / .84, 1 - y);
-      backMapped.push(.5 - x / .84, 1 - y);
+      const headX = name === 'head' ? x * 1.75 : x;
+      frontMapped.push(.5 + headX / .84, 1 - y);
+      backMapped.push(.5 - headX / .84, 1 - y);
       let sideX = .5 - z / .38;
       const usesRear = name === 'vest' || name === 'pelvis' || name === 'scarf';
       if (usesRear) sideX = .5 + z / .8;
@@ -76,13 +108,13 @@ function volume(name, rings, materials) {
     }
     geometry.addGroup(start, 3, material);
   };
-  for (let row = 0; row < rings.length - 1; row++) for (let i = 0; i < sectors; i++) {
+  for (let row = 0; row < sections.length - 1; row++) for (let i = 0; i < sectors; i++) {
     const angle = (i + .5) / sectors * Math.PI * 2;
     const material = Math.abs(Math.cos(angle)) > .8 ? Math.cos(angle) > 0 ? 0 : 1 : Math.sin(angle) > 0 ? 2 : 3;
     const a = row * (sectors + 1) + i, b = a + sectors + 1;
     add(a, b, a + 1, material); add(a + 1, b, b + 1, material);
   }
-  for (const row of [0, rings.length - 1]) {
+  for (const row of [0, sections.length - 1]) {
     for (let i = 1; i < sectors - 1; i++) {
       const start = row * (sectors + 1);
       add(start, start + i + (row === 0 ? 1 : 0), start + i + (row === 0 ? 0 : 1), 0);
@@ -94,34 +126,44 @@ function volume(name, rings, materials) {
   geometry.setAttribute('backUv', new THREE.Float32BufferAttribute(backMapped, 2));
   geometry.setAttribute('sideUv', new THREE.Float32BufferAttribute(sideMapped, 2));
   geometry.setAttribute('sideRear', new THREE.Float32BufferAttribute(sideRear, 1));
+  geometry.setAttribute('textureWeight', new THREE.Float32BufferAttribute(weights, 3));
   geometry.computeVertexNormals();
+  const normals = geometry.attributes.normal;
+  const shared = new Map();
+  for (let i = 0; i < expanded.length / 3; i++) {
+    const key = expanded.slice(i*3, i*3+3).map(value => value.toFixed(6)).join(',');
+    const entry = shared.get(key) || { normal: new THREE.Vector3(), vertices: [] };
+    entry.normal.add(new THREE.Vector3().fromBufferAttribute(normals, i)); entry.vertices.push(i);
+    shared.set(key, entry);
+  }
+  for (const { normal, vertices } of shared.values()) {
+    normal.normalize();
+    for (const i of vertices) normals.setXYZ(i, normal.x, normal.y, normal.z);
+  }
   geometry.clearGroups();
   const mesh = new THREE.Mesh(geometry, materials[0]); mesh.name = name;
   return mesh;
 }
 
 export function createHomeRig(textures = []) {
-  const view = { value: 0 };
   const materials = [0].map(index => new THREE.MeshBasicMaterial({
     map: textures[index] || null, color: textures[index] ? 0xffffff : 0x8d897a, side: THREE.DoubleSide
   }));
   for (const material of materials) {
     material.onBeforeCompile = shader => {
-      shader.uniforms.viewDirection = view;
       shader.uniforms.frontTexture = { value: textures[0] || null };
       shader.uniforms.backTexture = { value: textures[1] || null };
       shader.uniforms.sideTexture = { value: textures[2] || null };
-      shader.vertexShader = 'attribute vec2 frontUv; attribute vec2 backUv; attribute vec2 sideUv; attribute float sideRear;\nvarying vec2 vFront; varying vec2 vBack; varying vec2 vSide; varying float vSideRear;\n' + shader.vertexShader;
-      shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\nvFront=frontUv; vBack=backUv; vSide=sideUv; vSideRear=sideRear;');
-      shader.fragmentShader = 'uniform float viewDirection; uniform sampler2D frontTexture; uniform sampler2D backTexture; uniform sampler2D sideTexture;\nvarying vec2 vFront; varying vec2 vBack; varying vec2 vSide; varying float vSideRear;\n' + shader.fragmentShader;
+      shader.vertexShader = 'attribute vec2 frontUv; attribute vec2 backUv; attribute vec2 sideUv; attribute float sideRear; attribute vec3 textureWeight;\nvarying vec2 vFront; varying vec2 vBack; varying vec2 vSide; varying float vSideRear; varying vec3 vTextureWeight;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\nvFront=frontUv; vBack=backUv; vSide=sideUv; vSideRear=sideRear; vTextureWeight=textureWeight;');
+      shader.fragmentShader = 'uniform sampler2D frontTexture; uniform sampler2D backTexture; uniform sampler2D sideTexture;\nvarying vec2 vFront; varying vec2 vBack; varying vec2 vSide; varying float vSideRear; varying vec3 vTextureWeight;\n' + shader.fragmentShader;
       shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
         #ifdef USE_MAP
-          vec4 colour;
-          if (viewDirection > 0.45) colour=texture2D(frontTexture,vFront);
-          else if (viewDirection < -0.45) colour=texture2D(backTexture,vBack);
-          else if (vSideRear > 0.5) colour=texture2D(backTexture,vSide);
-          else colour=texture2D(sideTexture,vSide);
-          diffuseColor *= vec4(colour.rgb,1.0);
+          vec3 frontColour=texture2D(frontTexture,vFront).rgb;
+          vec3 backColour=texture2D(backTexture,vBack).rgb;
+          vec3 sideColour=vSideRear>0.5 ? texture2D(backTexture,vSide).rgb : texture2D(sideTexture,vSide).rgb;
+          vec3 weights=vTextureWeight/max(dot(vTextureWeight,vec3(1.0)),0.00001);
+          diffuseColor *= vec4(frontColour*weights.x+backColour*weights.y+sideColour*weights.z,1.0);
         #endif
       `);
     };
@@ -140,24 +182,37 @@ export function createHomeRig(textures = []) {
     mesh.geometry.translate(-pivot.x, -pivot.y, -pivot.z); parent.add(mesh);
   }
   const hips = joint('hips', root, 0, .52);
-  part('pelvis', hips, [[0,.46,.13,.075],[0,.52,.145,.082],[0,.59,.13,.073]]);
+  part('pelvis', hips, [[0,.445,.135,.072],[0,.48,.15,.078],[0,.53,.145,.085],[0,.575,.125,.071]]);
   const chest = joint('spine', hips, 0, -.2);
-  part('vest', chest, [[0,.17,.105,.065],[0,.205,.155,.08],[0,.25,.175,.085],[0,.34,.17,.085],[0,.46,.175,.075]]);
+  part('vest', chest, [[0,.175,.075,.045],[0,.20,.13,.06],[0,.23,.158,.075],[0,.29,.151,.082],[0,.36,.14,.075],[0,.43,.145,.075],[0,.46,.15,.076]]);
   const neck = joint('neck', chest, 0, -.15);
-  part('scarf', neck, [[0,.125,.08,.055],[0,.16,.11,.065],[0,.20,.09,.06]]);
-  part('head', neck, [[0,.02,.012,.012],[0,.035,.055,.045],[0,.055,.084,.07],[0,.09,.094,.08],[0,.125,.074,.07],[0,.15,.047,.047]]);
+  part('neckSkin', neck, [[0,.132,.025,.026],[0,.156,.027,.025],[0,.182,.034,.03]]);
+  part('scarf', neck, [[0,.145,.048,.048],[0,.16,.077,.055],[0,.183,.091,.052],[0,.205,.071,.045]]);
+  part('head', neck, [[0,.02,.003,.005,-.004],[0,.038,.029,.032,-.007],[0,.056,.044,.047,-.008],
+    [0,.077,.048,.052,-.007],[0,.096,.047,.049,-.003],[0,.115,.043,.042,.002],
+    [0,.135,.034,.035,.006],[0,.148,.021,.021,.012],[0,.154,.009,.012,.013]]);
+  for (const sign of [-1, 1]) {
+    part(`${sign < 0 ? 'left' : 'right'}Ear`, neck,
+      [[sign*.046,.085,.004,.005,-.008],[sign*.049,.099,.009,.011,-.008],[sign*.047,.118,.005,.007,-.007]]);
+  }
   for (const sign of [-1, 1]) {
     const side = sign < 0 ? 'left' : 'right';
-    const shoulder = joint(`${side}Shoulder`, chest, sign * .202, -.105);
-    part(`${side}UpperArm`, shoulder, [[sign*.202,.205,.045,.047],[sign*.227,.265,.048,.049],[sign*.254,.325,.041,.041]]);
-    const elbow = joint(`${side}Elbow`, shoulder, sign * .052, .12);
-    part(`${side}Forearm`, elbow, [[sign*.254,.325,.041,.041],[sign*.273,.40,.03,.033],[sign*.299,.46,.027,.028]]);
-    part(`${side}Hand`, elbow, [[sign*.299,.445,.03,.03],[sign*.316,.49,.035,.026],[sign*.312,.535,.022,.019]]);
+    const shoulder = joint(`${side}Shoulder`, chest, sign * .173, -.105);
+    part(`${side}UpperArm`, shoulder, [[sign*.16,.20,.02,.025],[sign*.185,.226,.043,.048],
+      [sign*.201,.267,.041,.042],[sign*.22,.31,.036,.036],[sign*.233,.338,.032,.032]]);
+    const elbow = joint(`${side}Elbow`, shoulder, sign * .06, .133);
+    part(`${side}Forearm`, elbow, [[sign*.233,.327,.033,.032],[sign*.244,.36,.034,.032],
+      [sign*.256,.4,.028,.027],[sign*.273,.451,.022,.021]]);
+    part(`${side}Hand`, elbow, [[sign*.273,.439,.021,.019],[sign*.29,.465,.031,.02],
+      [sign*.296,.494,.029,.018],[sign*.293,.529,.014,.013]]);
     const hip = joint(`${side}Hip`, hips, sign * .076, 0);
-    part(`${side}Thigh`, hip, [[sign*.075,.51,.072,.07],[sign*.086,.60,.076,.07],[sign*.102,.69,.059,.061]]);
+    part(`${side}Thigh`, hip, [[sign*.075,.51,.072,.074],[sign*.085,.56,.072,.075],
+      [sign*.097,.61,.064,.065],[sign*.107,.655,.053,.055],[sign*.111,.69,.047,.048]]);
     const knee = joint(`${side}Knee`, hip, sign * .026, .17);
-    part(`${side}Calf`, knee, [[sign*.102,.67,.059,.058],[sign*.113,.76,.063,.055],[sign*.125,.87,.044,.041]]);
-    part(`${side}Boot`, knee, [[sign*.125,.85,.044,.045],[sign*.129,.94,.048,.065],[sign*.133,.978,.061,.09]]);
+    part(`${side}Calf`, knee, [[sign*.111,.671,.048,.048],[sign*.115,.713,.051,.052],
+      [sign*.122,.764,.052,.058,-.008],[sign*.128,.824,.038,.039],[sign*.13,.879,.031,.034]]);
+    part(`${side}Boot`, knee, [[sign*.13,.857,.034,.035],[sign*.132,.899,.036,.042],
+      [sign*.136,.945,.042,.067,.019],[sign*.14,.969,.047,.091,.037],[sign*.14,.981,.048,.09,.037]]);
   }
   root.scale.y = -1;
   function animate(seconds) {
@@ -173,5 +228,5 @@ export function createHomeRig(textures = []) {
     root.userData.motion = stretch > .001 ? 'stretch' : 'breathe';
   }
   animate(0);
-  return { root, joints, animate, materials, setYaw(yaw) { root.rotation.y = yaw; view.value = Math.cos(yaw); } };
+  return { root, joints, animate, materials, setYaw(yaw) { root.rotation.y = yaw; } };
 }

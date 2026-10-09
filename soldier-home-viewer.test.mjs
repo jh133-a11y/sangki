@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from './vendor/three.module.min.js';
-import { createHomeRig, idlePose } from './soldier-home-rig.mjs';
+import { createHomeRig, idlePose, textureWeights } from './soldier-home-rig.mjs';
 
 test('home character has independent limbs and a joint hierarchy, not a blending sheet', () => {
   const rig = createHomeRig();
@@ -24,6 +24,40 @@ test('home character has independent limbs and a joint hierarchy, not a blending
     assert.ok(box.max.x - box.min.x > .1);
   }
 });
+
+test('texture placement is fixed to the surface and never switches when rotating the model', () => {
+    const rig = createHomeRig();
+    const shaders = { uniforms: {}, vertexShader: '#include <uv_vertex>', fragmentShader: '#include <map_fragment>' };
+    rig.materials[0].onBeforeCompile(shaders);
+    assert.equal(shaders.uniforms.viewDirection, undefined);
+    assert.ok(!shaders.fragmentShader.includes('viewDirection'));
+    assert.deepEqual(textureWeights(0, 1), [1, 0, 0]);
+    assert.deepEqual(textureWeights(0, -1), [0, 1, 0]);
+    for (let angle=0;angle<Math.PI*2;angle+=.01) {
+      const weights=textureWeights(Math.sin(angle),Math.cos(angle));
+      assert.ok(Math.abs(weights.reduce((a,b)=>a+b,0)-1)<1e-10);
+    }
+  });
+
+test('head has a nose profile, narrow chin and broader skull rather than a sphere', () => {
+    const rig=createHomeRig();
+    const head=rig.root.getObjectByName('head');
+    const p=head.geometry.attributes.position;
+    head.updateWorldMatrix(true,false);
+    const pivot=head.parent.getWorldPosition(new THREE.Vector3());
+    const rows=new Map();
+    for(let i=0;i<p.count;i++){
+      const y=p.getY(i)-pivot.y, key=y.toFixed(5);
+      const row=rows.get(key)||{y,width:0,front:-Infinity,back:Infinity};
+      row.width=Math.max(row.width,Math.abs(p.getX(i)));
+      row.front=Math.max(row.front,p.getZ(i));row.back=Math.min(row.back,p.getZ(i));
+      rows.set(key,row);
+    }
+    const nearest=y=>[...rows.values()].sort((a,b)=>Math.abs(a.y-y)-Math.abs(b.y-y))[0];
+    assert.ok(nearest(.148).width<nearest(.077).width*.6);
+    assert.ok(nearest(.105).front>nearest(.077).front);
+    assert.ok(nearest(.077).back<-.045);
+  });
 
 test('automatic breathing and stretching move joints with fixed feet and repeat continuously', () => {
   const rig = createHomeRig();
