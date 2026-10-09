@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { createHomeCharacter, createSoldierModel } from './soldier-character.mjs?v=1';
+import { createSoldierModel } from './soldier-character.mjs?v=2';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
@@ -131,7 +131,10 @@ function renderRankDetail() {
   $('rank-wins').textContent = progress.next ? `승리 보너스만 기준으로 ${progress.winsNeeded.toLocaleString('ko-KR')}판 더 승리하면 승급합니다. 처치 경험치가 더해지면 더 빨리 승급할 수 있습니다.` : '더 이상 승급할 계급이 없습니다.';
 }
 $('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
-let renderer, scene, camera, homeCharacter, hand, flash;
+$('home-character').addEventListener('error', () => {
+  $('home-status').textContent = '캐릭터 사진을 불러오지 못했습니다. 새로고침하세요.';
+});
+let renderer, scene, camera, hand, flash;
 try {
   renderer = new THREE.WebGLRenderer({ canvas: $('world'), antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
@@ -148,7 +151,6 @@ try {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(110, 110), new THREE.MeshStandardMaterial({ color: '#778569', roughness: 1 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
   makeMap();
-  homeCharacter = createHomeCharacter($('home-character'), $('character-status'));
   scene.add(camera);
   hand = new THREE.Group(); camera.add(hand);
   flash = new THREE.PointLight('#ffc67b', 0, 4); flash.position.set(.3, -.2, -.9); camera.add(flash);
@@ -337,7 +339,6 @@ function startMatch(isOnline) {
   if (!ready || !renderer) return;
   online = isOnline; mode = 'game';
   $('play-dialog').close(); $('lobby').close(); clearInterval(lobbyTimer); lobbyTimer = null;
-  homeCharacter.cancelDrag();
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
@@ -609,7 +610,6 @@ function frame(time) {
   const dt = Math.min(.05, (time - lastFrame) / 1000), now = time / 1000; lastFrame = time;
   if (mode !== 'game') {
     hand.visible = false;
-    if (!$('home').hidden) homeCharacter.render();
     return;
   } else {
     if (!online && now >= matchEnds) { finish(); return; }

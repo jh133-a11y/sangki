@@ -59,13 +59,10 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
   .home-status { bottom: 75px; font-size: 12px; padding: 8px; max-width: 32vw; }
 }
 
-/* Independent preview lighting preserves the match camera and warehouse backdrop. */
+/* Preserve the supplied character artwork without cropping the equipment card. */
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
-.home-character { position: absolute; height: 88%; width: 37%; bottom: 3%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
-.home-character:active { cursor: grabbing; }
-.home-character:focus-visible { outline: 2px solid #b8d5e8; outline-offset: -4px; }
-.character-rotate-hint { position: absolute; left: 51%; bottom: 0; transform: translateX(-50%); margin: 0; padding: 4px; font-size: 10px; color: #cfdae5; text-shadow: 0 1px 3px #000; text-align: center; width: 37%; }
+.home-character { position: absolute; height: 88%; width: auto; max-width: 37%; object-fit: contain; bottom: 3%; left: 51%; transform: translateX(-50%); filter: drop-shadow(8px 8px 10px #000b); }
 .currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
 .currency { display: flex; gap: 5px; align-items: center; min-width: 0; flex: 1; height: 32px; background: linear-gradient(#3e495acc, #151e29e0); border-radius: 18px; border: 1px solid #75869855; box-shadow: 0 2px 4px #0008; padding: 3px 10px 3px 3px; }
 .currency svg { width: 26px; height: 26px; flex-shrink: 0; }
@@ -91,8 +88,8 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .weapon-art { width: 100%; height: calc(100% - 45px); filter: drop-shadow(2px 3px 2px #0008); transform: rotate(-20deg); }
 #home .equipment-card select { position: absolute; bottom: 0; width: 100%; min-height: 44px; padding: 4px 1px; border: 0; border-radius: 0; background: #161b2ca6; font-size: 11px; text-align: center; font-weight: bold; }
 .equipment-card:focus-within { outline: 2px solid #ffe39c; }
-.character-card { background: linear-gradient(140deg, #6a747e, #222b33); border-color: #90a0aa; }
-.character-card img { height: 100%; width: 100%; object-fit: contain; }
+#home .character-card { align-self: start; height: auto; border: 0; box-shadow: none; background: transparent; }
+.character-card img { display: block; height: auto; width: 100%; }
 .character-card span { position: absolute; top: 3px; left: 3px; z-index: 1; font-size: 9px; text-shadow: 0 1px 3px #000; }
 .character-card strong { position: absolute; bottom: 0; width: 100%; padding: 5px; background: #17202ac9; text-align: center; font-size: 11px; }
 .home-bottom-mark { position: absolute; left: 2.3%; bottom: 5%; color: #bfcfea; font-weight: 800; font-size: clamp(12px, 1.8vw, 20px); text-shadow: 0 0 8px #438acd; }
