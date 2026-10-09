@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { createSoldierModel } from './soldier-character.mjs?v=2';
+import { createSoldierModel, createHomeCharacter, loadCharacterTextures } from './soldier-character.mjs?v=3';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
@@ -131,11 +131,9 @@ function renderRankDetail() {
   $('rank-wins').textContent = progress.next ? `승리 보너스만 기준으로 ${progress.winsNeeded.toLocaleString('ko-KR')}판 더 승리하면 승급합니다. 처치 경험치가 더해지면 더 빨리 승급할 수 있습니다.` : '더 이상 승급할 계급이 없습니다.';
 }
 $('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
-$('home-character').addEventListener('error', () => {
-  $('home-status').textContent = '캐릭터 사진을 불러오지 못했습니다. 새로고침하세요.';
-});
-let renderer, scene, camera, hand, flash;
+let renderer, scene, camera, homeCharacter, characterTextures, hand, flash;
 try {
+  characterTextures = await loadCharacterTextures();
   renderer = new THREE.WebGLRenderer({ canvas: $('world'), antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.setSize(innerWidth, innerHeight);
@@ -151,13 +149,14 @@ try {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(110, 110), new THREE.MeshStandardMaterial({ color: '#778569', roughness: 1 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
   makeMap();
+  homeCharacter = createHomeCharacter($('home-character'), $('character-status'), characterTextures);
   scene.add(camera);
   hand = new THREE.Group(); camera.add(hand);
   flash = new THREE.PointLight('#ffc67b', 0, 4); flash.position.set(.3, -.2, -.9); camera.add(flash);
   equip('primary');
 } catch (error) {
   renderer = null;
-  $('home-status').textContent = '3D 화면을 시작할 수 없습니다. WebGL을 지원하는 최신 브라우저와 하드웨어 가속을 사용하세요.';
+  $('home-status').textContent = `${error.message} 3D 화면을 시작할 수 없습니다. 새로고침하거나 WebGL을 지원하는 최신 브라우저와 하드웨어 가속을 사용하세요.`;
   console.error('3D 초기화 오류', error);
 }
 function cube(parent, x, y, z, w, h, d, color) {
@@ -183,7 +182,7 @@ function makeMap() {
 }
 function makeSoldier(color, label) {
   const body = new THREE.Group();
-  const character = createSoldierModel(true);
+  const character = createSoldierModel(true, characterTextures);
   // Gameplay's forward vector is -Z; the home model faces +Z.
   character.rotation.y = Math.PI;
   body.add(character);
@@ -199,12 +198,18 @@ function makeSoldier(color, label) {
   return body;
 }
 function dispose(group) {
+  const materials = new Set(), maps = new Set();
   group.traverse(object => {
     object.geometry?.dispose();
     if (object.material) {
-      object.material.map?.dispose(); object.material.dispose();
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        materials.add(material);
+        if (material.map && !material.map.userData.persistent) maps.add(material.map);
+      }
     }
   });
+  for (const map of maps) map.dispose();
+  for (const material of materials) material.dispose();
   group.removeFromParent();
 }
 function equip(next) {
@@ -339,6 +344,7 @@ function startMatch(isOnline) {
   if (!ready || !renderer) return;
   online = isOnline; mode = 'game';
   $('play-dialog').close(); $('lobby').close(); clearInterval(lobbyTimer); lobbyTimer = null;
+  homeCharacter.cancelDrag();
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
@@ -610,6 +616,7 @@ function frame(time) {
   const dt = Math.min(.05, (time - lastFrame) / 1000), now = time / 1000; lastFrame = time;
   if (mode !== 'game') {
     hand.visible = false;
+    if (!$('home').hidden) homeCharacter.render();
     return;
   } else {
     if (!online && now >= matchEnds) { finish(); return; }

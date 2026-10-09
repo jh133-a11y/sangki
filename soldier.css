@@ -62,7 +62,10 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 /* Preserve the supplied character artwork without cropping the equipment card. */
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
-.home-character { position: absolute; height: 88%; width: auto; max-width: 37%; object-fit: contain; bottom: 3%; left: 51%; transform: translateX(-50%); filter: drop-shadow(8px 8px 10px #000b); }
+.home-character { position: absolute; height: 88%; width: 37%; bottom: 3%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
+.home-character:active { cursor: grabbing; }
+.home-character:focus-visible { outline: 2px solid #b8d5e8; outline-offset: -4px; }
+.character-rotate-hint { position: absolute; left: 51%; bottom: 0; transform: translateX(-50%); width: 37%; margin: 0; padding: 4px; font-size: 10px; color: #cfdae5; text-shadow: 0 1px 3px #000; text-align: center; }
 .currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
 .currency { display: flex; gap: 5px; align-items: center; min-width: 0; flex: 1; height: 32px; background: linear-gradient(#3e495acc, #151e29e0); border-radius: 18px; border: 1px solid #75869855; box-shadow: 0 2px 4px #0008; padding: 3px 10px 3px 3px; }
 .currency svg { width: 26px; height: 26px; flex-shrink: 0; }
