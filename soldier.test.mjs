@@ -32,10 +32,13 @@ test('weapon names use a shared separate label rather than lettering baked into 
   const client = readFileSync(new URL('./soldier.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('./soldier.css', import.meta.url), 'utf8');
   assert.match(client, /card\.querySelector\('\.weapon-name'\)\.textContent = WEAPONS\[id\]\.name/);
-  const style = css.match(/\.weapon-name \{([^}]+)\}/)[1];
-  for (const declaration of ['text-align: center', 'bottom: 5%', 'font-weight: 900', 'font-style: italic', 'color: white']) {
+  const style = css.match(/\.weapon-level, \.weapon-name \{([^}]+)\}/)[1];
+  for (const declaration of ['font-weight: 900', 'font-style: italic', 'color: white']) {
     assert.ok(style.includes(declaration));
   }
+  const position = css.match(/\n\.weapon-name \{([^}]+)\}/)[1];
+  assert.ok(position.includes('text-align: center') && position.includes('bottom: 5%'));
+  assert.match(client, /card\.querySelector\('\.weapon-level'\)\.textContent = weaponLevelLabel\(level\)/);
   assert.doesNotMatch(css, /\.weapon-image[^}]+\+\s*\.weapon-name\s*\{\s*display:\s*none/);
   assert.ok(Object.values(WEAPONS).every(weapon => typeof weapon.name === 'string' && weapon.name.length > 0));
 });
