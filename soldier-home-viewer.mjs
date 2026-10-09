@@ -1,7 +1,7 @@
 export const CHARACTER_VIEWS = [
-  { name: '정면', src: 'soldier-view-front.png' },
-  { name: '측후면', src: 'soldier-view-side.png' },
-  { name: '뒷면', src: 'soldier-view-back.png' }
+  { name: '기본 자세', src: 'soldier-view-front.png' },
+  { name: '몸풀기 자세', src: 'soldier-view-side.png' },
+  { name: '뒷모습 참고', src: 'soldier-view-back.png' }
 ];
 
 export function viewIndex(angle) {
@@ -48,8 +48,8 @@ export async function createHomeViewer(canvas, status, buttons) {
     angle = nextAngle % (Math.PI * 2);
     index = viewIndex(angle);
     canvas.dataset.view = String(index);
-    canvas.setAttribute('aria-label', `Black Water 고화질 원본 사진: ${CHARACTER_VIEWS[index].name}. 드래그 또는 좌우 방향키로 보기 전환, Home 키로 정면.`);
-    status.textContent = `${CHARACTER_VIEWS[index].name} · 드래그/방향키로 사진 전환 (연속 3D 회전 아님)`;
+    canvas.setAttribute('aria-label', `Black Water 고화질 원본 사진: ${CHARACTER_VIEWS[index].name}. 드래그 또는 좌우 방향키로 참고 사진 전환, Home 키로 기본 자세.`);
+    status.textContent = `${CHARACTER_VIEWS[index].name} · 자세/참고 사진 전환 (게임 동작 애니메이션 아님)`;
     buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
     draw();
   }
@@ -79,6 +79,7 @@ export async function createHomeViewer(canvas, status, buttons) {
     if (event.code === 'Home') { select(0); event.preventDefault(); }
   });
   const observer = new ResizeObserver(draw); observer.observe(canvas);
+  window.addEventListener('pagehide', cancelDrag);
   select(0);
   canvas.dataset.viewReady = 'true';
   return { cancelDrag };

@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=1';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=2';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
