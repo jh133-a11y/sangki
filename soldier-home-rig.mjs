@@ -41,8 +41,8 @@ export async function loadHomeRig(id = 'black-water') {
 }
 
 const REQUIRED_JOINTS = ['Hips', 'Spine2', 'Neck', 'Head',
-  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
-  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+  'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'LeftHandMiddle1', 'LeftHandIndex1', 'LeftHandPinky1',
+  'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'RightHandMiddle1', 'RightHandIndex1', 'RightHandPinky1',
   'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot'];
 
 export function createHomeRig(source) {
@@ -110,11 +110,65 @@ export function createHomeRig(source) {
     });
   }
   const rotation = new THREE.Quaternion();
+  const attention = {};
+  for (const side of ['Left', 'Right']) {
+    const arm = joints[`${side}Arm`].getWorldPosition(new THREE.Vector3());
+    const elbow = joints[`${side}ForeArm`].getWorldPosition(new THREE.Vector3());
+    const hand = joints[`${side}Hand`].getWorldPosition(new THREE.Vector3());
+    const upperAngle = Math.atan2(elbow.x - arm.x, arm.y - elbow.y);
+    const lowerAngle = Math.atan2(hand.x - elbow.x, elbow.y - hand.y);
+    const clearance = side === 'Left' ? .12 : -.12;
+    const armAxis = elbow.clone().sub(arm).normalize()
+      .applyQuaternion(joints[`${side}Arm`].getWorldQuaternion(new THREE.Quaternion()).invert());
+    attention[side] = { arm: -upperAngle + clearance, elbow: upperAngle - lowerAngle, armAxis };
+  }
   function rotate(name, x, z = 0) {
     const bone = joints[name], bind = rest.get(bone);
     bone.quaternion.copy(bind.rotation)
       .multiply(rotation.setFromAxisAngle(bind.x, x))
       .multiply(rotation.setFromAxisAngle(bind.z, z));
+  }
+  for (const side of ['Left', 'Right']) {
+    rotate(`${side}Arm`, 0, attention[side].arm);
+    rotate(`${side}ForeArm`, 0, attention[side].elbow);
+  }
+  root.updateMatrixWorld(true);
+  function handTwist(side) {
+    const point = name => joints[side + name].getWorldPosition(new THREE.Vector3());
+    const wrist = point('Hand'), axis = wrist.clone().sub(point('ForeArm')).normalize();
+    const fingers = point('HandMiddle1').sub(wrist);
+    const across = point('HandIndex1').sub(point('HandPinky1'));
+    const dorsal = fingers.cross(across).multiplyScalar(side === 'Left' ? -1 : 1);
+    dorsal.addScaledVector(axis, -dorsal.dot(axis)).normalize();
+    const outward = new THREE.Vector3(side === 'Left' ? 1 : -1, 0, 0);
+    outward.addScaledVector(axis, -outward.dot(axis)).normalize();
+    return Math.atan2(axis.dot(dorsal.clone().cross(outward)), dorsal.dot(outward));
+  }
+  for (const side of ['Left', 'Right']) {
+    const twist = handTwist(side);
+    joints[side + 'Arm'].quaternion.multiply(rotation.setFromAxisAngle(attention[side].armAxis, twist * .2));
+    root.updateMatrixWorld(true);
+    const forearm = joints[side + 'ForeArm'], hand = joints[side + 'Hand'];
+    const inverse = forearm.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const direction = hand.getWorldPosition(new THREE.Vector3())
+      .sub(forearm.getWorldPosition(new THREE.Vector3())).normalize().applyQuaternion(inverse);
+    const target = new THREE.Vector3(side === 'Left' ? .12 : -.12, -1, .12).normalize().applyQuaternion(inverse);
+    forearm.quaternion.multiply(rotation.setFromUnitVectors(direction, target));
+    // Spread pronation across the arm rather than twisting only the wrist.
+    forearm.quaternion.multiply(rotation.setFromAxisAngle(direction, twist * .7));
+    root.updateMatrixWorld(true);
+    const wristAxis = hand.getWorldPosition(new THREE.Vector3())
+      .sub(forearm.getWorldPosition(new THREE.Vector3())).normalize()
+      .applyQuaternion(hand.getWorldQuaternion(new THREE.Quaternion()).invert());
+    hand.quaternion.multiply(rotation.setFromAxisAngle(wristAxis, handTwist(side)));
+    root.updateMatrixWorld(true);
+  }
+  for (const bone of Object.values(joints)) {
+    const inverse = bone.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const bind = rest.get(bone);
+    bind.rotation.copy(bone.quaternion);
+    bind.x.set(1, 0, 0).applyQuaternion(inverse);
+    bind.z.set(0, 0, 1).applyQuaternion(inverse);
   }
   function animate(seconds) {
     const { breath, stretch } = idlePose(seconds);

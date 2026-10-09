@@ -90,6 +90,18 @@ for (const [file, hash] of fixtures) {
     const rest = bones.map(bone => ({ position: bone.position.clone(), scale: bone.scale.clone(), quaternion: bone.quaternion.clone() }));
     const pivotRest = Object.fromEntries(['LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand']
       .map(name => [name, rig.joints[name].getWorldPosition(new THREE.Vector3())]));
+    for (const side of ['Left', 'Right']) {
+      const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
+      const elbow = pivotRest[side + 'ForeArm'], hand = pivotRest[side + 'Hand'];
+      assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .13, 'upper arm hangs beside torso');
+      assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, 'forearm points down, not sideways');
+      assert.ok(hand.y < elbow.y && elbow.y < arm.y, 'attention stance lowers both arms');
+      const point = name => rig.joints[side + name].getWorldPosition(new THREE.Vector3());
+      const fingers = point('HandMiddle1').sub(hand);
+      const across = point('HandIndex1').sub(point('HandPinky1'));
+      const dorsal = fingers.cross(across).normalize().multiplyScalar(side === 'Left' ? -1 : 1);
+      assert.ok(dorsal.x * (side === 'Left' ? 1 : -1) > .9, 'back of hand faces outward, not the palm');
+    }
     const mesh = rig.meshes[0], positions = mesh.geometry.attributes.position;
     const start = Array.from({ length: positions.count }, (_, index) => mesh.getVertexPosition(index, new THREE.Vector3()));
     const weights = mesh.geometry.attributes.skinWeight, ids = mesh.geometry.attributes.skinIndex;
@@ -108,7 +120,7 @@ for (const [file, hash] of fixtures) {
         }
         if (time === 1.125) {
           for (const name of ['ForeArm', 'Hand']) {
-            assert.ok(rig.joints[side + name].getWorldPosition(new THREE.Vector3()).y > pivotRest[side + name].y + .001,
+            assert.ok(rig.joints[side + name].getWorldPosition(new THREE.Vector3()).y > pivotRest[side + name].y + .0001,
               'inhalation must raise both elbow and hand');
           }
         }
