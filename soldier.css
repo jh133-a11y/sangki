@@ -66,7 +66,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .home-character:active { cursor: grabbing; }
 .home-character:focus-visible { outline: 2px solid #b8d5e8; outline-offset: -4px; }
 .character-rotate-hint { position: absolute; left: 51%; bottom: 0; transform: translateX(-50%); width: 37%; margin: 0; padding: 4px; font-size: 10px; color: #cfdae5; text-shadow: 0 1px 3px #000; text-align: center; }
-.character-view-controls { position: absolute; left: 51%; bottom: 4%; transform: translateX(-50%); display: flex; gap: 3px; width: 35%; justify-content: center; }
+.character-view-controls { position: absolute; left: 51%; bottom: 4%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 3px; width: 35%; justify-content: center; }
 .character-view-controls button { flex: 1; max-width: 90px; min-width: 0; padding: 3px; font-size: 11px; background: #172331da; }
 .character-view-controls button[aria-pressed="true"] { border-color: #c1d5eb; background: #3b536dda; }
 @media (max-height: 420px) {
