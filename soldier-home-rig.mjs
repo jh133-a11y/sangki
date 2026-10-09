@@ -12,7 +12,7 @@ export function idlePose(seconds) {
 export async function loadHomeRig() {
   let gltf;
   try {
-    gltf = await new GLTFLoader().loadAsync(`${HOME_MODEL}?v=2`);
+    gltf = await new GLTFLoader().loadAsync(`${HOME_MODEL}?v=3`);
   } catch (error) {
     throw new Error('제공된 3D 캐릭터 파일을 불러오지 못했습니다.', { cause: error });
   }
@@ -21,7 +21,7 @@ export async function loadHomeRig() {
 
 const smooth = (min, max, value) => THREE.MathUtils.smoothstep(value, min, max);
 
-// The supplied single-mesh GLB has no skin. Blend inferred joints across regions,
+// The supplied GLB has no skin. Blend inferred joints across all mesh regions,
 // rather than cutting its geometry or replacing the supplied silhouette/textures.
 export function jointWeights(x, y) {
   const neck = smooth(.81, .86, y);

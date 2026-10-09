@@ -19,62 +19,71 @@ function fixture() {
 
 test('supplied GLB is embedded, intact and unrigged, with original PBR maps', () => {
   const binary = readFileSync(HOME_MODEL);
-  assert.equal(createHash('sha256').update(binary).digest('hex'), 'aeb250d7666092dd0a0c02e3e8cf524d080444b15d072368a5d8e3fcb6bad702');
+  assert.equal(createHash('sha256').update(binary).digest('hex'), '3c1ac28bac2465bfca62c5e684ae68de4fcb0ffb2ddb40fb138c8205dc80e16a');
   assert.equal(binary.readUInt32LE(0), 0x46546c67);
   assert.equal(binary.readUInt32LE(4), 2);
   assert.equal(binary.readUInt32LE(8), binary.length);
   const gltf = JSON.parse(binary.subarray(20, 20 + binary.readUInt32LE(12)));
   assert.equal(gltf.skins?.length || 0, 0);
   assert.equal(gltf.animations?.length || 0, 0);
-  assert.equal(gltf.meshes.length, 1);
+  assert.equal(gltf.meshes.length, 35);
   assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
-  const material = gltf.materials[0];
-  assert.ok(material.pbrMetallicRoughness.baseColorTexture);
-  assert.ok(material.pbrMetallicRoughness.metallicRoughnessTexture);
-  assert.ok(material.normalTexture);
+  for (const material of gltf.materials) {
+    assert.ok(material.pbrMetallicRoughness.baseColorTexture);
+    assert.ok(material.pbrMetallicRoughness.metallicRoughnessTexture);
+    assert.ok(material.normalTexture);
+  }
 });
 
-test('new basic model receives fresh bones and actual breathing/stretch deformations', () => {
+test('final multipart model receives fresh shared bones and actual breathing/stretch deformations', () => {
   const binary = readFileSync(HOME_MODEL);
   const jsonLength = binary.readUInt32LE(12);
   const gltf = JSON.parse(binary.subarray(20, 20 + jsonLength));
   const binaryOffset = 20 + jsonLength + 8;
-  const geometry = new THREE.BufferGeometry();
-  const primitive = gltf.meshes[0].primitives[0];
-  for (const [name, index] of Object.entries(primitive.attributes)) {
-    const accessor = gltf.accessors[index], view = gltf.bufferViews[accessor.bufferView];
-    const size = { VEC3: 3, VEC2: 2 }[accessor.type];
-    const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
-    const values = new Float32Array(accessor.count * size);
-    for (let i = 0; i < values.length; i++) values[i] = binary.readFloatLE(offset + i * 4);
-    geometry.setAttribute({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv' }[name], new THREE.BufferAttribute(values, size));
-  }
-  const accessor = gltf.accessors[primitive.indices], view = gltf.bufferViews[accessor.bufferView];
-  const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
-  const indices = new Uint32Array(accessor.count);
-  for (let i = 0; i < indices.length; i++) indices[i] = binary.readUInt32LE(offset + i * 4);
-  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   const source = new THREE.Group();
-  source.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial()));
-  const rig = createHomeRig(source), mesh = rig.meshes[0];
+  for (const model of gltf.meshes) {
+    const geometry = new THREE.BufferGeometry();
+    const primitive = model.primitives[0];
+    for (const [name, index] of Object.entries(primitive.attributes)) {
+      const accessor = gltf.accessors[index], view = gltf.bufferViews[accessor.bufferView];
+      const size = { VEC3: 3, VEC2: 2 }[accessor.type];
+      const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
+      const values = new Float32Array(accessor.count * size);
+      for (let i = 0; i < values.length; i++) values[i] = binary.readFloatLE(offset + i * 4);
+      geometry.setAttribute({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv' }[name], new THREE.BufferAttribute(values, size));
+    }
+    const accessor = gltf.accessors[primitive.indices], view = gltf.bufferViews[accessor.bufferView];
+    const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
+    const indices = new Uint32Array(accessor.count);
+    for (let i = 0; i < indices.length; i++) indices[i] = binary.readUInt32LE(offset + i * 4);
+    geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+    source.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial()));
+  }
+  const rig = createHomeRig(source);
   const secondRig = createHomeRig(source);
   assert.notEqual(rig.skeleton, secondRig.skeleton);
   assert.ok(rig.skeleton.bones.every((bone, i) => bone !== secondRig.skeleton.bones[i]));
-  assert.equal(mesh.geometry.attributes.position.count, 17701);
-  assert.deepEqual(mesh.geometry.index.array, indices);
-  assert.deepEqual(mesh.geometry.attributes.uv.array, geometry.attributes.uv.array);
+  assert.equal(rig.meshes.length, 35);
+  assert.equal(rig.meshes.reduce((sum, mesh) => sum + mesh.geometry.attributes.position.count, 0), 21706);
+  for (const [index, mesh] of rig.meshes.entries()) {
+    assert.equal(mesh.skeleton, rig.skeleton);
+    assert.deepEqual(mesh.geometry.index.array, source.children[index].geometry.index.array);
+    assert.deepEqual(mesh.geometry.attributes.uv.array, source.children[index].geometry.attributes.uv.array);
+  }
   const rest = [];
   rig.root.updateMatrixWorld(true); rig.skeleton.update();
-  for (let i = 0; i < 17701; i++) {
-    rest.push(mesh.applyBoneTransform(i, new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i)));
+  for (const mesh of rig.meshes) {
+    for (let i = 0; i < mesh.geometry.attributes.position.count; i++) {
+      rest.push({ mesh, index: i, position: mesh.applyBoneTransform(i, new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i)) });
+    }
   }
   for (const time of [1.125, 7]) {
     rig.animate(time); rig.root.updateMatrixWorld(true); rig.skeleton.update();
     const moved = { chest: 0, leftArm: 0, rightArm: 0, head: 0 };
-    for (let i = 0; i < rest.length; i++) {
+    for (const { mesh, index: i, position: resting } of rest) {
       const position = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i);
       const actual = mesh.applyBoneTransform(i, position.clone());
-      const displacement = actual.distanceTo(rest[i]);
+      const displacement = actual.distanceTo(resting);
       assert.ok(Number.isFinite(displacement));
       if (position.y < .4) assert.ok(displacement < 1e-6);
       if (displacement <= .001) continue;
@@ -191,5 +200,5 @@ test('home starts loading the model without displaying a stationary preview', ()
   const html = readFileSync('sanggi-soldier.html', 'utf8');
   assert.ok(!html.includes('id="home-character-preview"'));
   assert.ok(!html.includes('soldier-home-model-preview.webp'));
-  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=2" crossorigin'));
+  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=3" crossorigin'));
 });
