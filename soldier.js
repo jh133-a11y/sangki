@@ -15,8 +15,7 @@ function save(key, value) {
   catch (error) { $('settings-status').textContent = '브라우저에 설정을 저장하지 못했습니다.'; console.warn(error); }
 }
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
-let loadout = { ...DEFAULT_LOADOUT };
-const savedLoadout = read('sanggi-soldier-loadout', {});
+const loadout = { ...DEFAULT_LOADOUT };
 let equipment = {};
 const artwork = { k2: 'soldier-weapon-k2.webp', shotgun: 'soldier-weapon-shotgun.webp', stick: 'soldier-weapon-stick.webp' };
 function updateEquipment(result) {
@@ -31,7 +30,7 @@ function updateEquipment(result) {
   identity.gold = result.gold; updateWallet(identity);
 }
 function renderWeaponCard(slot) {
-  const id = loadout[slot], container = $(slot).closest('.equipment-slot'), card = container.querySelector('.equipment-card');
+  const id = loadout[slot], card = $(slot).querySelector('.equipment-card');
   const level = weaponLevel(equipment[id]?.level);
   const grade = equipment[id]?.grade || 'D';
   card.dataset.grade = grade;
@@ -44,15 +43,6 @@ function renderWeaponCard(slot) {
   card.querySelector('.weapon-name').textContent = WEAPONS[id].name;
 }
 for (const slot of Object.keys(loadout)) {
-  if (WEAPONS[savedLoadout[slot]]?.slot === slot) loadout[slot] = savedLoadout[slot];
-  for (const [id, weapon] of Object.entries(WEAPONS)) {
-    if (weapon.slot === slot) $(slot).add(new Option(weapon.name, id));
-  }
-  $(slot).value = loadout[slot];
-  $(slot).addEventListener('change', () => {
-    loadout[slot] = $(slot).value; save('sanggi-soldier-loadout', loadout);
-    renderWeaponCard(slot);
-  });
   renderWeaponCard(slot);
 }
 let identity = null, room = null, myId = null, mode = 'home', online = false;

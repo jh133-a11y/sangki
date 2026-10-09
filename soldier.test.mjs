@@ -23,6 +23,8 @@ test('home displays weapon cards and saved levels without level-up buttons', () 
   assert.equal((html.match(/class="equipment-slot"/g) || []).length, 3);
   assert.equal((html.match(/class="weapon-level"/g) || []).length, 3);
   assert.doesNotMatch(html, /weapon-upgrade|>레벨업</);
+  assert.doesNotMatch(html, /<select id="(?:primary|secondary|melee)"/);
+  assert.doesNotMatch(client, /sanggi-soldier-loadout/);
   assert.doesNotMatch(client, /p_weapon:|p_level:/);
   assert.match(client, /rpc\('soldier_equipment_api', \{ p_token: identity.token \}\)/);
 });
