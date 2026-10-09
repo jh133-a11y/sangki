@@ -177,6 +177,9 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .grade-frame { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
 .weapon-level, .weapon-name { font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; font-size: clamp(9px, 1.2vw, 16px); font-weight: 900; font-style: italic; color: white; text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 2px #000; }
 .weapon-level { position: absolute; top: 8%; right: 10%; }
+.equipment-card { position: relative; aspect-ratio: 1091 / 1442; overflow: hidden; container-type: inline-size; }
+.equipment-card .weapon-level { left: 32%; right: auto; width: 21%; top: 8%; font-size: 10cqw; line-height: 1.1; white-space: nowrap; }
+.weapon-card-progress { position: absolute; top: 8%; left: 55%; width: 36%; height: 10%; display: grid; place-items: center; border: 1px solid #333; border-radius: 2px; background: #555; color: white; font: 900 9cqw/1 Arial, sans-serif; text-shadow: 1px 1px 1px black; }
 .weapon-image { position: absolute; width: 88%; height: 70%; object-fit: contain; left: 6%; top: 23%; }
 .weapon-name { position: absolute; left: 4%; bottom: 5%; width: 92%; text-align: center; }
 #home .equipment-slot select { display: block; width: 100%; min-height: 28px; padding: 3px 0; margin-top: 3px; font-size: 10px; }
@@ -231,6 +234,57 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .shop-owned-ribbon { position: absolute; z-index: 4; top: 0; left: 0; width: 45%; aspect-ratio: 1; background: linear-gradient(145deg, #10d4ff, #0064b6 75%); clip-path: polygon(0 0, 100% 0, 0 100%); color: white; font-size: clamp(16px, 2vw, 30px); font-weight: 900; }
 .shop-owned-ribbon > span { position: absolute; top: 28%; left: -15%; width: 100%; transform: rotate(-45deg); text-align: center; }
 #shop-status { margin: 0; padding: 8px 20px; font-size: 13px; }
+.shop-supply-art { background: repeating-conic-gradient(from 0deg at 50% 55%, #fff85733 0deg 8deg, transparent 8deg 16deg), radial-gradient(ellipse, #fff77a, #c8af03 55%, #3a3401); }
+.shop-supply-art img { display: block; width: 100%; aspect-ratio: 1.08; object-fit: fill; padding: 45px 0 0; }
+.shop-supply-product h2 { font-size: clamp(20px, 2.4vw, 34px); white-space: nowrap; padding: 5px 0; }
+.shop-supply-product > p { min-height: 110px; padding: 22px 4px 16px; font-weight: 900; font-size: clamp(13px, 1.55vw, 22px); background: linear-gradient(145deg,#050c12 65%,#26313a 66%,#070d13); }
+.shop-supply-product > button { position: absolute; inset: 0 0 auto; height: calc(100% - 35px); width: 100%; opacity: 0; margin: 0; }
+.shop-supply-product:focus-within { outline: 3px solid #3bb6ff; outline-offset: 2px; }
+.shop-supply-odds { position: relative; z-index: 4; text-align: left; font-size: 12px; padding: 8px; background: #172431; }
+.shop-supply-odds summary { cursor: pointer; }
+.shop-supply-odds p { margin: 8px 0 0; line-height: 1.6; }
+#shop-confirm-odds { font-size: 14px; line-height: 1.7; }
+#shop-confirm-image[data-supply]:not([data-supply=""]) { background: radial-gradient(#fff876, #6f6100); }
+#supply-opening-dialog { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; inset: 0; border: 0; padding: 12px; border-radius: 0; background: #000c; overflow: auto; color: white; }
+#supply-opening-dialog h2 { position: absolute; left: 4%; top: 4%; margin: 0; padding: 0; background: none; border: 0; font-size: clamp(16px,2vw,24px); }
+.supply-opening-counter { position: absolute; right: 5%; top: 5%; font-size: 24px; font-weight: 900; }
+.supply-opening-stage { position: relative; width: min(420px,90vw,70dvh); aspect-ratio: 420/360; margin: max(8px,calc((100dvh - 550px)/2)) auto 0; }
+.supply-opening-stage canvas { width: 100%; height: 100%; }
+.supply-opening-reward { position: absolute; width: 23%; left: 39%; top: 49%; }
+.supply-opening-reward .equipment-card { width: 100%; }
+#supply-opening-dialog [role="status"] { text-align: center; font-size: 14px; margin: 8px; }
+.supply-opening-error { text-align: center; color: #ffcf7a; }
+.supply-opening-error:empty { display: none; }
+.supply-opening-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.supply-opening-actions button { min-height: 40px; }
+.supply-opening-results { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 850px; margin: 20px auto; }
+.supply-opening-results .equipment-card { width: clamp(75px,12vw,120px); }
+.supply-burst { position: absolute; inset: 28% 25% 10%; background: #fffed0; clip-path: polygon(50% 0%,56% 27%,68% 5%,67% 32%,87% 15%,77% 39%,100% 32%,80% 48%,100% 60%,76% 60%,90% 82%,66% 69%,69% 100%,53% 77%,40% 99%,39% 72%,16% 88%,29% 63%,0 67%,24% 50%,0 32%,30% 37%,17% 11%,41% 29%); filter: drop-shadow(0 0 10px #fff600); opacity: 0; }
+.supply-burst { background: #ffff48; }
+.supply-burst::after { content: ''; position: absolute; inset: 10%; background: white; clip-path: inherit; transform: rotate(13deg); }
+.supply-particles { position: absolute; inset: 0; pointer-events: none; }
+.supply-particles i { position: absolute; left: 50%; top: 56%; width: 7px; height: 7px; border-radius: 50%; background: #ffe770; box-shadow: 0 0 7px #ffca21; opacity: 0; }
+.supply-particles i:nth-child(3n) { width: 30px; height: 30px; border-radius: 0; clip-path: polygon(50% 0,60% 32%,90% 10%,72% 42%,100% 50%,70% 60%,90% 90%,58% 70%,50% 100%,40% 70%,10% 90%,28% 58%,0 50%,30% 40%,10% 10%,42% 28%); background: #ffff89; }
+[data-phase="opening"] .supply-burst { animation: supply-flash .4s .4s both; }
+[data-phase="opening"] .supply-opening-reward { animation: supply-reveal .25s .78s both; }
+[data-phase="opening"] .supply-particles i, [data-phase="revealed"] .supply-particles i { animation: supply-spark 1.2s calc(.62s + var(--delay)) both; }
+@media (max-width: 600px) {
+  .shop-tabs { overflow-x: auto; gap: 8px; padding: 10px 12px 0; }
+  .shop-tabs button { flex: 0 0 auto; min-width: 75px; min-height: 48px; font-size: 16px; white-space: nowrap; }
+}
+@keyframes supply-flash { 0% { opacity: 0; transform: scale(.2); } 15%,45% { opacity: 1; transform: scale(1.2); } 75% { opacity: .95; transform: scale(1.6); } 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes supply-reveal { from { opacity: 0; transform: translateY(35px) scale(.5); } to { opacity: 1; transform: none; } }
+@keyframes supply-spark { 0% { opacity: 0; transform: rotate(var(--angle)) translateX(20px); } 15% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateX(var(--distance)) scale(.2); } }
+@media (max-height: 450px) {
+  .supply-opening-stage { width: min(330px,65dvh); margin: 0 auto; }
+  #supply-opening-dialog h2 { position: absolute; left: 3%; top: 5%; }
+  .supply-opening-counter { font-size: 18px; }
+  .shop-supply-product > p { min-height: 74px; padding: 12px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-phase="opening"] .supply-burst, [data-phase="opening"] .supply-particles i { animation: none; opacity: 0; }
+  [data-phase="opening"] .supply-opening-reward { animation: none; }
+}
 .shop-notice { margin: 0; padding: 0 20px; font-size: 12px; }
 @media (max-height: 420px) {
   #home .play-button, #shop-open { bottom: 3%; }
@@ -261,7 +315,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .weapon-material-meter progress::-webkit-progress-bar { background: #555; }
 .weapon-material-meter progress::-webkit-progress-value { background: linear-gradient(#ffdc34, #e9a500); }
 .weapon-material-meter progress::-moz-progress-bar { background: #e9b500; }
-.weapon-material-meter span { position: absolute; inset: 0; text-align: center; color: white; font-weight: 900; text-shadow: 1px 1px 2px #000; }
+.weapon-material-meter span { position: absolute; inset: 0; display: grid; place-items: center; color: white; font-weight: 900; text-shadow: 1px 1px 2px #000; }
 .weapon-material-target-detail { display: grid; grid-template-columns: minmax(95px, 27%) minmax(0, 1fr); gap: 10px; padding-top: 6px; align-items: center; }
 #weapon-material-dialog .equipment-card { position: relative; width: 100%; aspect-ratio: 1091 / 1442; overflow: hidden; border-radius: 6px; }
 .weapon-material-stats { width: 100%; border-spacing: 3px; font-size: 18px; }

@@ -6,8 +6,9 @@ import { characterInventoryStats } from './soldier-inventory.mjs';
 import { SUPPLY_PRODUCTS } from './soldier-shop.mjs';
 
 test('shop products use reference prices and separate portrait assets', () => {
-  assert.deepEqual(SUPPLY_PRODUCTS.map(({ id, price }) => [id, price]), [['normal', 3], ['advanced', 30]]);
-  for (const id of ['normal', 'advanced', 'fsb-agent', 'roka-swc']) assert.ok(readFileSync(`soldier-shop-${id}.webp`).length);
+  assert.deepEqual(SUPPLY_PRODUCTS.map(({ id, price }) => [id, price]), [['special', 300], ['advanced', 30], ['normal', 3]]);
+  for (const id of ['normal','advanced','special']) assert.ok(readFileSync(`soldier-supply-${id}.webp`).length);
+  for (const id of ['fsb-agent', 'roka-swc']) assert.ok(readFileSync(`soldier-shop-${id}.webp`).length);
 });
 
 test('all character levels follow the requested health and evasion progression', () => {

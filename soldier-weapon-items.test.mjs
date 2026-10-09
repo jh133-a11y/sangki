@@ -13,7 +13,7 @@ test('all fifteen weapon-grade rewards reuse the same artwork, names and card la
     for (const variant of variants) {
       assert.ok(existsSync(variant.image.split('?')[0]));
       assert.ok(existsSync(variant.frame));
-      const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
+      const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-card-progress', '.weapon-image', '.weapon-name'].map(key => [key, {style:{},setAttribute(){}}]));
       const card = { dataset: {}, querySelector: key => elements[key] };
       fillWeaponCard(card, weapon, { grade: variant.grade, level: 3 });
       assert.equal(card.dataset.grade, variant.grade);
@@ -22,6 +22,9 @@ test('all fifteen weapon-grade rewards reuse the same artwork, names and card la
       assert.equal(elements['.weapon-name'].textContent, variant.name);
       fillWeaponCard(card, weapon, { grade: variant.grade, level: 7 });
       assert.equal(elements['.weapon-level'].textContent, 'MAX');
+      assert.equal(elements['.weapon-card-progress'].textContent,'100%');
+      fillWeaponCard(card,weapon,{grade:variant.grade,level:2,upgrade_progress:41.5});
+      assert.equal(elements['.weapon-card-progress'].textContent,'41.5%');
     }
   }
 });
@@ -44,7 +47,7 @@ test('default weapons remain ordinary owned items and card reuse clears previous
     id: `default-${weapon}`, weapon, grade: 'D', level: 2, equipped: true, source: 'default'
   }));
   assert.deepEqual(validateWeaponItems({ gold: '0', items }), items);
-  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
+  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-card-progress', '.weapon-image', '.weapon-name'].map(key => [key, {style:{},setAttribute(){}}]));
   const card = { dataset: {}, querySelector: key => elements[key] };
   fillWeaponCard(card, 'k2', items[0]);
   assert.equal(card.dataset.source, 'default');
@@ -81,7 +84,7 @@ test('material upgrades use requested per-card gold costs and protect equipped/d
   const spare = { ...target, id:'spare', equipped:false, source:'event', upgrade_progress:20 };
   assert.deepEqual(upgradeMaterials([target, spare, {...spare,id:'default',source:'default'}, {...spare,id:'worn',equipped:true},
     {...spare,id:'other-grade',grade:'S'}, {...spare,id:'secondary',weapon:'shotgun'}],target).map(item=>item.id),['spare','other-grade','secondary']);
-  const state = { gold:'1000', material_version:2, items:[{...spare,upgrade_xp:20,upgrade_progress:40}] };
+  const state = { gold:'1000', material_version:2, material_rate:83, items:[{...spare,upgrade_xp:20,upgrade_progress:40}] };
   assert.equal(validateWeaponItems(state)[0].materialReady, true);
   for (const xp of [-1, 50, 1.5, undefined]) {
     assert.throws(()=>validateWeaponItems({...state,items:[{...spare,upgrade_xp:xp,upgrade_progress:40}]}),/진행률/);
@@ -89,18 +92,25 @@ test('material upgrades use requested per-card gold costs and protect equipped/d
   assert.throws(()=>validateWeaponItems({...state,items:[{...state.items[0],level:7}]}),/진행률/);
   assert.throws(()=>validateWeaponItems({...state,items:[{...state.items[0],upgrade_progress:20}]}),/진행률/);
   assert.equal(validateWeaponItems({...state,material_version:1})[0].materialReady, undefined);
+  assert.equal(validateWeaponItems({...state,material_rate:undefined})[0].materialReady, false);
 });
 
 test('material XP preserves invested levels and percentages with multi-level carry and MAX overflow', () => {
   assert.deepEqual(['D','C','B','A','S'].map(weaponLevelXp), [25,50,100,200,400]);
   const target = { grade:'A',level:1,upgrade_xp:0 };
   const material = { grade:'A',level:2,upgrade_xp:100 };
-  assert.equal(weaponMaterialXp(material), 500);
+  assert.equal(weaponMaterialXp(material), 415);
   assert.deepEqual(weaponUpgradePreview(target,[material]),
-    { added:500,level:3,xp:100,percent:50,overflow:0,cost:8000 });
+    { added:415,level:3,xp:15,percent:7.5,overflow:0,cost:8000 });
   assert.deepEqual(weaponUpgradePreview({...target,level:6},[material]),
-    { added:500,level:7,xp:0,percent:0,overflow:300,cost:8000 });
+    { added:415,level:7,xp:0,percent:0,overflow:215,cost:8000 });
   assert.deepEqual(weaponUpgradePreview(target,[{grade:'D',level:1,upgrade_xp:0}]),
-    { added:25,level:1,xp:25,percent:12.5,overflow:0,cost:8000 });
-  assert.equal(weaponUpgradePreview({...target,upgrade_xp:175},[{grade:'D',level:1,upgrade_xp:0}]).level,2);
+    { added:20,level:1,xp:20,percent:10,overflow:0,cost:8000 });
+  assert.equal(weaponUpgradePreview({...target,upgrade_xp:180},[{grade:'D',level:1,upgrade_xp:0}]).level,2);
+  for (const grade of ['D','C','B','A','S']) {
+    for (let level=1;level<=7;level++) {
+      assert.equal(weaponMaterialXp({grade,level,upgrade_xp:0}),weaponLevelXp(grade)*level*83/100);
+    }
+  }
+  assert.equal(weaponUpgradePreview(target,[{grade:'D',level:1,upgrade_xp:1},{grade:'D',level:1,upgrade_xp:1}]).added,43);
 });

@@ -1,6 +1,6 @@
 import { WEAPONS, weaponStats, weaponLevelLabel } from './soldier-core.mjs?v=4';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
-import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=5';
+import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=6';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryCharacters(state) {
@@ -187,7 +187,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         : '재료로 사용한 무기는 소모되어 사라집니다.';
       count.textContent = `선택된 아이템 : ${ids.size}`;
       price.textContent = preview.cost.toLocaleString('ko-KR');
-      nextLevel.textContent = weaponLevelLabel(preview.level);
+      nextLevel.textContent = `LV${preview.level}`;
       progress.value = preview.level === 7 ? 100 : preview.percent;
       percent.textContent = `${progress.value}%`;
       const after = weaponInventoryStats(item.weapon, item.grade, preview.level);

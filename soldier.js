@@ -1,10 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=15';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=5';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=16';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=6';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop } from './soldier-shop.mjs?v=5';
+import { createShop } from './soldier-shop.mjs?v=6';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=1';
 import { WEAPONS, weaponStats, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=4';
 
 const $ = id => document.getElementById(id);
@@ -80,8 +81,49 @@ async function changeWeaponItem(action = 'read', item = null, weapon = null, mat
 }
 const shop = createShop({
   getState: () => characterState, isReady: () => shopReady,
-  buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters()
+  buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters(),
+  isSupplyReady: () => supplyReady, buySupply,
+  renderCard(weapon,item) {
+    const card = $('primary').querySelector('.equipment-card').cloneNode(true);
+    fillWeaponCard(card,weapon,item); return card;
+  }
 });
+let supplyReady = false, supplyBusy = false, supplyOwner = null;
+async function buySupply(product) {
+  if (!identity || !supplyReady) throw new Error('보급함 상점에 연결되지 않았습니다.');
+  if (supplyBusy) throw new Error('이전 보급함 구매를 처리 중입니다.');
+  const spec = SUPPLY_PRODUCTS.find(entry => entry.id === product);
+  if (!spec) throw new Error('보급함 종류가 올바르지 않습니다.');
+  const key = `sanggi-supply-pending-${supplyOwner}`;
+  supplyBusy = true;
+  try {
+    let pending = JSON.parse(localStorage.getItem(key) || 'null');
+    if (pending && (pending.product !== product || typeof pending.request !== 'string'
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pending.request))) {
+      throw new Error('미확인 구매가 있습니다. 이전에 구매한 보급함을 다시 눌러 지급 결과를 확인하세요.');
+    }
+    pending ||= { product, request: crypto.randomUUID() };
+    localStorage.setItem(key,JSON.stringify(pending));
+    let result;
+    try {
+      result = await rpc('soldier_supply_api', { p_token: identity.token, p_product: product, p_request: pending.request });
+    } catch (error) {
+      if (error.rpcRejected) localStorage.removeItem(key);
+      throw error;
+    }
+    const items = validateSupply(result,product,pending.request);
+    if (result.client_id !== supplyOwner) throw new Error('보급함 구매자의 정보가 변경되었습니다.');
+    for (const slot of ['primary','secondary','melee']) {
+      if (inventoryWeapons(equipment,slot).length + items.filter(item => WEAPONS[item.weapon].slot === slot).length > INVENTORY_LIMIT) {
+        throw new Error('분류별 인벤토리 제한을 초과한 응답입니다.');
+      }
+    }
+    weaponItems = items; identity.gold = result.inventory.gold; identity.gems = result.gems;
+    updateWallet(identity); Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
+    localStorage.removeItem(key);
+    return result.rewards;
+  } finally { supplyBusy = false; }
+}
 async function refreshCharacters(action = 'read', id = null, level = null) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
   if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
@@ -131,7 +173,8 @@ async function rpc(name, data) {
       body: JSON.stringify(data), signal: controller.signal
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.message || '서버 요청에 실패했습니다.');
+    if (!response.ok) throw Object.assign(new Error(result.message || '서버 요청에 실패했습니다.'),
+      { rpcRejected: response.status >= 400 && response.status < 500 && response.status !== 408 });
     return result;
   } finally { clearTimeout(timeout); }
 }
@@ -172,6 +215,13 @@ async function connect() {
     catch (error) {
       $('shop-status').textContent = `상점 연결 실패: ${error.message} soldier-shop.sql 실행 후 새로고침하세요.`;
       console.error('상점 불러오기 오류', error);
+    }
+    try {
+      const result = await rpc('soldier_supply_api',{ p_token: identity.token });
+      validateSupply(result); supplyOwner = result.client_id; supplyReady = true;
+    } catch (error) {
+      $('shop-status').textContent = `보급함 연결 실패: ${error.message} soldier-supply.sql 실행 후 새로고침하세요.`;
+      console.error('보급함 불러오기 오류',error);
     }
     ready = true;
     $('play-open').disabled = false;

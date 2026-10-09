@@ -18,12 +18,15 @@ export function weaponLevelXp(grade) {
   if (!Object.hasOwn(xp, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
   return xp[grade];
 }
-export function weaponMaterialXp(item) {
+function investedWeaponXp(item) {
   return weaponLevelXp(item.grade) * item.level + item.upgrade_xp;
+}
+export function weaponMaterialXp(item) {
+  return investedWeaponXp(item) * 83 / 100;
 }
 export function weaponUpgradePreview(item, materials) {
   const required = weaponLevelXp(item.grade);
-  const added = materials.reduce((total, material) => total + weaponMaterialXp(material), 0);
+  const added = Math.floor(materials.reduce((total, material) => total + investedWeaponXp(material), 0) * 83 / 100);
   const total = item.upgrade_xp + added;
   const level = Math.min(7, item.level + Math.floor(total / required));
   const xp = level === 7 ? 0 : total % required;
@@ -66,7 +69,8 @@ export function validateWeaponItems(result) {
     if (item.equipped && equipped.has(slot)) throw new Error('동일 분류의 중복 장착 정보입니다.');
     if (item.equipped) equipped.add(slot);
   }
-  return result.material_version === 2 ? result.items.map(item => ({ ...item, materialReady: true })) : result.items;
+  return result.material_version === 2
+    ? result.items.map(item => ({ ...item, materialReady: result.material_rate === 83 })) : result.items;
 }
 
 export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
@@ -79,6 +83,12 @@ export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
   frame.src = `soldier-grade-${item.grade.toLowerCase()}.webp`;
   frame.alt = `${item.grade}급`;
   card.querySelector('.weapon-level').textContent = weaponLevelLabel(item.level);
+  const meter = card.querySelector('.weapon-card-progress');
+  const percent = item.level === 7 ? 100 : item.upgrade_progress ?? 0;
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new Error('무기 강화 진행률이 올바르지 않습니다.');
+  meter.textContent = `${percent}%`;
+  meter.setAttribute('aria-valuenow',String(percent));
+  meter.style.background = `linear-gradient(to right, #ffdc34, #e9a500 ${percent}%, #555 ${percent}%, #555)`;
   const image = card.querySelector('.weapon-image');
   image.hidden = !WEAPON_ARTWORK[weapon];
   if (WEAPON_ARTWORK[weapon]) image.src = WEAPON_ARTWORK[weapon];

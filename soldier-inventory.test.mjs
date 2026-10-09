@@ -53,8 +53,18 @@ test('enhancement UI keeps XP internal and exposes level-adjacent progress and a
   assert.doesNotMatch(source, /경험치|강화재료 선택 · 개당/);
   assert.match(source, /button\.textContent = '강화'/);
   assert.match(source, /targetHeading\.append\(title, nextLevel, meter\)/);
+  assert.match(source, /nextLevel\.textContent = `LV\$\{preview\.level\}`/);
   assert.match(source, /label\.append\(level, meter\)/);
   assert.match(source, /rows\.forEach/);
   assert.match(source, /선택초기화/);
   assert.match(source, /input\.dataset\.grade === grade/);
+});
+
+test('every home weapon card includes a persistent level-adjacent progress bar', () => {
+  const html=readFileSync('sanggi-soldier.html','utf8');
+  assert.equal((html.match(/class="weapon-card-progress"/g)||[]).length,3);
+  assert.equal((html.match(/class="weapon-level">Lv\.1<\/span><span class="weapon-card-progress"/g)||[]).length,3);
+  const helper=readFileSync('soldier-weapon-items.mjs','utf8');
+  assert.match(helper,/item\.level === 7 \? 100/);
+  assert.match(helper,/meter\.setAttribute\('aria-valuenow'/);
 });

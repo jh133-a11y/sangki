@@ -64,7 +64,7 @@ begin
     where client_id=owner_id and weapon=item.weapon and equipped;
     update public.soldier_weapon_items set equipped=true where id=item.id;
   end if;
-  return jsonb_build_object('gold',balance::text,'material_version',2,'items',coalesce((
+  return jsonb_build_object('gold',balance::text,'material_version',2,'material_rate',83,'items',coalesce((
     select jsonb_agg(jsonb_build_object(
       'id',id,'weapon',weapon,'grade',grade,'level',level,'equipped',equipped,
       'source',source,'upgrade_xp',upgrade_xp,
@@ -115,7 +115,7 @@ begin
   end if;
   perform 1 from public.soldier_weapon_items
   where client_id=owner_id and id=any(material_ids) order by id for update;
-  select count(*),coalesce(sum(public.soldier_weapon_level_xp(grade)*level+upgrade_xp),0)
+  select count(*),floor(coalesce(sum(public.soldier_weapon_level_xp(grade)*level+upgrade_xp),0)*0.83)::integer
   into valid,added_xp from public.soldier_weapon_items
   where client_id=owner_id and id=any(material_ids) and id<>p_item
     and not equipped and source<>'default';
