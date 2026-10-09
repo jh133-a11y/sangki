@@ -90,7 +90,7 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   assert.ok(Math.abs(rig.joints.leftShoulder.rotation.x) > .02);
   assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .015);
   assert.ok(vertex(0).distanceTo(foot) < 1e-7);
-  rig.animate(15);
+  rig.animate(17);
   assert.equal(rig.root.userData.motion, 'stretch');
   assert.ok(vertex(5).distanceTo(head) > .0001);
   assert.ok(vertex(2).distanceTo(arm) > .0001);
@@ -102,6 +102,11 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   rig.animate(0);
   assert.ok(vertex(5).distanceTo(head) < 1e-7);
   rig.setYaw(Math.PI); assert.equal(rig.root.rotation.y, Math.PI);
+  for (const seconds of [0, 4, 5, 7, 9.99]) {
+    assert.ok(Math.abs(idlePose(seconds).stretch - idlePose(seconds + 10).stretch) < 1e-10);
+  }
+  assert.equal(idlePose(7).stretch, 1);
+  assert.equal(idlePose(17).stretch, 1);
 });
 
 test('invalid model input produces an explicit error', () => {
@@ -122,4 +127,14 @@ test('home has automatic motion without pose or motion buttons', () => {
   const css = readFileSync('soldier.css', 'utf8');
   assert.ok(css.includes('.home-character:focus { outline: none; }'));
   assert.ok(!css.includes('.home-character:focus-visible { outline:'));
+});
+
+test('home displays a lightweight model preview before loading without reducing GLB quality', () => {
+  const html = readFileSync('sanggi-soldier.html', 'utf8');
+  assert.ok(html.includes('id="home-character-preview"'));
+  assert.ok(html.includes('as="image" href="soldier-home-model-preview.webp"'));
+  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=1" crossorigin'));
+  assert.ok(readFileSync('soldier-home-model-preview.webp').length < 250000);
+  const viewer = readFileSync('soldier-home-viewer.mjs', 'utf8');
+  assert.ok(viewer.indexOf("sync(); canvas.dataset.viewReady = 'true'") < viewer.indexOf('preview.hidden = true'));
 });

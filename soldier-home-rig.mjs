@@ -4,8 +4,8 @@ import { GLTFLoader } from './vendor/GLTFLoader.js';
 export const HOME_MODEL = 'soldier-home-model.glb';
 
 export function idlePose(seconds) {
-  const cycle = seconds % 24;
-  const stretch = cycle >= 12 && cycle <= 18 ? Math.sin((cycle - 12) / 6 * Math.PI) ** 2 : 0;
+  const cycle = seconds % 10;
+  const stretch = cycle >= 4 ? Math.sin((cycle - 4) / 6 * Math.PI) ** 2 : 0;
   return { breath: Math.sin(seconds * Math.PI * 2 / 4.5), stretch };
 }
 

@@ -63,6 +63,8 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
 .home-character { position: absolute; height: 81%; width: 37%; bottom: 10%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
+.home-character-preview { object-fit: contain; pointer-events: none; }
+.home-character-preview[hidden] { display: none; }
 .home-character:active { cursor: grabbing; }
 .home-character:focus { outline: none; }
 .home-character:focus-visible ~ .character-rotate-hint { text-decoration: underline; }

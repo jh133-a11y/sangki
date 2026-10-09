@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=6';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=7';
 
 export { idlePose };
 
@@ -108,5 +108,7 @@ export async function createHomeViewer(canvas, status) {
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });
   canvas.dataset.view = '0';
   labels(); sync(); canvas.dataset.viewReady = 'true';
+  const preview = home.querySelector('#home-character-preview');
+  if (preview) preview.hidden = true;
   return { cancelDrag };
 }
