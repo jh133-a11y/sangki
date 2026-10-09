@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=4';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=5';
 
 export { idlePose };
 
@@ -21,10 +21,12 @@ export async function createHomeViewer(canvas, status) {
   let pageActive = true, contextLost = false, cssWidth = 0, cssHeight = 0;
   const visible = () => !home.hidden && !document.hidden && pageActive && !contextLost;
   const turning = () => Math.abs(targetYaw - yaw) > .0001;
-  const idle = () => !reduced.matches && !drag;
+  const idle = () => !reduced.matches;
   const active = () => visible() && (idle() || turning());
   function labels() {
-    status.textContent = '제공된 3D 모델 · 드래그/방향키 회전 · 자동 호흡·몸풀기';
+    status.textContent = reduced.matches
+      ? '기기의 동작 줄이기 설정으로 자동 모션 정지 · 드래그/방향키 회전'
+      : '제공된 3D 모델 · 드래그/방향키 회전 · 자동 호흡·몸풀기';
   }
   function draw() {
     canvas.dataset.motion = visible() && turning() ? 'turn' : visible() && idle() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';

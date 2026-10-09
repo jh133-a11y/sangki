@@ -84,11 +84,17 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
     return mesh.applyBoneTransform(index, p);
   }
   const foot = vertex(0), chest = vertex(4), head = vertex(5), arm = vertex(2);
-  rig.animate(1); assert.ok(vertex(4).distanceTo(chest) > .00001);
+  rig.animate(1);
+  assert.ok(vertex(4).distanceTo(chest) > .003);
+  assert.ok(vertex(2).distanceTo(arm) > .003);
+  assert.ok(Math.abs(rig.joints.leftShoulder.rotation.x) > .02);
+  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .015);
+  assert.ok(vertex(0).distanceTo(foot) < 1e-7);
   rig.animate(15);
   assert.equal(rig.root.userData.motion, 'stretch');
   assert.ok(vertex(5).distanceTo(head) > .0001);
   assert.ok(vertex(2).distanceTo(arm) > .0001);
+  assert.ok(rig.joints.leftElbow.rotation.x > .1);
   assert.ok(vertex(0).distanceTo(foot) < 1e-7);
   for (let time = 0; time < 48; time += .02) {
     assert.ok(Math.abs(idlePose(time).stretch - idlePose(time + .02).stretch) < .02);
@@ -108,7 +114,7 @@ test('home has automatic motion without pose or motion buttons', () => {
   assert.ok(!html.includes('data-character-view'));
   assert.ok(!html.includes('character-motion-toggle'));
   const viewer = readFileSync('soldier-home-viewer.mjs', 'utf8');
-  assert.ok(viewer.includes("const idle = () => !reduced.matches && !drag;"));
+  assert.ok(viewer.includes("const idle = () => !reduced.matches;"));
   assert.ok(!viewer.includes('motionButton'));
   const css = readFileSync('soldier.css', 'utf8');
   assert.ok(css.includes('.home-character:focus { outline: none; }'));
