@@ -1,11 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=11';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=2';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=14';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=5';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
 import { createShop } from './soldier-shop.mjs?v=5';
-import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
+import { WEAPONS, weaponStats, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=4';
 
 const $ = id => document.getElementById(id);
 const endpoint = 'https://ejrwrwjsgizzxhqybtff.supabase.co/rest/v1/rpc';
@@ -59,9 +59,13 @@ const inventory = createEquipmentInventory({
     fillWeaponCard(card, id, item); return card;
   }
 });
-async function changeWeaponItem(action = 'read', item = null, weapon = null) {
+async function changeWeaponItem(action = 'read', item = null, weapon = null, materials = null) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
-  const result = await rpc('soldier_weapon_items_api', {
+  const result = action === 'material'
+    ? await rpc('soldier_weapon_material_api', {
+      p_token: identity.token, p_item: item.id, p_materials: materials.ids,
+      p_level: item.level, p_progress: item.upgrade_xp, p_request: materials.request
+    }) : await rpc('soldier_weapon_items_api', {
     p_token: identity.token, p_action: action, p_item: item?.id || null,
     p_level: action === 'upgrade' ? item.level : null, p_weapon: weapon
   });
@@ -113,7 +117,7 @@ let entities = [], matchEnds = 0, lastFrame = performance.now(), slot = 'primary
 let player = { x: -42, y: 0, z: -42, yaw: -.8, pitch: 0, crouch: false, hp: 100, kills: 0, deaths: 0 };
 let velocityY = 0, nextShot = 0, reloadEnds = 0, reloadSlot = null, respawnAt = 0, protectionEnds = 0, jumpPending = false;
 let reloadRequested = null;
-let ammo = {}, fireHeld = false, aiming = false, shotRequested = false, recoil = 0;
+let ammo = {}, matchWeapons = {}, fireHeld = false, aiming = false, shotRequested = false, recoil = 0;
 let keys = new Set(), moveTouch = null, lookTouch = null, joystick = { x: 0, y: 0 };
 let audioContext = null;
 const dialogOpen = () => !!document.querySelector('dialog[open]');
@@ -359,7 +363,7 @@ function equip(next) {
   updateHud();
 }
 function resetAmmo() {
-  ammo = Object.fromEntries(Object.entries(loadout).map(([key, id]) => [key, WEAPONS[id].magazine]));
+  ammo = initialWeaponAmmo(loadout);
 }
 function applyControls() {
   for (const [id, config] of Object.entries(settings.controls)) {
@@ -472,6 +476,10 @@ function startMatch(isOnline) {
   homeCharacter.cancelDrag();
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
+  matchWeapons = Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
+    const item = weaponItems.find(entry => entry.weapon === id && entry.equipped) || equipment[id];
+    return [key, weaponStats(id, item?.grade || 'D', item?.level || 1)];
+  }));
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
   const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
   player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: stats.hp, maxHp: stats.hp, evasion: stats.evasion, lastDodge: null, kills: 0, deaths: 0 };
@@ -519,6 +527,11 @@ function applySnapshot(state) {
   if (respawned) $('game-status').textContent = '';
   if (startingMatch && state.character_version !== 2) $('game-status').textContent = '캐릭터 능력 적용에는 soldier-character-upgrade.sql 실행이 필요합니다.';
   ammo = state.ammo;
+  if (state.weapon_version === 1) matchWeapons = validateCombatWeapons(state, loadout);
+  else if (startingMatch) {
+    matchWeapons = Object.fromEntries(Object.entries(loadout).map(([key, id]) => [key, weaponStats(id)]));
+    $('game-status').textContent += ' 무기 성장·보유탄환 적용에는 soldier-weapon-combat.sql 실행이 필요합니다.';
+  }
   reloadEnds = state.reload_until ? performance.now() / 1000 + Math.max(0, (Date.parse(state.reload_until) - Date.parse(room.server_time)) / 1000) : 0;
   matchEnds = performance.now() / 1000 + Math.max(0, (Date.parse(room.ends_at) - Date.parse(room.server_time)) / 1000);
   updateRank(state.xp);
@@ -561,7 +574,7 @@ function updateHud() {
   $('score').textContent = `${player.kills} 처치 · ${player.deaths} 사망`;
   const weapon = WEAPONS[loadout[slot]];
   const reloading = reloadEnds > performance.now() / 1000;
-  $('ammo').textContent = `${weapon.name} · ${slot === 'melee' ? '근접 무기' : `${ammo[slot] ?? weapon.magazine}/${weapon.magazine}`}${reloading ? ' · 장전 중' : ''}`;
+  $('ammo').textContent = `${weapon.name} · ${slot === 'melee' ? '무한대' : `${ammo[slot] ?? weapon.magazine}/${ammo[`${slot}_reserve`] ?? weapon.magazine}`}${reloading ? ' · 장전 중' : ''}`;
 }
 function finish(scores) {
   if (mode !== 'game') return;
@@ -609,7 +622,7 @@ function gunSound() {
   } catch (error) { console.warn('효과음 오류', error); }
 }
 function shoot() {
-  const now = performance.now() / 1000, weapon = WEAPONS[loadout[slot]];
+  const now = performance.now() / 1000, weapon = matchWeapons[slot];
   if (mode !== 'game' || dialogOpen() || player.hp <= 0 || now < nextShot || now < reloadEnds) return;
   if (online && networkBusy) { shotRequested = true; return; }
   shotRequested = false;
@@ -622,7 +635,8 @@ function shoot() {
     const target = targeted();
     if (target && now >= target.protected) {
       if (evadesAttack(target.evasion)) { $('game-status').textContent = 'AI가 공격을 회피했습니다.'; updateHud(); return; }
-      target.hp = Math.max(0, target.hp - weapon.damage); $('game-status').textContent = '명중';
+      const hit = weaponHitDamage(weapon);
+      target.hp = Math.max(0, target.hp - hit.damage); $('game-status').textContent = hit.critical ? '크리티컬 명중!' : '명중';
       if (target.hp === 0) { player.kills++; target.deaths++; target.respawn = now + 3; $('game-status').textContent = 'AI 처치'; }
     }
     updateHud();
@@ -631,6 +645,7 @@ function shoot() {
 function reload() {
   const weapon = WEAPONS[loadout[slot]], now = performance.now() / 1000;
   if (player.hp <= 0 || slot === 'melee' || now < reloadEnds || ammo[slot] >= weapon.magazine) return;
+  if (ammo[`${slot}_reserve`] === 0) { $('game-status').textContent = '보유탄환이 없습니다.'; return; }
   if (online) {
     if (networkBusy) reloadRequested = slot;
     else networkAction('reload', { slot });
@@ -776,7 +791,7 @@ function frame(time) {
       if (settings.autoFire && loadout[slot] !== 'sniper' && slot !== 'melee' && targeted()) shoot();
     }
     if (!online) {
-      if (reloadEnds && now >= reloadEnds) { ammo[reloadSlot] = WEAPONS[loadout[reloadSlot]].magazine; reloadEnds = 0; updateHud(); }
+      if (reloadEnds && now >= reloadEnds) { ammo = reloadWeaponAmmo(ammo, reloadSlot, matchWeapons[reloadSlot]); reloadEnds = 0; updateHud(); }
       if (!dialogOpen()) updateBots(dt, now);
       else matchEnds += dt;
     } else if (time - lastNet > 200 && !networkBusy) {

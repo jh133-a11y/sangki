@@ -30,10 +30,20 @@ test('every weapon exposes the seven reference inventory fields using actual gam
   for (const [id, weapon] of Object.entries(WEAPONS)) {
     const stats = weaponInventoryStats(id);
     assert.deepEqual(stats.map(([label]) => label), labels);
-    assert.equal(stats[0][1], weapon.magazine ? `${weapon.magazine} / 미설정` : '해당 없음');
+    assert.equal(stats[0][1], weapon.magazine ? `${weapon.magazine} / ${weapon.reserve ?? '미설정'}` : '무한대');
     assert.equal(stats[1][1], weapon.damage);
     assert.equal(stats[2][1], Math.round(60 / weapon.delay));
-    assert.ok(stats.slice(3).every(([, value, explanation]) => value === '미설정' && explanation.length > 0));
+    assert.ok(stats.slice(3).every(([, , explanation]) => explanation.length > 0));
   }
   assert.throws(() => weaponInventoryStats('invalid'), /무기/);
+});
+
+test('requested D Lv1 K2, M870 and M9 stats are exact and comparisons use the selected grade/level', () => {
+  assert.deepEqual(weaponInventoryStats('k2').map(([,value])=>value), ['25 / 100',24,375,85,90,1800,'4%']);
+  assert.deepEqual(weaponInventoryStats('shotgun').map(([,value])=>value), ['6 / 24',75,67,75,60,2500,'1%']);
+  assert.deepEqual(weaponInventoryStats('stick').map(([,value])=>value), ['무한대',70,200,100,'없음',900,'10%']);
+  assert.equal(weaponInventoryStats('k2','A',3)[1][1],46);
+  assert.equal(weaponInventoryStats('k2','A',3)[6][1],'5%');
+  assert.equal(weaponInventoryStats('stick','S',7)[1][1],118);
+  assert.equal(weaponInventoryStats('stick','S',7)[6][1],'19%');
 });

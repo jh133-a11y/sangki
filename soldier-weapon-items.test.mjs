@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { WEAPON_REWARDS, validateWeaponItems, fillWeaponCard } from './soldier-weapon-items.mjs';
+import { WEAPON_REWARDS, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
 
 test('all fifteen weapon-grade rewards reuse the same artwork, names and card layout', () => {
   assert.equal(WEAPON_REWARDS.length, 15);
@@ -72,4 +72,35 @@ test('default inventory migration issues idempotent real items for existing and 
   assert.match(sql, /select client_id from public\.soldier_profiles/);
   assert.match(sql, /revoke all on function public\.soldier_default_weapons\(uuid\) from public,anon,authenticated/);
   assert.doesNotMatch(sql, /\bdelete\s+from\b/i);
+});
+
+test('material upgrades use requested per-card gold costs and protect equipped/default/target cards', () => {
+  assert.deepEqual(['D','C','B','A','S'].map(materialCost), [0,2000,4000,8000,16000]);
+  assert.throws(() => materialCost('X'));
+  const target = { id:'target', weapon:'k2', grade:'C', level:1, equipped:true };
+  const spare = { ...target, id:'spare', equipped:false, source:'event', upgrade_progress:20 };
+  assert.deepEqual(upgradeMaterials([target, spare, {...spare,id:'default',source:'default'}, {...spare,id:'worn',equipped:true},
+    {...spare,id:'other-grade',grade:'S'}, {...spare,id:'secondary',weapon:'shotgun'}],target).map(item=>item.id),['spare','other-grade','secondary']);
+  const state = { gold:'1000', material_version:2, items:[{...spare,upgrade_xp:20,upgrade_progress:40}] };
+  assert.equal(validateWeaponItems(state)[0].materialReady, true);
+  for (const xp of [-1, 50, 1.5, undefined]) {
+    assert.throws(()=>validateWeaponItems({...state,items:[{...spare,upgrade_xp:xp,upgrade_progress:40}]}),/진행률/);
+  }
+  assert.throws(()=>validateWeaponItems({...state,items:[{...state.items[0],level:7}]}),/진행률/);
+  assert.throws(()=>validateWeaponItems({...state,items:[{...state.items[0],upgrade_progress:20}]}),/진행률/);
+  assert.equal(validateWeaponItems({...state,material_version:1})[0].materialReady, undefined);
+});
+
+test('material XP preserves invested levels and percentages with multi-level carry and MAX overflow', () => {
+  assert.deepEqual(['D','C','B','A','S'].map(weaponLevelXp), [25,50,100,200,400]);
+  const target = { grade:'A',level:1,upgrade_xp:0 };
+  const material = { grade:'A',level:2,upgrade_xp:100 };
+  assert.equal(weaponMaterialXp(material), 500);
+  assert.deepEqual(weaponUpgradePreview(target,[material]),
+    { added:500,level:3,xp:100,percent:50,overflow:0,cost:8000 });
+  assert.deepEqual(weaponUpgradePreview({...target,level:6},[material]),
+    { added:500,level:7,xp:0,percent:0,overflow:300,cost:8000 });
+  assert.deepEqual(weaponUpgradePreview(target,[{grade:'D',level:1,upgrade_xp:0}]),
+    { added:25,level:1,xp:25,percent:12.5,overflow:0,cost:8000 });
+  assert.equal(weaponUpgradePreview({...target,upgrade_xp:175},[{grade:'D',level:1,upgrade_xp:0}]).level,2);
 });

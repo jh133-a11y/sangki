@@ -1,50 +1,5 @@
--- Run after the site's investment/account schema. No Realtime publication is required.
+-- Run after soldier-weapon-material-upgrade.sql. Existing items/currency are preserved.
 begin;
-create table if not exists public.soldier_profiles (
-  client_id uuid primary key references public.investment_users(client_id) on delete cascade,
-  xp bigint not null default 0 check (xp >= 0)
-);
-alter table public.soldier_profiles add column if not exists wins bigint not null default 0 check (wins>=0);
-alter table public.soldier_profiles add column if not exists gold bigint not null default 0 check (gold>=0);
-alter table public.soldier_profiles add column if not exists gems bigint not null default 0 check (gems>=0);
-create table if not exists public.soldier_sessions (
-  token uuid primary key default gen_random_uuid(),
-  client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
-  account_token uuid,
-  expires_at timestamptz not null default now() + interval '1 day'
-);
-create table if not exists public.soldier_rooms (
-  id uuid primary key default gen_random_uuid(),
-  name text not null check (length(name) between 1 and 30),
-  host uuid not null,
-  status text not null default 'waiting' check (status in ('waiting','playing','finished')),
-  created_at timestamptz not null default now(),
-  ends_at timestamptz
-);
-create table if not exists public.soldier_players (
-  id uuid primary key default gen_random_uuid(),
-  client_id uuid not null unique references public.soldier_profiles(client_id) on delete cascade,
-  session_token uuid not null references public.soldier_sessions(token) on delete cascade,
-  room_id uuid not null references public.soldier_rooms(id) on delete cascade,
-  nickname text not null,
-  x double precision not null default -42, z double precision not null default -42,
-  y double precision not null default 0, yaw double precision not null default 0, pitch double precision not null default 0,
-  crouch boolean not null default false, hp integer not null default 100,
-  kills integer not null default 0, deaths integer not null default 0,
-  loadout jsonb not null, ammo jsonb not null default '{"primary":30,"secondary":12,"melee":0}',
-  slot text not null default 'primary', reload_slot text, reload_until timestamptz,
-  next_fire timestamptz not null default now(), last_shot timestamptz,
-  respawn_at timestamptz, protected_until timestamptz not null default now(),
-  jump_at timestamptz, last_moved timestamptz not null default now(),
-  last_seen timestamptz not null default now(), joined_at timestamptz not null default now()
-);
-create index if not exists soldier_players_room_idx on public.soldier_players(room_id);
-alter table public.soldier_profiles enable row level security;
-alter table public.soldier_sessions enable row level security;
-alter table public.soldier_rooms enable row level security;
-alter table public.soldier_players enable row level security;
-revoke all on public.soldier_profiles,public.soldier_sessions,public.soldier_rooms,public.soldier_players from anon,authenticated;
-
 create or replace function public.soldier_weapon(p_name text)
 returns jsonb language sql immutable set search_path=public as $$
   select case p_name
@@ -60,54 +15,86 @@ returns jsonb language sql immutable set search_path=public as $$
     when 'stick' then '{"damage":70,"delay":0.3,"range":3.2,"magazine":0,"accuracy":100,"recoilControl":null,"weight":900,"critical":10,"reload":0,"slot":"melee"}'::jsonb
     else null end
 $$;
-create or replace function public.soldier_cover()
-returns jsonb language sql immutable set search_path=public as $$
-  select '[[-25,-25,12,12,8],[25,-25,12,12,8],[-25,25,12,12,8],[25,25,12,12,8],[-8,-12,6,4,2.8],[12,8,6,4,2.8],[-12,12,4,8,2.8],[8,-5,4,5,2.8],[0,30,10,3,2.5],[0,-32,10,3,2.5],[-35,0,3,12,3],[35,0,3,12,3]]'::jsonb
-$$;
-create or replace function public.soldier_blocked(px double precision,pz double precision)
-returns boolean language sql immutable set search_path=public as $$
-  select abs(px)>48 or abs(pz)>48 or exists (
-    select 1 from jsonb_array_elements(public.soldier_cover()) b
-    where abs(px-(b->>0)::float8)<(b->>2)::float8/2+.5
-      and abs(pz-(b->>1)::float8)<(b->>3)::float8/2+.5)
-$$;
-create or replace function public.soldier_ray(o float8[],d float8[],lo float8[],hi float8[])
-returns float8 language plpgsql immutable set search_path=public as $$
-declare n float8:=0; f float8:='Infinity'; a float8; b float8; i integer;
+create or replace function public.soldier_weapon_stats(p_weapon text,p_grade text,p_level integer)
+returns jsonb language plpgsql immutable set search_path=public as $$
+declare spec jsonb; offset_damage integer; per_level integer; offset_critical integer; per_two_levels integer;
 begin
-  for i in 1..3 loop
-    if abs(d[i])<0.00000001 then
-      if o[i]<lo[i] or o[i]>hi[i] then return 'Infinity'; end if;
-    else
-      a:=(lo[i]-o[i])/d[i]; b:=(hi[i]-o[i])/d[i];
-      n:=greatest(n,least(a,b)); f:=least(f,greatest(a,b));
-      if n>f then return 'Infinity'; end if;
-    end if;
-  end loop;
-  return n;
-end $$;
-
-create or replace function public.soldier_connect(p_client_id uuid,p_nickname text,p_session_token uuid default null)
-returns jsonb language plpgsql security definer set search_path=public as $$
-declare uid uuid; nick text; t uuid; profile public.soldier_profiles%rowtype;
-begin
-  if p_session_token is not null then
-    select account_id into uid from public.site_account_sessions where token=p_session_token and expires_at>now();
-    if uid is null then raise exception '로그인 세션이 만료되었습니다. 다시 로그인하세요.'; end if;
-  else
-    if exists(select 1 from public.site_accounts where id=p_client_id) then raise exception '계정에 연결된 투자 닉네임입니다. 로그인하세요.'; end if;
-    select client_id into uid from public.investment_users where client_id=p_client_id and nickname=trim(p_nickname);
+  spec:=public.soldier_weapon(p_weapon);
+  if spec is null or p_grade is null or p_grade not in ('D','C','B','A','S')
+    or p_level is null or p_level not between 1 and 7 then
+    raise exception '무기 등급과 레벨이 올바르지 않습니다.';
   end if;
-  select nickname into nick from public.investment_users where client_id=uid;
-  if nick is null then raise exception '메인에서 투자 고유 닉네임을 먼저 설정하세요.'; end if;
-  insert into public.soldier_profiles(client_id) values(uid) on conflict do nothing;
-  delete from public.soldier_rooms where created_at<now()-interval '1 day';
-  delete from public.soldier_sessions where expires_at<now();
-  insert into public.soldier_sessions(client_id,account_token) values(uid,p_session_token) returning token into t;
-  select * into profile from public.soldier_profiles where client_id=uid;
-  return jsonb_build_object('token',t,'nickname',nick,'xp',profile.xp,'wins',profile.wins,
-    'gold',profile.gold::text,'gems',profile.gems::text,'home_version',2);
+  offset_damage:=case p_grade when 'D' then 0 when 'C' then 6 when 'B' then 12 when 'A' then 18 else 30 end;
+  per_level:=case p_grade when 'A' then 2 when 'S' then 3 else 1 end;
+  offset_critical:=case when p_grade='S' then 3 else 0 end;
+  per_two_levels:=case p_grade when 'A' then 1 when 'S' then 2 else 0 end;
+  return spec||jsonb_build_object('weapon',p_weapon,'grade',p_grade,'level',p_level,
+    'damage',(spec->>'damage')::integer+offset_damage+(p_level-1)*per_level,
+    'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+((p_level-1)/2)*per_two_levels);
 end $$;
+create or replace function public.soldier_loadout_stats(p_client uuid,p_loadout jsonb)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare slot_name text; weapon_id text; item_grade text; item_level integer; stats jsonb:='{}';
+begin
+  foreach slot_name in array array['primary','secondary','melee'] loop
+    weapon_id:=p_loadout->>slot_name;
+    if weapon_id in ('k2','shotgun','stick') then
+      select grade,level into item_grade,item_level from public.soldier_weapon_items
+      where client_id=p_client and weapon=weapon_id and equipped;
+    else
+      select grade,level into item_grade,item_level from public.soldier_equipment
+      where client_id=p_client and weapon=weapon_id;
+    end if;
+    if not found then raise exception '장착 무기의 보유 정보를 확인할 수 없습니다.'; end if;
+    stats:=jsonb_set(stats,array[slot_name],public.soldier_weapon_stats(weapon_id,item_grade,item_level));
+  end loop;
+  return stats;
+end $$;
+create or replace function public.soldier_initial_ammo(p_stats jsonb)
+returns jsonb language plpgsql immutable set search_path=public as $$
+declare slot_name text; spec jsonb; ammo jsonb:='{}';
+begin
+  foreach slot_name in array array['primary','secondary','melee'] loop
+    spec:=p_stats->slot_name;
+    ammo:=jsonb_set(ammo,array[slot_name],spec->'magazine');
+    if spec ? 'reserve' then ammo:=jsonb_set(ammo,array[slot_name||'_reserve'],spec->'reserve'); end if;
+  end loop;
+  return ammo;
+end $$;
+create or replace function public.soldier_reload_ammo(p_ammo jsonb,p_slot text,p_spec jsonb)
+returns jsonb language plpgsql immutable set search_path=public as $$
+declare loaded integer; remaining integer; reserve_key text:=p_slot||'_reserve';
+begin
+  loaded:=greatest(0,(p_spec->>'magazine')::integer-(p_ammo->>p_slot)::integer);
+  if p_spec ? 'reserve' then
+    remaining:=(p_ammo->>reserve_key)::integer;
+    if remaining is null or remaining<0 then raise exception '보유탄환 정보를 확인할 수 없습니다.'; end if;
+    loaded:=least(loaded,remaining);
+    p_ammo:=jsonb_set(p_ammo,array[reserve_key],to_jsonb(remaining-loaded));
+  end if;
+  return jsonb_set(p_ammo,array[p_slot],to_jsonb((p_ammo->>p_slot)::integer+loaded));
+end $$;
+alter table public.soldier_players add column if not exists weapon_stats jsonb not null default '{}';
+create or replace function public.soldier_weapon_combat()
+returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  new.weapon_stats:=public.soldier_loadout_stats(new.client_id,new.loadout);
+  new.ammo:=public.soldier_initial_ammo(new.weapon_stats);
+  return new;
+end $$;
+drop trigger if exists soldier_weapon_combat on public.soldier_players;
+create trigger soldier_weapon_combat before insert on public.soldier_players
+for each row execute function public.soldier_weapon_combat();
+update public.soldier_players set weapon_stats=public.soldier_loadout_stats(client_id,loadout)
+where weapon_stats='{}'::jsonb;
+update public.soldier_players p set ammo=ammo||coalesce((
+  select jsonb_object_agg(key,value)
+  from jsonb_each(public.soldier_initial_ammo(p.weapon_stats)-'primary'-'secondary'-'melee')
+  where not (p.ammo ? key)
+),'{}'::jsonb);
+update public.soldier_players set ammo=jsonb_set(jsonb_set(ammo,array['primary'],
+  to_jsonb(least((ammo->>'primary')::integer,(weapon_stats->'primary'->>'magazine')::integer))),
+  array['secondary'],to_jsonb(least((ammo->>'secondary')::integer,(weapon_stats->'secondary'->>'magazine')::integer)));
 
 create or replace function public.soldier_snapshot(p_room uuid,p_player uuid)
 returns jsonb language sql security definer set search_path=public as $$
@@ -116,15 +103,17 @@ returns jsonb language sql security definer set search_path=public as $$
     'players',coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'nickname',p.nickname,
       'x',p.x,'y',p.y,'z',p.z,'yaw',p.yaw,'pitch',p.pitch,'crouch',p.crouch,'hp',p.hp,
       'kills',p.kills,'deaths',p.deaths,'weapon',p.loadout->>p.slot,'last_shot',p.last_shot,
-      'protected_until',p.protected_until,'respawn_at',p.respawn_at))
+      'protected_until',p.protected_until,'respawn_at',p.respawn_at,
+      'character',p.character,'character_level',p.character_level,'max_hp',p.max_hp,'evasion',p.evasion,'last_dodge',p.last_dodge))
       from public.soldier_players p where p.room_id=r.id and p.last_seen>now()-interval '12 seconds'),'[]'::jsonb),
     'ammo',(select ammo from public.soldier_players where id=p_player),
+    'weapon_stats',(select weapon_stats from public.soldier_players where id=p_player),'weapon_version',1,
     'reload_until',(select reload_until from public.soldier_players where id=p_player),
     'xp',(select s.xp from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
     'wins',(select s.wins from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
     'gold',(select s.gold::text from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
     'gems',(select s.gems::text from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
-    'home_version',2)
+    'home_version',2,'character_version',2)
   from public.soldier_rooms r where r.id=p_room
 $$;
 
@@ -154,10 +143,9 @@ begin
     ) q),'[]'::jsonb);
   end if;
   if p_action in ('create','join') then
-    -- One active player per investment identity, including different tabs/sessions.
     perform 1 from public.soldier_profiles where client_id=uid for update;
     if exists(select 1 from public.soldier_players where client_id=uid and last_seen>ts-interval '12 seconds') then raise exception '이미 방에 접속 중입니다. 기존 방을 나가거나 12초 후 다시 시도하세요.'; end if;
-    equipment:=coalesce(p_data->'loadout','{"primary":"k2","secondary":"pistol","melee":"kukri"}'::jsonb);
+    equipment:=coalesce(p_data->'loadout','{"primary":"k2","secondary":"shotgun","melee":"stick"}'::jsonb);
     foreach slot_name in array array['primary','secondary','melee'] loop
       item:=equipment->>slot_name; spec:=public.soldier_weapon(item);
       if spec is null or spec->>'slot'<>slot_name then raise exception '무기 선택이 올바르지 않습니다.'; end if;
@@ -220,13 +208,12 @@ begin
     nx:=case when me.deaths%2=0 then -42 else 42 end; nz:=case when me.deaths%4<2 then -42 else 42 end;
     update public.soldier_players set hp=100,x=nx,z=nz,y=0,jump_at=null,respawn_at=null,
       protected_until=ts+interval '2 seconds',last_moved=ts,reload_until=null,reload_slot=null,
-      ammo=jsonb_build_object('primary',(public.soldier_weapon(loadout->>'primary')->>'magazine')::int,
-        'secondary',(public.soldier_weapon(loadout->>'secondary')->>'magazine')::int,'melee',0) where id=me.id;
+      ammo=public.soldier_initial_ammo(weapon_stats) where id=me.id;
     select * into me from public.soldier_players where id=me.id;
   end if;
   if me.hp<=0 then return public.soldier_snapshot(rid,me.id); end if;
   if me.reload_until is not null and ts>=me.reload_until then
-    update public.soldier_players set ammo=jsonb_set(ammo,array[reload_slot],public.soldier_weapon(loadout->>reload_slot)->'magazine'),
+    update public.soldier_players set ammo=public.soldier_reload_ammo(ammo,reload_slot,weapon_stats->reload_slot),
       reload_until=null,reload_slot=null where id=me.id;
     select * into me from public.soldier_players where id=me.id;
   end if;
@@ -249,12 +236,13 @@ begin
     update public.soldier_players set x=nx,z=nz,y=py,jump_at=me.jump_at,yaw=aim_yaw,pitch=aim_pitch,
       crouch=coalesce((p_data->>'crouch')::boolean,false),last_moved=ts where id=me.id;
   elsif p_action='reload' then
-    spec:=public.soldier_weapon(me.loadout->>slot_name);
-    if slot_name<>'melee' and me.reload_until is null then
+    spec:=me.weapon_stats->slot_name;
+    if slot_name<>'melee' and me.reload_until is null and (me.ammo->>slot_name)::integer<(spec->>'magazine')::integer
+      and (not spec ? 'reserve' or (me.ammo->>(slot_name||'_reserve'))::integer>0) then
       update public.soldier_players set reload_slot=slot_name,reload_until=ts+(spec->>'reload')::float8*interval '1 second' where id=me.id;
     end if;
   elsif p_action='fire' then
-    spec:=public.soldier_weapon(me.loadout->>slot_name);
+    spec:=me.weapon_stats->slot_name;
     if ts<me.next_fire or me.reload_until is not null or (slot_name<>'melee' and (me.ammo->>slot_name)::int<=0) then
       return public.soldier_snapshot(rid,me.id);
     end if;
@@ -279,6 +267,7 @@ begin
     end loop;
     if hit is not null then
       damage:=(spec->>'damage')::int;
+      if random()<coalesce((spec->>'critical')::numeric,0)/100 then damage:=damage*2; end if;
       update public.soldier_players set hp=greatest(0,hp-damage) where id=hit returning * into enemy;
       if enemy.hp=0 then
         update public.soldier_players set deaths=deaths+1,respawn_at=ts+interval '3 seconds' where id=hit;
@@ -290,29 +279,11 @@ begin
   end if;
   return public.soldier_snapshot(rid,me.id);
 end $$;
-create or replace function public.soldier_settle_match()
-returns trigger language plpgsql security definer set search_path=public as $$
-declare winner uuid; top_kills integer; tied integer;
-begin
-  if old.status='playing' and new.status='finished' then
-    select max(kills) into top_kills from public.soldier_players where room_id=new.id;
-    if coalesce(top_kills,0)>0 and (select count(*) from public.soldier_players where room_id=new.id)>=2 then
-      select count(*) into tied from public.soldier_players where room_id=new.id and kills=top_kills;
-      if tied=1 then
-        select client_id into winner from public.soldier_players where room_id=new.id and kills=top_kills;
-        update public.soldier_profiles set xp=xp+100,wins=wins+1 where client_id=winner;
-      end if;
-    end if;
-  end if;
-  return new;
-end $$;
-drop trigger if exists soldier_match_rewards on public.soldier_rooms;
-create trigger soldier_match_rewards after update of status on public.soldier_rooms
-for each row execute function public.soldier_settle_match();
-revoke all on function public.soldier_settle_match() from public;
-revoke all on function public.soldier_weapon(text),public.soldier_cover(),public.soldier_blocked(float8,float8),
-  public.soldier_ray(float8[],float8[],float8[],float8[]),public.soldier_snapshot(uuid,uuid) from public;
-revoke all on function public.soldier_connect(uuid,text,uuid),public.soldier_api(uuid,text,uuid,jsonb) from public;
-grant execute on function public.soldier_connect(uuid,text,uuid),public.soldier_api(uuid,text,uuid,jsonb) to anon,authenticated;
+revoke all on function public.soldier_weapon(text),public.soldier_weapon_stats(text,text,integer),
+  public.soldier_loadout_stats(uuid,jsonb),public.soldier_initial_ammo(jsonb),
+  public.soldier_reload_ammo(jsonb,text,jsonb),public.soldier_weapon_combat(),
+  public.soldier_snapshot(uuid,uuid) from public,anon,authenticated;
+revoke all on function public.soldier_api(uuid,text,uuid,jsonb) from public;
+grant execute on function public.soldier_api(uuid,text,uuid,jsonb) to anon,authenticated;
 notify pgrst,'reload schema';
 commit;

@@ -243,6 +243,22 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .play-button small { display: block; margin-top: 4px; font-size: 11px; color: #bfcede; }
 .play-button > span { color: #172f50; font-size: 32px; vertical-align: middle; }
 #home .home-status { right: 2%; bottom: calc(6% + 80px); max-width: 29%; padding: 6px; font-size: 11px; line-height: 1.4; background: #0e1924bb; border: 0; border-radius: 0; text-shadow: 0 1px 2px #000; }
+#weapon-material-dialog { width: min(700px, 92vw); max-height: 85vh; overflow: auto; }
+#weapon-material-dialog[open] { display: flex; flex-direction: column; }
+#weapon-material-dialog > h2, #weapon-material-dialog > p, .weapon-material-footer { flex-shrink: 0; }
+.weapon-material-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 12px 0; min-height: 60px; overflow: auto; }
+.weapon-material-list label { display: flex; flex-direction: column; align-items: center; padding: 8px; margin: 0; border: 1px solid var(--ui-border); cursor: pointer; }
+.weapon-material-list input { width: 20px; height: 20px; }
+.weapon-material-list .equipment-card { position: relative; width: 88px; aspect-ratio: 1091 / 1442; overflow: hidden; flex: none; }
+.weapon-material-list label:has(input:checked) { background: #b7d9f0; }
+.inventory-item-detail progress { width: 100%; accent-color: #159bea; }
+.weapon-material-actions button { margin: 4px; }
+@media (max-height: 420px) {
+  #weapon-material-dialog { max-height: 95dvh; padding: 12px; font-size: 12px; }
+  #weapon-material-dialog > h2 { margin: -12px -12px 6px; padding: 10px 12px; font-size: 16px; }
+  #weapon-material-dialog > p, .weapon-material-footer p { margin: 6px 0; }
+  .weapon-material-list { margin: 6px 0; }
+}
 #hud .match-info { border-top: 3px solid #119ef0; }
 #hud .ammo { background: var(--ui-metal); border-color: #91a2b2; }
 #hud .round { background: linear-gradient(#455364d9, #19222ce6); border: 2px solid #9aaebb; color: white; font-weight: 800; }

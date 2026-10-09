@@ -1,15 +1,75 @@
 export const WEAPONS = {
-  k2: { name: 'K2', slot: 'primary', damage: 24, delay: .16, range: 85, magazine: 30, reload: 2, automatic: true },
+  k2: { name: 'K2', slot: 'primary', damage: 24, delay: .16, range: 85, magazine: 25, reserve: 100, accuracy: 85, recoilControl: 90, weight: 1800, critical: 4, reload: 2, automatic: true },
   ak47: { name: 'AK47', slot: 'primary', damage: 30, delay: .2, range: 80, magazine: 30, reload: 2.3, automatic: true },
   aug64: { name: 'AUG64', slot: 'primary', damage: 22, delay: .13, range: 85, magazine: 30, reload: 2, automatic: true },
   sniper: { name: '스나이퍼', slot: 'primary', damage: 100, delay: 1.3, range: 140, magazine: 5, reload: 2.8, automatic: false },
   pistol: { name: '권총', slot: 'secondary', damage: 28, delay: .32, range: 55, magazine: 12, reload: 1.5, automatic: false },
-  shotgun: { name: 'M870', slot: 'secondary', damage: 75, delay: .9, range: 22, magazine: 6, reload: 2.4, automatic: false },
+  shotgun: { name: 'M870', slot: 'secondary', damage: 75, delay: .9, range: 22, magazine: 6, reserve: 24, accuracy: 75, recoilControl: 60, weight: 2500, critical: 1, reload: 2.4, automatic: false },
   kukri: { name: '쿠쿠리', slot: 'melee', damage: 45, delay: .55, range: 2.8, magazine: 0, reload: 0, automatic: false },
   axe: { name: '도끼', slot: 'melee', damage: 65, delay: .85, range: 2.7, magazine: 0, reload: 0, automatic: false },
   shovel: { name: '삽', slot: 'melee', damage: 50, delay: .7, range: 3, magazine: 0, reload: 0, automatic: false },
-  stick: { name: 'M9', slot: 'melee', damage: 35, delay: .4, range: 3.2, magazine: 0, reload: 0, automatic: false }
+  stick: { name: 'M9', slot: 'melee', damage: 70, delay: .3, range: 3.2, magazine: 0, accuracy: 100, recoilControl: null, weight: 900, critical: 10, reload: 0, automatic: false }
 };
+
+export function weaponStats(id, grade = 'D', level = 1) {
+  const weapon = Object.hasOwn(WEAPONS, id) && WEAPONS[id];
+  const rules = { D: [0, 1, 0, 0], C: [6, 1, 0, 0], B: [12, 1, 0, 0],
+    A: [18, 2, 0, 1], S: [30, 3, 3, 2] };
+  const growth = Object.hasOwn(rules, grade) && rules[grade];
+  if (!weapon || !growth || !Number.isInteger(level) || level < 1 || level > 7) {
+    throw new RangeError('무기 등급과 레벨이 올바르지 않습니다.');
+  }
+  return { ...weapon, grade, level, damage: weapon.damage + growth[0] + (level - 1) * growth[1],
+    critical: (weapon.critical || 0) + growth[2] + Math.floor((level - 1) / 2) * growth[3] };
+}
+export function initialWeaponAmmo(loadout) {
+  const ammo = {};
+  for (const [slot, id] of Object.entries(loadout)) {
+    const weapon = Object.hasOwn(WEAPONS, id) && WEAPONS[id];
+    if (!weapon || weapon.slot !== slot) throw new RangeError('무기 칸이 올바르지 않습니다.');
+    ammo[slot] = weapon.magazine;
+    if (weapon.reserve !== undefined) ammo[`${slot}_reserve`] = weapon.reserve;
+  }
+  return ammo;
+}
+export function reloadWeaponAmmo(ammo, slot, weapon) {
+  if (weapon.slot === 'melee') return { ...ammo };
+  const reserveKey = `${slot}_reserve`, reserve = ammo[reserveKey];
+  if (weapon.reserve !== undefined && (!Number.isInteger(reserve) || reserve < 0)) {
+    throw new Error('보유탄환 정보를 확인할 수 없습니다.');
+  }
+  const needed = Math.max(0, weapon.magazine - ammo[slot]);
+  const loaded = reserve === undefined ? needed : Math.min(needed, reserve);
+  return { ...ammo, [slot]: ammo[slot] + loaded,
+    ...(reserve === undefined ? {} : { [reserveKey]: reserve - loaded }) };
+}
+export function weaponHitDamage(weapon, random = Math.random) {
+  const critical = random() < (weapon.critical || 0) / 100;
+  return { damage: weapon.damage * (critical ? 2 : 1), critical };
+}
+export function validateCombatWeapons(state, loadout) {
+  const weapons = {};
+  if (state.weapon_version !== 1 || !state.weapon_stats || !state.ammo) {
+    throw new Error('서버 무기 능력치 정보를 확인할 수 없습니다.');
+  }
+  for (const [slot, id] of Object.entries(loadout)) {
+    const received = state.weapon_stats[slot];
+    if (!received || received.weapon !== id) throw new Error('서버 장착 무기 정보가 일치하지 않습니다.');
+    const expected = weaponStats(id, received.grade, received.level);
+    for (const [key, value] of Object.entries(expected)) {
+      if (key !== 'name' && key !== 'automatic' && received[key] !== value) {
+        throw new Error(`서버 무기 능력치가 일치하지 않습니다: ${key}`);
+      }
+    }
+    if (!Number.isInteger(state.ammo[slot]) || state.ammo[slot] < 0 || state.ammo[slot] > expected.magazine
+      || (expected.reserve !== undefined && (!Number.isInteger(state.ammo[`${slot}_reserve`])
+        || state.ammo[`${slot}_reserve`] < 0 || state.ammo[`${slot}_reserve`] > expected.reserve))) {
+      throw new Error('서버 탄환 정보를 확인할 수 없습니다.');
+    }
+    weapons[slot] = expected;
+  }
+  return weapons;
+}
 export const RANKS = ['이등병', '일등병', '상등병', '병장', '하사', '중사', '상사', '원사', '준위', '소위', '중위', '대위', '소령', '중령', '대령', '준장', '소장', '중장', '대장', '원수'];
 export const WIN_XP = 100;
 export const RANK_STEPS = RANKS.slice(0, -1).map((_, index) => Math.ceil(200 * 1.5 ** index));

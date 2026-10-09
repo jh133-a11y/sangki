@@ -1,4 +1,4 @@
-import { WEAPONS, EQUIPMENT_GRADES, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=3';
+import { WEAPONS, EQUIPMENT_GRADES, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=4';
 
 export const WEAPON_ARTWORK = {
   k2: 'soldier-weapon-k2.webp?v=3',
@@ -13,6 +13,34 @@ export const WEAPON_REWARDS = Object.entries(WEAPON_ARTWORK).flatMap(([weapon, i
   }))
 );
 
+export function weaponLevelXp(grade) {
+  const xp = { D:25, C:50, B:100, A:200, S:400 };
+  if (!Object.hasOwn(xp, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
+  return xp[grade];
+}
+export function weaponMaterialXp(item) {
+  return weaponLevelXp(item.grade) * item.level + item.upgrade_xp;
+}
+export function weaponUpgradePreview(item, materials) {
+  const required = weaponLevelXp(item.grade);
+  const added = materials.reduce((total, material) => total + weaponMaterialXp(material), 0);
+  const total = item.upgrade_xp + added;
+  const level = Math.min(7, item.level + Math.floor(total / required));
+  const xp = level === 7 ? 0 : total % required;
+  const overflow = Math.max(0, total - (7 - item.level) * required);
+  return { added, level, xp, percent: Math.round(xp * 1000 / required) / 10, overflow,
+    cost: materialCost(item.grade) * materials.length };
+}
+export function materialCost(grade) {
+  const costs = { D: 0, C: 2000, B: 4000, A: 8000, S: 16000 };
+  if (!Object.hasOwn(costs, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
+  return costs[grade];
+}
+export function upgradeMaterials(items, target) {
+  return items.filter(item => item.id !== target.id
+    && !item.equipped && item.source !== 'default');
+}
+
 export function validateWeaponItems(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !Array.isArray(result.items)) {
     throw new Error('서버 보상 장비 정보를 확인할 수 없습니다.');
@@ -24,6 +52,13 @@ export function validateWeaponItems(result) {
       throw new Error('서버 보상 무기 정보를 확인할 수 없습니다.');
     }
     weaponUpgradeCost(item.grade, item.level);
+    if (result.material_version === 2 && (!Number.isInteger(item.upgrade_xp)
+      || item.upgrade_xp < 0 || item.upgrade_xp >= weaponLevelXp(item.grade)
+      || !Number.isFinite(item.upgrade_progress)
+      || item.upgrade_progress !== Math.round(item.upgrade_xp * 1000 / weaponLevelXp(item.grade)) / 10
+      || (item.level === 7 && item.upgrade_xp !== 0))) {
+      throw new Error('서버 강화 진행률을 확인할 수 없습니다.');
+    }
     ids.add(item.id);
     const slot = WEAPONS[item.weapon].slot;
     counts[slot] = (counts[slot] || 0) + 1;
@@ -31,7 +66,7 @@ export function validateWeaponItems(result) {
     if (item.equipped && equipped.has(slot)) throw new Error('동일 분류의 중복 장착 정보입니다.');
     if (item.equipped) equipped.add(slot);
   }
-  return result.items;
+  return result.material_version === 2 ? result.items.map(item => ({ ...item, materialReady: true })) : result.items;
 }
 
 export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
