@@ -22,7 +22,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
-  let slot = 'primary', sorted = false;
+  let slot = 'primary', sorted = false, keyboardOpened = false;
   function updateWallet() {
     const wallet = $('inventory-wallet');
     wallet.replaceChildren(...[...document.querySelectorAll('.currency-bar .currency')].map(currency => {
@@ -86,7 +86,8 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
       $('inventory-items').append(button);
     }
   }
-  function open(next) {
+  function open(next, keyboard = false) {
+    keyboardOpened = keyboard;
     slot = next; render(); updateWallet();
     dialog.showModal(); $('home').hidden = true;
     tabs.find(tab => tab.dataset.equipmentTab === slot).focus();
@@ -108,7 +109,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
     sorted = !sorted; $('inventory-sort').textContent = sorted ? '기본순 정렬' : '이름순 정렬'; render();
   });
   $('equipment-back').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('close', () => { $('home').hidden = false; $(slot).focus(); });
+  dialog.addEventListener('close', () => {
+    $('home').hidden = false;
+    if (keyboardOpened) $(slot).focus();
+    else if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
   for (const name of ['primary', 'secondary', 'melee', 'character']) {
     const card = $(name);
     card.setAttribute('role', 'button'); card.tabIndex = 0;
@@ -116,7 +121,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
     card.addEventListener('click', () => open(name));
     card.addEventListener('keydown', event => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault(); open(name);
+      event.preventDefault(); open(name, true);
     });
   }
   return { refresh() { if (dialog.open) { render(); updateWallet(); } } };

@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=13';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=2';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=3';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
