@@ -243,21 +243,95 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .play-button small { display: block; margin-top: 4px; font-size: 11px; color: #bfcede; }
 .play-button > span { color: #172f50; font-size: 32px; vertical-align: middle; }
 #home .home-status { right: 2%; bottom: calc(6% + 80px); max-width: 29%; padding: 6px; font-size: 11px; line-height: 1.4; background: #0e1924bb; border: 0; border-radius: 0; text-shadow: 0 1px 2px #000; }
-#weapon-material-dialog { width: min(700px, 92vw); max-height: 85vh; overflow: auto; }
-#weapon-material-dialog[open] { display: flex; flex-direction: column; }
-#weapon-material-dialog > h2, #weapon-material-dialog > p, .weapon-material-footer { flex-shrink: 0; }
-.weapon-material-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 12px 0; min-height: 60px; overflow: auto; }
-.weapon-material-list label { display: flex; flex-direction: column; align-items: center; padding: 8px; margin: 0; border: 1px solid var(--ui-border); cursor: pointer; }
-.weapon-material-list input { width: 20px; height: 20px; }
-.weapon-material-list .equipment-card { position: relative; width: 88px; aspect-ratio: 1091 / 1442; overflow: hidden; flex: none; }
-.weapon-material-list label:has(input:checked) { background: #b7d9f0; }
+#weapon-material-dialog { width: min(1100px, 96vw); max-height: 95dvh; padding: 12px; background: #f5f3f0; color: #363636; border: 3px solid #ccc; border-radius: 10px; overflow: auto; font-family: 'Malgun Gothic', Arial, sans-serif; }
+#weapon-material-dialog[open] { display: flex; flex-direction: column; gap: 10px; }
+.weapon-material-header { display: flex; align-items: center; gap: 20px; padding: 5px 62px 5px 18px; margin: -12px -12px 0; background: linear-gradient(#32b6ff, #0072bd); color: white; border-bottom: 3px solid #07558b; }
+.weapon-material-header h2 { display: flex; align-items: center; gap: 14px; font-size: 38px; margin: 0; white-space: nowrap; text-shadow: 1px 2px #25465a; }
+.weapon-material-header h2:focus { outline: none; }
+.weapon-material-tool-icon { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 50%; border: 7px solid #1e9ade; background: #fff; color: #168bcd; font-family: Arial, sans-serif; font-size: 45px; text-shadow: none; box-shadow: 0 2px 3px #14364c; }
+.weapon-material-warning { display: flex; align-items: center; gap: 10px; margin: 0; margin-left: auto; color: #ffe675; font-size: 18px; font-weight: 800; text-shadow: 1px 1px 2px #234154; }
+.weapon-material-warning::before { content: '!'; display: grid; place-items: center; flex: 0 0 32px; height: 32px; border: 2px solid #1d2c38; border-radius: 50%; background: #ffd52c; color: #253746; font-size: 28px; font-weight: 900; }
+#weapon-material-dialog .weapon-material-close { position: absolute; top: 7px; right: 8px; margin: 0; padding: 0; width: 40px; min-height: 40px; background: linear-gradient(#ff9e87, #e0372e); border: 2px solid #915346; font-size: 32px; }
+.weapon-material-top { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(200px, 1fr); gap: 20px; align-items: center; }
+.weapon-material-target, .weapon-material-footer { border: 3px ridge #ddd; border-radius: 6px; padding: 6px; min-width: 0; }
+.weapon-material-target-heading { display: flex; align-items: center; gap: 12px; padding: 4px 8px; background: #bec1c4; border-radius: 4px; font-size: 24px; }
+.weapon-material-target-heading > strong:first-child { margin-right: auto; }
+.weapon-material-meter { position: relative; width: 30%; min-width: 80px; height: 30px; }
+.weapon-material-meter progress { width: 100%; height: 100%; appearance: none; border: 2px solid #444; border-radius: 4px; overflow: hidden; background: #555; }
+.weapon-material-meter progress::-webkit-progress-bar { background: #555; }
+.weapon-material-meter progress::-webkit-progress-value { background: linear-gradient(#ffdc34, #e9a500); }
+.weapon-material-meter progress::-moz-progress-bar { background: #e9b500; }
+.weapon-material-meter span { position: absolute; inset: 0; text-align: center; color: white; font-weight: 900; text-shadow: 1px 1px 2px #000; }
+.weapon-material-target-detail { display: grid; grid-template-columns: minmax(95px, 27%) minmax(0, 1fr); gap: 10px; padding-top: 6px; align-items: center; }
+#weapon-material-dialog .equipment-card { position: relative; width: 100%; aspect-ratio: 1091 / 1442; overflow: hidden; border-radius: 6px; }
+.weapon-material-stats { width: 100%; border-spacing: 3px; font-size: 18px; }
+.weapon-material-stats th { text-align: left; width: 43%; }
+.weapon-material-stats td:not(.weapon-material-arrow) { width: 23%; text-align: center; }
+.weapon-material-stats td[aria-label="현재"], .weapon-material-stat-next:not(:empty) { background: #4e5561; color: white; border-radius: 3px; font-weight: 800; }
+.weapon-material-stats .weapon-material-stat-next { color: #d6ef45; }
+.weapon-material-arrow { font-weight: 900; text-align: center; }
+.weapon-material-footer { padding: 16px; }
+.weapon-material-cost { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #202b37; border-radius: 8px; color: white; padding: 12px; font-size: 40px; font-style: italic; }
+.weapon-material-cost span { display: grid; place-items: center; width: 36px; height: 36px; border: 3px double #b88300; border-radius: 50%; background: #efbe21; color: #a87700; font-size: 24px; font-style: normal; }
+.weapon-material-actions > button:last-child { width: 100%; margin: 10px 0 0; min-height: 70px; font-size: 34px; text-shadow: 1px 2px #25465a; }
+#weapon-material-dialog > [role="status"], .weapon-material-description, .weapon-material-help { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.weapon-material-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px; background: #c3c5c7; border: 3px ridge #ddd; border-radius: 5px; }
+.weapon-material-count { margin-right: auto; font-size: 24px; }
+.weapon-material-toolbar button { margin: 0; padding: 4px 10px; min-height: 36px; font-size: 20px; text-shadow: 1px 1px #25465a; }
+.weapon-material-list { display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; padding: 5px; border: 3px ridge #ddd; border-radius: 5px; scroll-snap-type: x proximity; }
+.weapon-material-list label { position: relative; flex: 0 0 146px; display: flex; flex-direction: column; padding: 3px; margin: 0; border: 2px solid #b5b7b9; border-radius: 5px; cursor: pointer; scroll-snap-align: start; }
+.weapon-material-list input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.weapon-material-list label:focus-within { outline: 3px solid #159bea; outline-offset: -2px; }
+.weapon-material-list label:has(input:checked) { border-color: #d9aa18; background: #fff0a1; }
+.weapon-material-check { display: none; position: absolute; top: 32%; left: 18%; width: 64%; aspect-ratio: 1; place-items: center; background: #fffdf0eb; border: 7px solid #ffd32f; border-radius: 50%; color: #382500; font-size: 58px; font-weight: 900; box-shadow: 0 2px 5px #0008; pointer-events: none; }
+.weapon-material-list input:checked ~ .weapon-material-check { display: grid; }
 .inventory-item-detail progress { width: 100%; accent-color: #159bea; }
-.weapon-material-actions button { margin: 4px; }
+.weapon-upgrade-progress { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.weapon-upgrade-progress .weapon-material-meter { width: 60%; }
+@media (max-width: 600px) {
+  .weapon-material-top { grid-template-columns: 1fr; gap: 8px; }
+  .weapon-material-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px; }
+  .weapon-material-actions > button:last-child { margin: 0; min-height: 48px; font-size: 20px; }
+  .weapon-material-cost { font-size: 24px; padding: 6px; }
+  .weapon-material-header { gap: 8px; padding-left: 10px; }
+  .weapon-material-header h2 { font-size: 22px; }
+  .weapon-material-tool-icon { width: 36px; height: 36px; border-width: 4px; font-size: 24px; }
+  .weapon-material-warning { font-size: 11px; }
+  .weapon-material-warning::before { flex-basis: 22px; height: 22px; font-size: 18px; }
+  .weapon-material-list label { flex-basis: 105px; }
+  .weapon-material-count { font-size: 14px; }
+  .weapon-material-toolbar button { font-size: 13px; }
+  .weapon-material-stats { font-size: 12px; }
+  .weapon-material-target-heading { font-size: 16px; }
+  .weapon-material-check { font-size: 34px; border-width: 5px; }
+}
 @media (max-height: 420px) {
-  #weapon-material-dialog { max-height: 95dvh; padding: 12px; font-size: 12px; }
-  #weapon-material-dialog > h2 { margin: -12px -12px 6px; padding: 10px 12px; font-size: 16px; }
-  #weapon-material-dialog > p, .weapon-material-footer p { margin: 6px 0; }
-  .weapon-material-list { margin: 6px 0; }
+  #weapon-material-dialog { padding: 8px; }
+  #weapon-material-dialog[open] { gap: 4px; }
+  .weapon-material-header { padding-block: 5px; margin: -8px -8px 0; }
+  .weapon-material-header h2 { font-size: 20px; }
+  .weapon-material-tool-icon { width: 30px; height: 30px; border-width: 3px; font-size: 22px; }
+  .weapon-material-warning { font-size: 11px; }
+  .weapon-material-warning::before { flex-basis: 22px; height: 22px; font-size: 18px; }
+  #weapon-material-dialog .weapon-material-close { top: 3px; width: 30px; min-height: 30px; font-size: 24px; }
+  .weapon-material-top { gap: 8px; }
+  .weapon-material-target-detail { grid-template-columns: 70px minmax(0, 1fr); gap: 6px; padding-top: 3px; }
+  .weapon-material-target-heading { font-size: 12px; padding: 2px 4px; }
+  .weapon-material-meter { height: 20px; }
+  .weapon-material-stats { font-size: 10px; line-height: 1.1; border-spacing: 2px; }
+  .weapon-material-stats th, .weapon-material-stats td { padding: 0; }
+  .weapon-material-footer { padding: 8px; }
+  .weapon-material-cost { font-size: 24px; padding: 6px; }
+  .weapon-material-cost span { width: 28px; height: 28px; font-size: 18px; }
+  .weapon-material-actions > button:last-child { min-height: 38px; font-size: 20px; margin-top: 6px; }
+  .weapon-material-toolbar { padding: 3px; }
+  .weapon-material-count { font-size: 12px; }
+  .weapon-material-toolbar button { min-height: 26px; padding: 3px 6px; font-size: 11px; }
+  .weapon-material-list { padding: 3px; }
+  .weapon-material-list label { flex-basis: 72px; }
+  .weapon-material-check { font-size: 24px; border-width: 3px; }
+  .weapon-material-description { font-size: 9px; padding: 2px 0; }
+  .weapon-material-help, #weapon-material-dialog > [role="status"] { font-size: 10px; }
 }
 #hud .match-info { border-top: 3px solid #119ef0; }
 #hud .ammo { background: var(--ui-metal); border-color: #91a2b2; }

@@ -1,6 +1,6 @@
 import { WEAPONS, weaponStats, weaponLevelLabel } from './soldier-core.mjs?v=4';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
-import { materialCost, upgradeMaterials, weaponMaterialXp, weaponUpgradePreview, weaponLevelXp } from './soldier-weapon-items.mjs?v=5';
+import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=5';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryCharacters(state) {
@@ -95,30 +95,107 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   }
   function selectMaterials(item) {
     const heading = document.createElement('h2');
-    heading.textContent = `${WEAPONS[item.weapon].name} ${item.grade}급 강화재료`;
+    const toolIcon = document.createElement('span'); toolIcon.className = 'weapon-material-tool-icon';
+    toolIcon.textContent = '⚒'; toolIcon.setAttribute('aria-hidden', 'true');
+    const headingText = document.createElement('span'); headingText.textContent = '강화';
+    heading.append(toolIcon, headingText);
     const warning = document.createElement('p');
-    warning.textContent = `등급에 관계없이 미장착 무기의 기본 경험치 + 레벨·진행률 경험치를 합산합니다. ${item.grade}급은 레벨당 ${weaponLevelXp(item.grade)} 경험치가 필요합니다. 선택한 무기는 영구 소모되며, MAX를 초과한 경험치는 소멸합니다. 기본 무기는 사용할 수 없습니다.`;
+    warning.className = 'weapon-material-warning';
+    warning.textContent = '재료로 사용한 무기는 소모되어 사라집니다.';
     const list = document.createElement('div'); list.className = 'weapon-material-list';
     const summary = document.createElement('p'); summary.setAttribute('role', 'status');
-    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = '취소';
-    const submit = document.createElement('button'); submit.type = 'button'; submit.textContent = '재료 소모 및 강화';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = '×';
+    cancel.className = 'weapon-material-close'; cancel.setAttribute('aria-label', '강화 취소');
+    const submit = document.createElement('button'); submit.type = 'button'; submit.textContent = '강화시작';
     const footer = document.createElement('div'); footer.className = 'weapon-material-footer';
     const actions = document.createElement('div'); actions.className = 'weapon-material-actions';
-    actions.append(cancel, submit); footer.append(summary, actions);
+    const cost = document.createElement('div'); cost.className = 'weapon-material-cost';
+    const coin = document.createElement('span'); coin.textContent = 'G'; coin.setAttribute('aria-hidden', 'true');
+    const price = document.createElement('strong'); price.setAttribute('aria-label', '강화 비용');
+    cost.append(coin, price); actions.append(cancel, submit); footer.append(cost, actions);
+    const header = document.createElement('header'); header.className = 'weapon-material-header';
+    header.append(heading, warning);
+    const target = document.createElement('section'); target.className = 'weapon-material-target';
+    target.setAttribute('aria-label', '강화할 무기 및 예상 능력치');
+    const targetHeading = document.createElement('div'); targetHeading.className = 'weapon-material-target-heading';
+    const title = document.createElement('strong'); title.textContent = '강화할 무기';
+    const nextLevel = document.createElement('strong');
+    const progress = document.createElement('progress'); progress.max = 100; progress.setAttribute('aria-label', '강화 후 예상 진행률');
+    const percent = document.createElement('span');
+    const meter = document.createElement('div'); meter.className = 'weapon-material-meter'; meter.append(progress, percent);
+    targetHeading.append(title, nextLevel, meter);
+    const detail = document.createElement('div'); detail.className = 'weapon-material-target-detail';
+    const table = document.createElement('table'); table.className = 'weapon-material-stats';
+    table.setAttribute('aria-label', '현재 능력치와 강화 후 능력치 비교');
+    const before = weaponInventoryStats(item.weapon, item.grade, item.level);
+    const rows = before.map(([name, value, explanation]) => {
+      const row = document.createElement('tr');
+      const label = document.createElement('th'); label.scope = 'row'; label.textContent = name; label.title = explanation;
+      const current = document.createElement('td'); current.textContent = value; current.setAttribute('aria-label', '현재');
+      const arrow = document.createElement('td'); arrow.className = 'weapon-material-arrow'; arrow.setAttribute('aria-hidden', 'true');
+      const after = document.createElement('td'); after.className = 'weapon-material-stat-next'; after.setAttribute('aria-label', '강화 후');
+      row.append(label, current, arrow, after); table.append(row);
+      return { arrow, after };
+    });
+    detail.append(renderCard(item.weapon, item), table); target.append(targetHeading, detail);
+    const top = document.createElement('div'); top.className = 'weapon-material-top'; top.append(target, footer);
+    const toolbar = document.createElement('div'); toolbar.className = 'weapon-material-toolbar';
+    const count = document.createElement('strong'); count.className = 'weapon-material-count'; toolbar.append(count);
     const choices = [], candidates = upgradeMaterials(getWeaponItems(), item);
+    let materialSorted = false;
+    function tool(label, action) {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+      button.addEventListener('click', action); toolbar.append(button); return button;
+    }
+    const sortButton = tool('↓ 정렬', () => {
+      materialSorted = !materialSorted;
+      const order = [...candidates];
+      if (materialSorted) order.sort((a, b) => weaponMaterialXp(b) - weaponMaterialXp(a)
+        || WEAPONS[a.weapon].name.localeCompare(WEAPONS[b.weapon].name, 'ko'));
+      list.replaceChildren(...order.map(material => choices.find(input => input.value === material.id).parentElement));
+      sortButton.textContent = materialSorted ? '기본순' : '↓ 정렬';
+    });
+    for (const grade of ['C', 'D']) {
+      const button = tool(`${grade}등급 선택`, () => {
+        for (const input of choices) {
+          if (input.dataset.grade === grade) input.checked = true;
+        }
+        update();
+      });
+      button.disabled = !candidates.some(material => material.grade === grade);
+    }
+    tool('선택초기화', () => { choices.forEach(input => { input.checked = false; }); update(); });
     for (const material of candidates) {
       const label = document.createElement('label'), input = document.createElement('input');
       input.type = 'checkbox'; input.value = material.id; input.dataset.material = material.id;
+      input.dataset.grade = material.grade;
       const name = document.createElement('span');
-      name.textContent = `${WEAPONS[material.weapon].name} ${material.grade}급 ${weaponLevelLabel(material.level)} · ${material.upgrade_progress}% · ${weaponMaterialXp(material)} 경험치`;
-      label.append(input, renderCard(material.weapon, material), name); list.append(label); choices.push(input);
+      name.className = 'weapon-material-description';
+      name.textContent = `${WEAPONS[material.weapon].name} ${material.grade}급 ${weaponLevelLabel(material.level)} · ${material.upgrade_progress}%`;
+      label.title = name.textContent;
+      const check = document.createElement('span'); check.className = 'weapon-material-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true');
+      label.append(input, renderCard(material.weapon, material), check, name); list.append(label); choices.push(input);
     }
-    if (!choices.length) list.textContent = '사용 가능한 미장착 무기가 없습니다.';
+    if (!choices.length) { list.textContent = '사용 가능한 미장착 무기가 없습니다.'; sortButton.disabled = true; }
     const selected = () => choices.filter(input => input.checked);
     function update() {
       const ids = new Set(selected().map(input => input.value));
       const preview = weaponUpgradePreview(item, candidates.filter(material => ids.has(material.id)));
-      summary.textContent = `${weaponLevelLabel(item.level)} ${item.upgrade_progress}% → ${weaponLevelLabel(preview.level)} ${preview.level === 7 ? '' : `${preview.percent}%`} · +${preview.added} 경험치 · ${ids.size}개 소모 · ${preview.cost.toLocaleString('ko-KR')}골드${preview.overflow ? ` · MAX 초과 ${preview.overflow} 경험치 소멸` : ''}`;
+      summary.textContent = `${weaponLevelLabel(item.level)} ${item.upgrade_progress}% → ${weaponLevelLabel(preview.level)} ${preview.level === 7 ? '' : `${preview.percent}%`} · ${ids.size}개 소모${preview.overflow ? ' · MAX를 초과한 강화분은 소멸합니다.' : ''}`;
+      warning.textContent = preview.overflow
+        ? '재료 무기는 사라집니다. MAX를 초과한 강화분은 소멸합니다.'
+        : '재료로 사용한 무기는 소모되어 사라집니다.';
+      count.textContent = `선택된 아이템 : ${ids.size}`;
+      price.textContent = preview.cost.toLocaleString('ko-KR');
+      nextLevel.textContent = weaponLevelLabel(preview.level);
+      progress.value = preview.level === 7 ? 100 : preview.percent;
+      percent.textContent = `${progress.value}%`;
+      const after = weaponInventoryStats(item.weapon, item.grade, preview.level);
+      rows.forEach((row, index) => {
+        const changed = before[index][1] !== after[index][1];
+        row.arrow.textContent = changed ? '»' : '';
+        row.after.textContent = changed ? after[index][1] : '';
+      });
       submit.disabled = !ids.size;
     }
     choices.forEach(input => input.addEventListener('change', update));
@@ -141,7 +218,9 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         catch (refreshError) { $('inventory-status').textContent += ` 재확인 실패: ${refreshError.message} 새로고침하세요.`; console.error(refreshError); }
       } finally { weaponBusy = false; render(); updateWallet(); }
     });
-    materialDialog.replaceChildren(heading, warning, list, footer);
+    const help = document.createElement('p'); help.className = 'weapon-material-help';
+    help.textContent = '기본·장착 무기는 재료로 사용할 수 없습니다. MAX를 초과한 강화분은 소멸합니다.';
+    materialDialog.replaceChildren(header, top, summary, toolbar, list, help);
     heading.tabIndex = -1;
     update(); materialDialog.showModal(); heading.focus({ preventScroll: true });
   }
@@ -154,13 +233,18 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         progress.value = item.materialReady ? item.upgrade_progress : 0;
         progress.setAttribute('aria-label', '무기 강화 진행률');
         const label = document.createElement('p'); label.className = 'weapon-upgrade-progress';
-        label.textContent = item.materialReady ? `강화 진행률 ${item.upgrade_progress}% · ${item.upgrade_xp} / ${weaponLevelXp(item.grade)} 경험치` : 'soldier-weapon-material-upgrade.sql 실행 후 강화 가능합니다.';
+        const level = document.createElement('strong'); level.textContent = weaponLevelLabel(item.level);
+        const percent = document.createElement('span');
+        percent.textContent = item.materialReady ? `${item.upgrade_progress}%` : '강화 SQL 설치 필요';
+        const meter = document.createElement('span'); meter.className = 'weapon-material-meter';
+        meter.append(progress, percent); label.append(level, meter);
+        if (!item.materialReady) label.title = 'soldier-weapon-material-upgrade.sql 실행 후 강화 가능합니다.';
         const button = document.createElement('button'); button.type = 'button';
         button.className = 'weapon-item-action';
-        button.textContent = `강화재료 선택 · 개당 ${materialCost(item.grade).toLocaleString('ko-KR')}골드`;
+        button.textContent = '강화';
         button.disabled = weaponBusy || !item.materialReady;
         button.addEventListener('click', () => selectMaterials(item));
-        body.append(progress, label, button);
+        body.append(label, button);
       }
       else {
         const max = document.createElement('p'); max.textContent = '최대 레벨 (MAX)'; body.append(max);

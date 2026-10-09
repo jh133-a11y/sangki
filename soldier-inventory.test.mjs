@@ -47,3 +47,14 @@ test('requested D Lv1 K2, M870 and M9 stats are exact and comparisons use the se
   assert.equal(weaponInventoryStats('stick','S',7)[1][1],118);
   assert.equal(weaponInventoryStats('stick','S',7)[6][1],'19%');
 });
+
+test('enhancement UI keeps XP internal and exposes level-adjacent progress and a plain upgrade button', () => {
+  const source = readFileSync('soldier-inventory.mjs','utf8');
+  assert.doesNotMatch(source, /경험치|강화재료 선택 · 개당/);
+  assert.match(source, /button\.textContent = '강화'/);
+  assert.match(source, /targetHeading\.append\(title, nextLevel, meter\)/);
+  assert.match(source, /label\.append\(level, meter\)/);
+  assert.match(source, /rows\.forEach/);
+  assert.match(source, /선택초기화/);
+  assert.match(source, /input\.dataset\.grade === grade/);
+});
