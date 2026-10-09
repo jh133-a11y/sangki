@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
+import { createHomeCharacter, createSoldierModel } from './soldier-character.mjs?v=1';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
@@ -130,9 +131,7 @@ function renderRankDetail() {
   $('rank-wins').textContent = progress.next ? `승리 보너스만 기준으로 ${progress.winsNeeded.toLocaleString('ko-KR')}판 더 승리하면 승급합니다. 처치 경험치가 더해지면 더 빨리 승급할 수 있습니다.` : '더 이상 승급할 계급이 없습니다.';
 }
 $('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
-$('home-character').addEventListener('error', () => { $('home-status').textContent = '캐릭터 이미지를 불러오지 못했습니다. 새로고침하세요.'; });
-
-let renderer, scene, camera, preview, hand, flash;
+let renderer, scene, camera, homeCharacter, hand, flash;
 try {
   renderer = new THREE.WebGLRenderer({ canvas: $('world'), antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
@@ -149,12 +148,13 @@ try {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(110, 110), new THREE.MeshStandardMaterial({ color: '#778569', roughness: 1 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
   makeMap();
-  preview = makeSoldier('#466b53', false); preview.position.set(0, 0, 0); scene.add(preview);
+  homeCharacter = createHomeCharacter($('home-character'), $('character-status'));
   scene.add(camera);
   hand = new THREE.Group(); camera.add(hand);
   flash = new THREE.PointLight('#ffc67b', 0, 4); flash.position.set(.3, -.2, -.9); camera.add(flash);
   equip('primary');
 } catch (error) {
+  renderer = null;
   $('home-status').textContent = '3D 화면을 시작할 수 없습니다. WebGL을 지원하는 최신 브라우저와 하드웨어 가속을 사용하세요.';
   console.error('3D 초기화 오류', error);
 }
@@ -181,20 +181,10 @@ function makeMap() {
 }
 function makeSoldier(color, label) {
   const body = new THREE.Group();
-  cube(body, 0, 1.12, 0, .68, .7, .36, color);
-  cube(body, 0, 1.25, -.22, .57, .45, .12, '#35463c');
-  cube(body, 0, 1.73, 0, .38, .42, .36, '#bf9676');
-  cube(body, 0, 1.97, .02, .43, .15, .4, '#35463c');
-  for (const x of [-.13, .13]) cube(body, x, 1.78, -.185, .045, .045, .025, '#2a2c2c');
-  for (const x of [-.19, .19]) {
-    cube(body, x, .48, 0, .25, .65, .3, '#394d47');
-    cube(body, x, .12, -.07, .28, .24, .46, '#283032');
-  }
-  for (const x of [-.44, .44]) {
-    const arm = cube(body, x, 1.2, -.08, .19, .58, .2, color); arm.rotation.x = -.5;
-    cube(body, x, .94, -.21, .17, .18, .18, '#bf9676');
-  }
-  cube(body, .24, 1.18, -.42, .12, .14, .65, '#283032');
+  const character = createSoldierModel(true);
+  // Gameplay's forward vector is -Z; the home model faces +Z.
+  character.rotation.y = Math.PI;
+  body.add(character);
   if (label) {
     const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext('2d');
@@ -347,7 +337,8 @@ function startMatch(isOnline) {
   if (!ready || !renderer) return;
   online = isOnline; mode = 'game';
   $('play-dialog').close(); $('lobby').close(); clearInterval(lobbyTimer); lobbyTimer = null;
-  $('home').hidden = true; $('hud').hidden = false; preview.visible = false;
+  homeCharacter.cancelDrag();
+  $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
   player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: 100, kills: 0, deaths: 0 };
@@ -446,7 +437,7 @@ $('leave').addEventListener('click', () => { if (confirm('경기를 나가시겠
 function goHome() {
   mode = 'home'; resetInput(); clearEntities(); document.exitPointerLock?.();
   camera.fov = 75; camera.updateProjectionMatrix();
-  $('hud').hidden = true; $('home').hidden = false; preview.visible = true; hand.visible = false;
+  $('hud').hidden = true; $('home').hidden = false; hand.visible = false;
 }
 function resetInput() {
   keys.clear(); fireHeld = false; aiming = false; shotRequested = false; reloadRequested = null; moveTouch = null; lookTouch = null; joystick = { x: 0, y: 0 };
@@ -617,8 +608,9 @@ function frame(time) {
   if (!renderer) return;
   const dt = Math.min(.05, (time - lastFrame) / 1000), now = time / 1000; lastFrame = time;
   if (mode !== 'game') {
-    camera.position.set(0, 1.7, 4.4); camera.lookAt(0, 1.1, 0); preview.rotation.y = Math.PI + Math.sin(now * .3) * .25;
     hand.visible = false;
+    if (!$('home').hidden) homeCharacter.render();
+    return;
   } else {
     if (!online && now >= matchEnds) { finish(); return; }
     if (!online && player.hp <= 0 && now >= respawnAt) {
