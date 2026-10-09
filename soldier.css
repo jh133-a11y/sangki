@@ -64,14 +64,11 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
 .home-character { position: absolute; height: 81%; width: 37%; bottom: 10%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
 .home-character:active { cursor: grabbing; }
-.home-character:focus-visible { outline: 2px solid #b8d5e8; outline-offset: -4px; }
+.home-character:focus { outline: none; }
+.home-character:focus-visible ~ .character-rotate-hint { text-decoration: underline; }
 .character-rotate-hint { position: absolute; left: 51%; bottom: 0; transform: translateX(-50%); width: 37%; margin: 0; padding: 4px; font-size: 10px; color: #cfdae5; text-shadow: 0 1px 3px #000; text-align: center; }
-.character-view-controls { position: absolute; left: 51%; bottom: 4%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 3px; width: 35%; justify-content: center; }
-.character-view-controls button { flex: 1; max-width: 90px; min-width: 0; padding: 3px; font-size: 11px; background: #172331da; }
-.character-view-controls button[aria-pressed="true"] { border-color: #c1d5eb; background: #3b536dda; }
 @media (max-height: 420px) {
   .home-character { height: 76%; bottom: 15%; }
-  .character-view-controls { bottom: 3%; }
   .character-rotate-hint { font-size: 8px; padding: 0; }
 }
 .currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
