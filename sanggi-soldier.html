@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-home-model.glb?v=5" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=25">
+  <link rel="stylesheet" href="soldier.css?v=26">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -18,7 +18,8 @@
       <div class="currency gold" aria-label="보유 골드"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="soldier-gold-metal" x2="0.8" y2="1"><stop stop-color="#fff2a3"/><stop offset=".45" stop-color="#d8a93d"/><stop offset="1" stop-color="#806022"/></linearGradient></defs><path d="m20 2 13 5 5 13-5 13-13 5-13-5-5-13L7 7Z" fill="url(#soldier-gold-metal)" stroke="#59451f" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="#3a3525" stroke="#ffdc79"/><path d="M25 13h-9l-3 7 3 7h9v-8h-6v4h3" fill="none" stroke="#efcf72" stroke-width="3"/></svg><strong id="gold">0</strong></div>
       <div class="currency gems" aria-label="보유 보석"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 5h20l8 12-18 21L2 17Z" fill="#6194a6" stroke="#cbeaf0" stroke-width="1.5"/><path d="m10 5 10 12L30 5M2 17h36M10 5l-2 12 12 21 12-21-2-12" fill="none" stroke="#c9f0f4"/><path d="m10 5 10 12H8ZM30 5l2 12H20Z" fill="#e0f7fa"/><path d="m8 17 12 21V17Z" fill="#97c7d3"/></svg><strong id="gems">0</strong></div>
     </div>
-    <div class="home-top-actions"><a href="index.html" aria-label="홈으로">⌂</a><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
+    <div class="home-top-actions"><a href="index.html" aria-label="홈으로">⌂</a><button id="fullscreen-open" type="button" aria-label="전체화면" aria-pressed="false">⛶</button><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
+    <p id="fullscreen-status" role="status"></p>
     <div class="soldier-music-controls">
       <button id="soldier-music-toggle" type="button" aria-pressed="true">음악 켜짐</button>
       <label for="soldier-music-volume">음량 <output id="soldier-music-volume-label" for="soldier-music-volume">25%</output></label>
@@ -31,9 +32,9 @@
     </header>
     <div class="home-mode-label"><strong>PVP</strong><span>상기 솔져 · 기본 장비</span></div>
     <section class="loadout" aria-label="무기 선택">
-      <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><span class="weapon-card-progress" role="progressbar" aria-label="무기 강화 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">0%</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-name">K2</span></div></div>
-      <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><span class="weapon-card-progress" role="progressbar" aria-label="무기 강화 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">0%</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-name">M870</span></div></div>
-      <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><span class="weapon-card-progress" role="progressbar" aria-label="무기 강화 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">0%</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-name">M9</span></div></div>
+      <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-name">K2</span></div></div>
+      <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-name">M870</span></div></div>
+      <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-name">M9</span></div></div>
       <div id="character" class="character-card"><img src="soldier-character-black-water.webp?v=2" alt="Black Water"><span class="character-level" aria-label="레벨 1">1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
@@ -97,7 +98,7 @@
     </div>
     <section id="equipment-panel" role="tabpanel" tabindex="0">
       <div class="inventory-details">
-        <section class="inventory-equipped"><h2>현재 장착된 장비 <span id="inventory-level"></span></h2><div id="inventory-current"></div><button type="button" disabled title="옵션 기능은 준비 중입니다.">옵션</button></section>
+        <section class="inventory-equipped"><h2><span>현재 장착된 장비</span><span id="inventory-level"></span><span id="inventory-progress" class="weapon-material-meter"><progress id="inventory-progress-value" max="100" value="0" aria-label="현재 장착된 무기 강화 진행률"></progress><span id="inventory-progress-percent">0%</span></span></h2><div id="inventory-current"></div><button type="button" disabled title="옵션 기능은 준비 중입니다.">옵션</button></section>
         <section id="inventory-comparison" class="inventory-comparison" aria-label="장비 비교"><p>비교할 장비를 선택해 주세요</p></section>
       </div>
       <section class="inventory-list-panel" aria-label="보유 장비">
@@ -131,6 +132,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=40"></script>
+  <script type="module" src="soldier.js?v=41"></script>
 </body>
 </html>

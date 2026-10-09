@@ -13,7 +13,7 @@ test('all fifteen weapon-grade rewards reuse the same artwork, names and card la
     for (const variant of variants) {
       assert.ok(existsSync(variant.image.split('?')[0]));
       assert.ok(existsSync(variant.frame));
-      const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-card-progress', '.weapon-image', '.weapon-name'].map(key => [key, {style:{},setAttribute(){}}]));
+      const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
       const card = { dataset: {}, querySelector: key => elements[key] };
       fillWeaponCard(card, weapon, { grade: variant.grade, level: 3 });
       assert.equal(card.dataset.grade, variant.grade);
@@ -22,9 +22,8 @@ test('all fifteen weapon-grade rewards reuse the same artwork, names and card la
       assert.equal(elements['.weapon-name'].textContent, variant.name);
       fillWeaponCard(card, weapon, { grade: variant.grade, level: 7 });
       assert.equal(elements['.weapon-level'].textContent, 'MAX');
-      assert.equal(elements['.weapon-card-progress'].textContent,'100%');
       fillWeaponCard(card,weapon,{grade:variant.grade,level:2,upgrade_progress:41.5});
-      assert.equal(elements['.weapon-card-progress'].textContent,'41.5%');
+      assert.equal(elements['.weapon-level'].textContent,'Lv.2');
     }
   }
 });
@@ -47,7 +46,7 @@ test('default weapons remain ordinary owned items and card reuse clears previous
     id: `default-${weapon}`, weapon, grade: 'D', level: 2, equipped: true, source: 'default'
   }));
   assert.deepEqual(validateWeaponItems({ gold: '0', items }), items);
-  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-card-progress', '.weapon-image', '.weapon-name'].map(key => [key, {style:{},setAttribute(){}}]));
+  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
   const card = { dataset: {}, querySelector: key => elements[key] };
   fillWeaponCard(card, 'k2', items[0]);
   assert.equal(card.dataset.source, 'default');

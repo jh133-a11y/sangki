@@ -83,12 +83,6 @@ export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
   frame.src = `soldier-grade-${item.grade.toLowerCase()}.webp`;
   frame.alt = `${item.grade}급`;
   card.querySelector('.weapon-level').textContent = weaponLevelLabel(item.level);
-  const meter = card.querySelector('.weapon-card-progress');
-  const percent = item.level === 7 ? 100 : item.upgrade_progress ?? 0;
-  if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new Error('무기 강화 진행률이 올바르지 않습니다.');
-  meter.textContent = `${percent}%`;
-  meter.setAttribute('aria-valuenow',String(percent));
-  meter.style.background = `linear-gradient(to right, #ffdc34, #e9a500 ${percent}%, #555 ${percent}%, #555)`;
   const image = card.querySelector('.weapon-image');
   image.hidden = !WEAPON_ARTWORK[weapon];
   if (WEAPON_ARTWORK[weapon]) image.src = WEAPON_ARTWORK[weapon];

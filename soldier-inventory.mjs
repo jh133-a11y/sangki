@@ -1,6 +1,6 @@
 import { WEAPONS, weaponStats, weaponLevelLabel } from './soldier-core.mjs?v=4';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
-import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=6';
+import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=7';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryCharacters(state) {
@@ -229,22 +229,13 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     body.append(renderCard(id, item), stats(id, item));
     if (item && changeWeaponItem) {
       if (item.level < 7) {
-        const progress = document.createElement('progress'); progress.max = 100;
-        progress.value = item.materialReady ? item.upgrade_progress : 0;
-        progress.setAttribute('aria-label', '무기 강화 진행률');
-        const label = document.createElement('p'); label.className = 'weapon-upgrade-progress';
-        const level = document.createElement('strong'); level.textContent = weaponLevelLabel(item.level);
-        const percent = document.createElement('span');
-        percent.textContent = item.materialReady ? `${item.upgrade_progress}%` : '강화 SQL 설치 필요';
-        const meter = document.createElement('span'); meter.className = 'weapon-material-meter';
-        meter.append(progress, percent); label.append(level, meter);
-        if (!item.materialReady) label.title = 'soldier-weapon-material-upgrade.sql 실행 후 강화 가능합니다.';
         const button = document.createElement('button'); button.type = 'button';
         button.className = 'weapon-item-action';
         button.textContent = '강화';
         button.disabled = weaponBusy || !item.materialReady;
         button.addEventListener('click', () => selectMaterials(item));
-        body.append(label, button);
+        button.title = item.materialReady ? '강화재료 선택' : 'soldier-weapon-material-upgrade.sql 실행 후 강화 가능합니다.';
+        body.append(button);
       }
       else {
         const max = document.createElement('p'); max.textContent = '최대 레벨 (MAX)'; body.append(max);
@@ -299,6 +290,14 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         const segment = document.createElement('i'); segment.classList.toggle('filled', index <= level); progress.append(segment);
       }
       $('inventory-level').append(progress);
+    }
+    const meter = $('inventory-progress');
+    meter.hidden = slot === 'character';
+    if (slot !== 'character') {
+      const level = currentItem?.level || equipment[current]?.level || 1;
+      const percent = level === 7 ? 100 : currentItem?.upgrade_progress ?? 0;
+      $('inventory-progress-value').value = percent;
+      $('inventory-progress-percent').textContent = `${percent}%`;
     }
     $('inventory-current').replaceChildren(content(current, currentItem));
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';

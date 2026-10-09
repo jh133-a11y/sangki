@@ -99,7 +99,10 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-details { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .inventory-equipped, .inventory-comparison { padding: 8px; border: 2px solid #b2bcc9; border-radius: 8px; background: #edf0f5; min-width: 0; }
 .inventory-equipped h2, .inventory-comparison h2 { margin: 0 0 8px; padding: 6px 10px; background: #aebfda; color: #35444f; font-size: clamp(14px, 1.8vw, 23px); }
-.inventory-equipped h2 { display: flex; justify-content: space-between; }
+.inventory-equipped h2 { display: flex; align-items: center; gap: 10px; }
+.inventory-equipped h2 > span:first-child { margin-right: auto; }
+#inventory-level { white-space: nowrap; }
+#inventory-progress { flex: 0 1 30%; min-width: 70px; font-size: inherit; }
 .inventory-equipped > button { display: block; margin: 8px 0 0 auto; width: 25%; background: linear-gradient(#29acff, #0067b9); }
 .inventory-comparison { display: flex; flex-direction: column; justify-content: center; }
 .inventory-comparison > p { margin: auto; padding: 18px; border: 2px solid #b5bcc4; background: #e1e4e8; color: #66717a; font-size: clamp(16px, 2.4vw, 32px); font-weight: 900; text-align: center; }
@@ -152,6 +155,8 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 }
 @media (max-width: 450px) { .inventory-details { grid-template-columns: 1fr; } }
 .home-top-actions { position: absolute; top: 8px; right: 14px; display: flex; gap: 10px; pointer-events: auto; }
+#fullscreen-status { position: absolute; right: 14px; top: 50px; max-width: min(420px, 90vw); color: #ffcf7a; background: #182838; padding: 8px; z-index: 5; pointer-events: auto; }
+#fullscreen-status:empty { display: none; }
 .home-top-actions button, .home-top-actions a { display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; color: #bbc9e2; font-size: 30px; padding: 0; min-width: 44px; min-height: 44px; text-decoration: none; }
 .soldier-music-controls { position: absolute; right: 2%; top: 65px; width: 28%; max-width: 290px; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; align-items: center; padding: 5px; background: var(--ui-metal); border: 1px solid #718295; border-radius: 6px; font-size: 11px; pointer-events: auto; }
 .soldier-music-controls button { grid-row: span 2; font-size: 11px; padding: 4px; }
@@ -178,8 +183,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .weapon-level, .weapon-name { font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; font-size: clamp(9px, 1.2vw, 16px); font-weight: 900; font-style: italic; color: white; text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 2px #000; }
 .weapon-level { position: absolute; top: 8%; right: 10%; }
 .equipment-card { position: relative; aspect-ratio: 1091 / 1442; overflow: hidden; container-type: inline-size; }
-.equipment-card .weapon-level { left: 32%; right: auto; width: 21%; top: 8%; font-size: 10cqw; line-height: 1.1; white-space: nowrap; }
-.weapon-card-progress { position: absolute; top: 8%; left: 55%; width: 36%; height: 10%; display: grid; place-items: center; border: 1px solid #333; border-radius: 2px; background: #555; color: white; font: 900 9cqw/1 Arial, sans-serif; text-shadow: 1px 1px 1px black; }
 .weapon-image { position: absolute; width: 88%; height: 70%; object-fit: contain; left: 6%; top: 23%; }
 .weapon-name { position: absolute; left: 4%; bottom: 5%; width: 92%; text-align: center; }
 #home .equipment-slot select { display: block; width: 100%; min-height: 28px; padding: 3px 0; margin-top: 3px; font-size: 10px; }
@@ -340,8 +343,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .weapon-material-check { display: none; position: absolute; top: 32%; left: 18%; width: 64%; aspect-ratio: 1; place-items: center; background: #fffdf0eb; border: 7px solid #ffd32f; border-radius: 50%; color: #382500; font-size: 58px; font-weight: 900; box-shadow: 0 2px 5px #0008; pointer-events: none; }
 .weapon-material-list input:checked ~ .weapon-material-check { display: grid; }
 .inventory-item-detail progress { width: 100%; accent-color: #159bea; }
-.weapon-upgrade-progress { display: flex; align-items: center; justify-content: center; gap: 10px; }
-.weapon-upgrade-progress .weapon-material-meter { width: 60%; }
 @media (max-width: 600px) {
   .weapon-material-top { grid-template-columns: 1fr; gap: 8px; }
   .weapon-material-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px; }
