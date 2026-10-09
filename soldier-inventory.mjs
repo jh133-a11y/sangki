@@ -1,5 +1,5 @@
 import { WEAPONS, weaponLevelLabel } from './soldier-core.mjs?v=3';
-import { CHARACTERS } from './soldier-characters.mjs?v=2';
+import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryWeapons(equipment, slot) {
@@ -93,10 +93,12 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     }
     $('inventory-current').replaceChildren(content(current));
     if (slot === 'character' && current !== 'black-water') {
-      const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = '기본 캐릭터 카드 장착';
+      const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = '기본 캐릭터 장착';
+      restore.className = 'character-restore';
       restore.addEventListener('click', async () => {
         restore.disabled = true;
-        try { await equipCharacter('black-water'); render(); }
+        $('inventory-status').textContent = '기본 캐릭터의 3D 모델을 준비하고 장착하는 중입니다…';
+        try { await equipCharacter('black-water'); render(); $('inventory-status').textContent = '기본 캐릭터와 3D 모델을 장착했습니다.'; }
         catch (error) { $('inventory-status').textContent = `장착 실패: ${error.message}`; console.error(error); restore.disabled = false; }
       });
       $('inventory-current').append(restore);
@@ -121,10 +123,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         title.textContent = id === current ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
         $('inventory-comparison').replaceChildren(title, content(id));
         if (slot === 'character' && id !== current) {
-          const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 카드 장착';
+          const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 장착';
           equip.addEventListener('click', async () => {
             equip.disabled = true;
-            try { await equipCharacter(id); render(); }
+            $('inventory-status').textContent = `${CHARACTERS[id].name}의 3D 모델을 준비하고 장착하는 중입니다…`;
+            try { await equipCharacter(id); render(); $('inventory-status').textContent = `${CHARACTERS[id].name}과 3D 모델을 장착했습니다.`; }
             catch (error) {
               $('inventory-status').textContent = `장착 실패: ${error.message}`;
               console.error('캐릭터 장착 오류', error); equip.disabled = false;

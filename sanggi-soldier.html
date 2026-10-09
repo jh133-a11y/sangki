@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
-  <link rel="preload" as="fetch" href="soldier-home-model.glb?v=3" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=16">
+  <link rel="preload" as="fetch" href="soldier-home-model.glb?v=4" crossorigin>
+  <link rel="stylesheet" href="soldier.css?v=17">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -104,7 +104,7 @@
         <header><strong id="inventory-count"></strong><h2>PVP 인벤토리</h2><button id="inventory-sort" type="button">이름순 정렬</button><button type="button" disabled title="분해 기능은 준비 중입니다.">분해</button><button type="button" disabled title="판매 기능은 준비 중입니다.">판매</button></header>
         <div id="inventory-items"></div>
       </section>
-      <p id="inventory-status" role="status">미설정 항목은 아직 게임에 반영되지 않은 수치입니다. 옵션·분해·판매는 준비 중이며, 캐릭터 장착은 카드에만 적용됩니다.</p>
+      <p id="inventory-status" role="status">미설정 항목은 아직 게임에 반영되지 않은 수치입니다. 옵션·분해·판매는 준비 중이며, 캐릭터 장착 시 3D 모델도 변경됩니다.</p>
     </section>
   </dialog>
   <dialog id="shop-dialog" aria-label="솔져 상점">
@@ -118,9 +118,9 @@
       <button id="shop-tab-gems" type="button" role="tab" data-shop-tab="gems" aria-controls="shop-products">보석</button>
     </div>
     <section id="shop-products" role="tabpanel"></section>
-    <p class="shop-notice">캐릭터 특기는 소개 문구입니다. 회피·체력 보너스와 새 3D 모델은 아직 적용되지 않습니다.</p>
+    <p class="shop-notice">구매한 캐릭터는 인벤토리에서 3D 모델을 장착할 수 있습니다. 특기는 소개 문구이며 회피·체력 보너스는 준비 중입니다.</p>
     <p id="shop-status" role="status"></p>
   </dialog>
-  <script type="module" src="soldier.js?v=27"></script>
+  <script type="module" src="soldier.js?v=28"></script>
 </body>
 </html>

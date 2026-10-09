@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export const HOME_MODEL = 'soldier-home-model.glb';
 
@@ -9,14 +10,34 @@ export function idlePose(seconds) {
   return { breath: Math.sin(seconds * Math.PI * 2 / 4.5), stretch };
 }
 
-export async function loadHomeRig() {
-  let gltf;
-  try {
-    gltf = await new GLTFLoader().loadAsync(`${HOME_MODEL}?v=3`);
-  } catch (error) {
-    throw new Error('제공된 3D 캐릭터 파일을 불러오지 못했습니다.', { cause: error });
+const sources = new Map();
+export async function loadCharacterSource(id = 'black-water') {
+  const character = CHARACTERS[id];
+  if (!character) throw new Error('3D 캐릭터가 올바르지 않습니다.');
+  if (!sources.has(id)) {
+    const pending = new GLTFLoader().loadAsync(character.model).then(gltf => {
+      gltf.scene.traverse(part => {
+        if (!part.isMesh) return;
+        for (const material of Array.isArray(part.material) ? part.material : [part.material]) {
+          for (const value of Object.values(material)) {
+            if (value?.isTexture) value.userData.persistent = true;
+          }
+        }
+      });
+      return gltf.scene;
+    }).catch(error => {
+      sources.delete(id);
+      throw new Error(`${character.name} 3D 모델을 불러오지 못했습니다. 다시 장착하거나 새로고침하세요.`, { cause: error });
+    });
+    sources.set(id, pending);
   }
-  return createHomeRig(gltf.scene);
+  return sources.get(id);
+}
+
+export async function loadHomeRig(id = 'black-water') {
+  const rig = createHomeRig(await loadCharacterSource(id));
+  rig.root.userData.character = id;
+  return rig;
 }
 
 const smooth = (min, max, value) => THREE.MathUtils.smoothstep(value, min, max);
@@ -105,5 +126,11 @@ export function createHomeRig(source) {
   }
   animate(0);
   return { root, joints, meshes, skeleton, materials: [...materials], animate,
+    dispose() {
+      root.removeFromParent();
+      for (const mesh of meshes) mesh.geometry.dispose();
+      for (const material of materials) material.dispose();
+      skeleton.dispose();
+    },
     setYaw(yaw) { root.rotation.y = yaw; } };
 }

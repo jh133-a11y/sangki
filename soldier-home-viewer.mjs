@@ -1,11 +1,12 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=9';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=10';
+import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export { idlePose };
 
 export async function createHomeViewer(canvas, status) {
-  status.textContent = '제공된 3D 모델을 불러오는 중입니다 (약 4 MB)…';
-  const rig = await loadHomeRig();
+  status.textContent = '기본 3D 모델을 불러오는 중입니다 (약 11 MB)…';
+  let rig = await loadHomeRig(), characterId = 'black-water', loading = false, loadSequence = 0;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setClearColor(0, 0); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -23,7 +24,7 @@ export async function createHomeViewer(canvas, status) {
   const turning = () => Math.abs(targetYaw - yaw) > .0001;
   const active = () => visible();
   function labels() {
-    status.textContent = '제공된 3D 모델 · 드래그/방향키 회전 · 자동 호흡·몸풀기';
+    status.textContent = `${CHARACTERS[characterId].name} · 드래그/방향키 회전 · 자동 호흡·몸풀기`;
   }
   function draw() {
     canvas.dataset.motion = visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
@@ -31,6 +32,8 @@ export async function createHomeViewer(canvas, status) {
     canvas.dataset.seconds = seconds.toFixed(3);
     canvas.dataset.rig = 'articulated';
     canvas.dataset.model = 'supplied-glb';
+    canvas.dataset.character = characterId;
+    canvas.dataset.loading = String(loading);
     if (contextLost) return;
     const { width, height } = canvas.getBoundingClientRect();
     if (!width || !height) return;
@@ -108,5 +111,24 @@ export async function createHomeViewer(canvas, status) {
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });
   canvas.dataset.view = '0';
   labels(); sync(); canvas.dataset.viewReady = 'true';
-  return { cancelDrag };
+  return { cancelDrag, async setCharacter(id) {
+    if (!CHARACTERS[id]) throw new Error('3D 캐릭터가 올바르지 않습니다.');
+    if (id === characterId && !loading) return;
+    const sequence = ++loadSequence;
+    loading = true; status.textContent = `${CHARACTERS[id].name} 모델을 불러오는 중입니다 (약 11 MB)…`; draw();
+    let next;
+    try {
+      next = await loadHomeRig(id);
+      if (sequence !== loadSequence) { next.dispose(); return; }
+      rig.dispose(); rig = next; characterId = id;
+      scene.add(rig.root); rig.root.position.y = -.5;
+      loading = false; labels(); sync();
+      canvas.setAttribute('aria-label', `${CHARACTERS[id].name} 3D 캐릭터. 드래그·좌우 방향키로 회전, Home 키로 정면.`);
+    } catch (error) {
+      if (sequence === loadSequence) {
+        loading = false; status.textContent = `캐릭터 표시 실패: ${error.message}`; draw();
+      }
+      throw error;
+    }
+  } };
 }

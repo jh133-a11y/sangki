@@ -1,4 +1,4 @@
-:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #eef4ff; background: #121c2a; }
+:root { color-scheme: dark; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; color: #eef4ff; background: #121c2a; --ui-surface: #e6ebef; --ui-panel: #edf0f5; --ui-ink: #303c46; --ui-border: #aab6bf; --ui-metal: linear-gradient(#455364, #19222c); --ui-action: linear-gradient(#29acff, #0067b9); }
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; overscroll-behavior: none; }
 [hidden] { display: none !important; }
@@ -6,12 +6,13 @@ body { margin: 0; overflow: hidden; overscroll-behavior: none; }
 #home, #hud { position: fixed; inset: 0; pointer-events: none; }
 #home button, #home select, #home .panel, #hud button, #hud .control { pointer-events: auto; }
 button, input, select { font: inherit; }
-button, select, input { border: 1px solid #718295; border-radius: 8px; background: #243649; color: #fff; padding: 10px; min-height: 44px; }
+button, select, input { border: 1px solid #718295; border-radius: 6px; background: #243649; color: #fff; padding: 10px; min-height: 44px; }
+button { background: var(--ui-action); font-weight: 700; box-shadow: inset 0 1px 1px #ffffff44, 0 1px 2px #0004; }
 button { cursor: pointer; }
 button:disabled { opacity: .5; cursor: not-allowed; }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #9df7d0; outline-offset: 2px; }
-a { color: #b0efde; }
-.panel { background: #142231e8; padding: 12px 16px; border: 1px solid #637688; border-radius: 10px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #29acff; outline-offset: 2px; }
+a { color: #bce8ff; }
+.panel { background: var(--ui-metal); padding: 12px 16px; border: 1px solid #8999a8; border-radius: 6px; }
 h1 { margin: 0 0 6px; font-size: 24px; } h2 { font-size: 20px; margin: 0 0 14px; }
 p { line-height: 1.5; }
 .profile { position: absolute; left: 18px; top: 18px; } .profile p { margin: 6px 0; }
@@ -22,14 +23,19 @@ p { line-height: 1.5; }
 .loadout p { margin: 10px 0 0; font-size: 12px; }
 .play-button { position: absolute; right: 18px; bottom: 24px; background: #156e51; font-weight: 800; font-size: 22px; min-width: 180px; }
 .home-status { position: absolute; right: 18px; bottom: 85px; max-width: min(350px, 45vw); font-size: 13px; }
-dialog { width: min(560px, calc(100% - 30px)); max-height: 90dvh; overflow-y: auto; padding: 22px; border: 1px solid #8097ab; border-radius: 14px; background: #152536; color: #fff; }
+dialog { color-scheme: light; width: min(560px, calc(100% - 30px)); max-height: 90dvh; overflow-y: auto; padding: 22px; border: 2px solid var(--ui-border); border-radius: 6px; background: var(--ui-surface); color: var(--ui-ink); box-shadow: 0 10px 45px #0008; }
+dialog > h2 { margin: -22px -22px 18px; padding: 18px 60px 18px 22px; color: white; background: var(--ui-metal); border-bottom: 1px solid #718295; }
+dialog input:not([type="range"]):not([type="checkbox"]), dialog select { background: #fff; color: var(--ui-ink); border-color: var(--ui-border); }
+dialog input[type="range"], input[type="checkbox"] { accent-color: #078fe3; }
+dialog input[type="range"] { background: transparent; }
+dialog p, dialog li { overflow-wrap: anywhere; }
 dialog::backdrop { background: #0009; }
-dialog .close { position: absolute; top: 8px; right: 8px; }
+dialog .close { position: absolute; top: 8px; right: 8px; background: transparent; color: #f78059; border: 0; box-shadow: none; font-size: 26px; }
 dialog label { display: block; margin: 12px 0; }
-dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; margin: 16px 0; padding: 8px 0; }
+dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-border); margin: 16px 0; padding: 8px 0; }
 .check { display: flex; gap: 8px; align-items: center; } .check input { min-height: 22px; }
-.room-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid #526377; padding: 8px 0; overflow-wrap: anywhere; }
-.setting-row { padding: 10px 0; border-top: 1px solid #526377; }
+.room-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--ui-border); padding: 8px 0; overflow-wrap: anywhere; }
+.setting-row { padding: 10px 0; border-top: 1px solid var(--ui-border); }
 .setting-row label { display: grid; grid-template-columns: 75px 1fr 45px; align-items: center; gap: 8px; margin: 3px 0; }
 .setting-row input { width: 100%; }
 .match-info { position: absolute; top: 12px; left: 12px; font-size: 13px; pointer-events: none; }
@@ -41,7 +47,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .control { position: absolute; touch-action: none; user-select: none; opacity: .85; }
 .round { border-radius: 50%; }
 .weapons { display: flex; flex-direction: column; gap: 4px; }
-.weapons button { font-size: 12px; padding: 7px; } .weapons button[aria-pressed="true"] { background: #156e51; border-color: #bdffe6; }
+.weapons button { font-size: 12px; padding: 7px; background: var(--ui-metal); } .weapons button[aria-pressed="true"] { background: var(--ui-action); border-color: #bce8ff; }
 #joystick { width: 92px; height: 92px; border: 2px solid #d7e6f8aa; border-radius: 50%; background: #17253588; }
 #joystick span { position: absolute; top: 28px; left: 28px; width: 32px; height: 32px; border-radius: 50%; background: #e2f3ffaa; }
 .ammo { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); pointer-events: none; margin: 0; }
@@ -112,6 +118,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #inventory-status { font-size: 12px; margin: 10px 0 0; }
 .character-inventory .inventory-equipped h2, .character-inventory .inventory-list-panel > header { background: #bfc1c3; color: #3c4247; }
 .character-inventory .inventory-equipped > button { display: none; }
+.character-inventory #inventory-current > .character-restore { display: block; margin: 8px 0 0 auto; }
 .character-inventory .inventory-item-detail { grid-template-columns: minmax(80px, 28%) 1fr auto; align-items: start; gap: 10px; }
 .character-inventory .character-item-detail .character-card { grid-column: 1; grid-row: 1 / 3; }
 .character-inventory .character-item-detail dl { grid-column: 2; grid-row: 1; align-self: center; padding-top: 20px; }
@@ -146,7 +153,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 @media (max-width: 450px) { .inventory-details { grid-template-columns: 1fr; } }
 .home-top-actions { position: absolute; top: 8px; right: 14px; display: flex; gap: 10px; pointer-events: auto; }
 .home-top-actions button, .home-top-actions a { display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; color: #bbc9e2; font-size: 30px; padding: 0; min-width: 44px; min-height: 44px; text-decoration: none; }
-.soldier-music-controls { position: absolute; right: 2%; top: 65px; width: 28%; max-width: 290px; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; align-items: center; padding: 5px; background: #101c2bd9; font-size: 11px; pointer-events: auto; }
+.soldier-music-controls { position: absolute; right: 2%; top: 65px; width: 28%; max-width: 290px; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; align-items: center; padding: 5px; background: var(--ui-metal); border: 1px solid #718295; border-radius: 6px; font-size: 11px; pointer-events: auto; }
 .soldier-music-controls button { grid-row: span 2; font-size: 11px; padding: 4px; }
 .soldier-music-controls label { display: flex; justify-content: space-between; }
 .soldier-music-controls input { width: 100%; min-width: 0; min-height: 24px; padding: 0; }
@@ -186,9 +193,10 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .home-bottom-mark { position: absolute; left: 2.3%; bottom: 5%; color: #bfcfea; font-weight: 800; font-size: clamp(12px, 1.8vw, 20px); text-shadow: 0 0 8px #438acd; }
 .home-bottom-mark span { font-size: 28px; color: #c7ddff; } .home-bottom-mark small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 2px; color: #9dabbe; }
 #home .play-button { border: 1px solid #a0b8da; border-radius: 0; background: linear-gradient(145deg, #657fa899, #253767e0); color: #ecf4ff; width: 29%; min-width: 0; bottom: 6%; right: 2%; min-height: 75px; font-size: clamp(18px, 2.4vw, 30px); box-shadow: inset 0 0 20px #789bd344, 0 0 8px #000; text-shadow: 0 2px 2px #24324c; }
-#home .play-button { width: 23%; right: 15%; bottom: 6%; min-height: 66px; font-size: clamp(16px, 2vw, 25px); }
-#shop-open { position: absolute; right: 2%; bottom: 6%; width: 12%; min-height: 66px; border-radius: 0; border: 1px solid #9bb2cc; background: linear-gradient(#5b748c, #24354b); font-weight: 900; font-size: clamp(14px, 1.7vw, 23px); }
+#home .play-button { width: 23%; right: 2%; bottom: 6%; min-height: 66px; font-size: clamp(16px, 2vw, 25px); background: var(--ui-action); border-radius: 6px; }
+#shop-open { position: absolute; right: 27%; bottom: 6%; width: clamp(54px, 7vw, 82px); height: auto; aspect-ratio: 1; min-height: 0; border-radius: 50%; border: 2px solid #9bb2cc; background: var(--ui-action); font-weight: 900; font-size: clamp(12px, 1.5vw, 18px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; }
 #shop-open span { color: #edc65b; }
+#shop-open span { font-size: 1.4em; }
 .character-card .character-level { font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; font-weight: 900; font-style: italic; color: white; z-index: 1; }
 .character-card { container-type: inline-size; }
 .character-card .character-level { top: 4%; left: 36%; right: auto; font-family: 'Arial Black', Arial, sans-serif; font-size: 20.5cqw; line-height: 1; color: #f4f5f6; -webkit-text-stroke: 1.5cqw #080808; paint-order: stroke fill; text-shadow: none; }
@@ -222,7 +230,8 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #shop-status { margin: 0; padding: 8px 20px; font-size: 13px; }
 .shop-notice { margin: 0; padding: 0 20px; font-size: 12px; }
 @media (max-height: 420px) {
-  #home .play-button, #shop-open { bottom: 3%; min-height: 54px; }
+  #home .play-button, #shop-open { bottom: 3%; }
+  #home .play-button { min-height: 54px; }
   .shop-tabs { padding-top: 10px; gap: 6px; }
   .shop-tabs button { min-height: 40px; }
   #shop-products { padding: 10px; gap: 10px; }
@@ -231,9 +240,20 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .play-button small { display: block; margin-top: 4px; font-size: 11px; color: #bfcede; }
 .play-button > span { color: #172f50; font-size: 32px; vertical-align: middle; }
 #home .home-status { right: 2%; bottom: calc(6% + 80px); max-width: 29%; padding: 6px; font-size: 11px; line-height: 1.4; background: #0e1924bb; border: 0; border-radius: 0; text-shadow: 0 1px 2px #000; }
+#hud .match-info { border-top: 3px solid #119ef0; }
+#hud .ammo { background: var(--ui-metal); border-color: #91a2b2; }
+#hud .round { background: linear-gradient(#455364d9, #19222ce6); border: 2px solid #9aaebb; color: white; font-weight: 800; }
+#hud .round:active, #hud .round[aria-pressed="true"] { background: var(--ui-action); }
+#hud .game-status { background: var(--ui-surface); color: var(--ui-ink); border: 2px solid var(--ui-border); }
+#hud .desktop-help { padding: 5px 10px; border-radius: 4px; background: #19222cc9; color: #edf0f5; }
+#joystick { background: #19222c99; border-color: #b3c8d5; }
+#joystick span { background: linear-gradient(#dce7ee, #758c9c); border: 1px solid #e1f2fc; }
 @media (max-height: 420px) {
   .currency-bar { top: 5px; } .currency { height: 26px; } .currency svg { width: 22px; height: 22px; }
   #home .profile { top: 16%; } #home .loadout { top: 46%; }
   #home .play-button { min-height: 66px; bottom: 3%; } #home .home-status { bottom: calc(3% + 70px); }
+  #home .play-button { padding: 6px; }
+  #home .play-button > span { font-size: 20px; }
+  #home .play-button small { font-size: 9px; line-height: 1.2; }
   .home-bottom-mark { display: none; }
 }

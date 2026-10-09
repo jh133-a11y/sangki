@@ -1,9 +1,9 @@
 import * as THREE from './vendor/three.module.min.js';
-import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=13';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=5';
-import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=2';
-import { createShop } from './soldier-shop.mjs?v=2';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=10';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=14';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=6';
+import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=3';
+import { createShop } from './soldier-shop.mjs?v=3';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
@@ -76,6 +76,7 @@ async function refreshCharacters(action = 'read', id = null) {
   if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
   characterBusy = true;
   try {
+    if (action === 'equip') await loadCharacterSource(id);
     const result = await rpc('soldier_shop_api', { p_token: identity.token, p_action: action, p_character: id });
     if (!result || !CHARACTERS[result.equipped] || !result.characters || Array.isArray(result.characters) || typeof result.characters !== 'object'
       || !/^\d+$/.test(String(result.gold)) || !/^\d+$/.test(String(result.gems))
@@ -84,6 +85,7 @@ async function refreshCharacters(action = 'read', id = null) {
       if (!CHARACTERS[key] || !item || !Number.isInteger(item.level) || item.level < 1 || item.level > 7) throw new Error('캐릭터 정보를 확인할 수 없습니다.');
     }
     if (result.equipped !== 'black-water' && !result.characters[result.equipped]) throw new Error('장착 캐릭터의 보유 정보를 확인할 수 없습니다.');
+    await homeCharacter.setCharacter(result.equipped);
     characterState = { characters: result.characters, equipped: result.equipped };
     identity.gold = result.gold; identity.gems = result.gems;
     updateWallet(identity); shopReady = true;
@@ -215,10 +217,9 @@ function renderRankDetail() {
   $('rank-wins').textContent = progress.next ? `승리 보너스만 기준으로 ${progress.winsNeeded.toLocaleString('ko-KR')}판 더 승리하면 승급합니다. 처치 경험치가 더해지면 더 빨리 승급할 수 있습니다.` : '더 이상 승급할 계급이 없습니다.';
 }
 $('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
-let renderer, scene, camera, homeCharacter, characterTextures, hand, flash;
+let renderer, scene, camera, homeCharacter, hand, flash;
 try {
   homeCharacter = await createHomeViewer($('home-character'), $('character-status'));
-  characterTextures = await loadCharacterTextures();
   renderer = new THREE.WebGLRenderer({ canvas: $('world'), antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.setSize(innerWidth, innerHeight);
@@ -264,12 +265,9 @@ function makeMap() {
     crown.position.set(i, 4, 47); scene.add(crown);
   }
 }
-function makeSoldier(color, label) {
+function makeSoldier(characterId, label) {
   const body = new THREE.Group();
-  const character = createSoldierModel(true, characterTextures);
-  // Gameplay's forward vector is -Z; the home model faces +Z.
-  character.rotation.y = Math.PI;
-  body.add(character);
+  setSoldierCharacter(body, characterId);
   if (label) {
     const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext('2d');
@@ -281,7 +279,28 @@ function makeSoldier(color, label) {
   }
   return body;
 }
+function setSoldierCharacter(body, id) {
+  if (!CHARACTERS[id]) throw new Error('서버 캐릭터 정보가 올바르지 않습니다.');
+  if (body.userData.character === id) return;
+  if (body.userData.retryAt > performance.now()) return;
+  body.userData.retryAt = 0;
+  body.userData.character = id;
+  loadHomeRig(id).then(rig => {
+    if (body.userData.disposed || body.userData.character !== id) { rig.dispose(); return; }
+    body.userData.rig?.dispose();
+    rig.root.rotation.y = Math.PI; rig.root.scale.setScalar(1.9);
+    body.add(rig.root); body.userData.rig = rig;
+  }).catch(error => {
+    if (body.userData.disposed || body.userData.character !== id) return;
+    body.userData.character = null;
+    body.userData.retryAt = performance.now() + 10000;
+    $('game-status').textContent = `캐릭터 표시 실패: ${error.message}`;
+    console.error('경기 캐릭터 로딩 오류', error);
+  });
+}
 function dispose(group) {
+  group.userData.disposed = true;
+  group.userData.rig?.dispose();
   const materials = new Set(), maps = new Set();
   group.traverse(object => {
     object.geometry?.dispose();
@@ -438,7 +457,7 @@ function startMatch(isOnline) {
   if (!online) {
     for (let i = 1; i <= 5; i++) {
       const [x, z] = SPAWNS[i];
-      const body = makeSoldier('#9b574a', `AI ${i}`); scene.add(body);
+      const body = makeSoldier('black-water', `AI ${i}`); scene.add(body);
       entities.push({ id: `bot${i}`, nickname: `AI ${i}`, x, y: 0, z, yaw: 0, crouch: false, hp: 100, kills: 0, deaths: 0, body, nextShot: 0, respawn: 0, protected: 0 });
     }
   }
@@ -483,9 +502,10 @@ function applySnapshot(state) {
   for (const other of others) {
     let entity = entities.find(p => p.id === other.id);
     if (!entity) {
-      const body = makeSoldier('#9b574a', other.nickname); scene.add(body);
+      const body = makeSoldier(other.character || 'black-water', other.nickname); scene.add(body);
       entity = { ...other, body, tx: other.x, tz: other.z }; entities.push(entity);
     }
+    setSoldierCharacter(entity.body, other.character || 'black-water');
     entity.tx = other.x; entity.tz = other.z; entity.y = other.y; entity.yaw = other.yaw;
     entity.hp = other.hp; entity.crouch = other.crouch; entity.kills = other.kills;
   }
@@ -735,6 +755,7 @@ function frame(time) {
     for (const entity of entities) {
       if (online) { entity.x += (entity.tx - entity.x) * Math.min(1, dt * 12); entity.z += (entity.tz - entity.z) * Math.min(1, dt * 12); }
       entity.body.visible = entity.hp > 0;
+      entity.body.userData.rig?.animate(now);
       entity.body.position.set(entity.x, entity.y, entity.z); entity.body.rotation.y = entity.yaw; entity.body.scale.y = entity.crouch ? .65 : 1;
     }
     camera.position.set(player.x, origin().y, player.z); camera.rotation.set(player.pitch, player.yaw, 0);

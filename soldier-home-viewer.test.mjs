@@ -4,6 +4,13 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from './vendor/three.module.min.js';
 import { createHomeRig, idlePose, jointWeights, HOME_MODEL } from './soldier-home-rig.mjs';
+import { CHARACTERS } from './soldier-characters.mjs';
+
+const modelFixtures = [
+  [HOME_MODEL, '2c2330a698690651e2d2e063ac34700b3cd11f1cb27c14f83d529678b6db07f4', 8273],
+  ['soldier-roka-swc.glb', 'b4da52a3ff914f41f9dfd61741c7868cc67ecd8b4b288cc4543ffd6fe19955cd', 9335],
+  ['soldier-fsb-agent.glb', 'f2ed6b7e7631b21d232ab3754eb234b0b1970e0c9e4d7994fdaae2511ecf4492', 7419]
+];
 
 function fixture() {
   const geometry = new THREE.BufferGeometry();
@@ -17,16 +24,17 @@ function fixture() {
   return source;
 }
 
-test('supplied GLB is embedded, intact and unrigged, with original PBR maps', () => {
-  const binary = readFileSync(HOME_MODEL);
-  assert.equal(createHash('sha256').update(binary).digest('hex'), '3c1ac28bac2465bfca62c5e684ae68de4fcb0ffb2ddb40fb138c8205dc80e16a');
+for (const [file, hash, vertexCount] of modelFixtures) {
+test(`${file} is the exact supplied GLB, embedded and unrigged with original PBR maps`, () => {
+  const binary = readFileSync(file);
+  assert.equal(createHash('sha256').update(binary).digest('hex'), hash);
   assert.equal(binary.readUInt32LE(0), 0x46546c67);
   assert.equal(binary.readUInt32LE(4), 2);
   assert.equal(binary.readUInt32LE(8), binary.length);
   const gltf = JSON.parse(binary.subarray(20, 20 + binary.readUInt32LE(12)));
   assert.equal(gltf.skins?.length || 0, 0);
   assert.equal(gltf.animations?.length || 0, 0);
-  assert.equal(gltf.meshes.length, 35);
+  assert.equal(gltf.meshes.length, 1);
   assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
   for (const material of gltf.materials) {
     assert.ok(material.pbrMetallicRoughness.baseColorTexture);
@@ -35,8 +43,8 @@ test('supplied GLB is embedded, intact and unrigged, with original PBR maps', ()
   }
 });
 
-test('final multipart model receives fresh shared bones and actual breathing/stretch deformations', () => {
-  const binary = readFileSync(HOME_MODEL);
+test(`${file} receives fresh joints and actual breathing/stretch deformation`, () => {
+  const binary = readFileSync(file);
   const jsonLength = binary.readUInt32LE(12);
   const gltf = JSON.parse(binary.subarray(20, 20 + jsonLength));
   const binaryOffset = 20 + jsonLength + 8;
@@ -63,8 +71,8 @@ test('final multipart model receives fresh shared bones and actual breathing/str
   const secondRig = createHomeRig(source);
   assert.notEqual(rig.skeleton, secondRig.skeleton);
   assert.ok(rig.skeleton.bones.every((bone, i) => bone !== secondRig.skeleton.bones[i]));
-  assert.equal(rig.meshes.length, 35);
-  assert.equal(rig.meshes.reduce((sum, mesh) => sum + mesh.geometry.attributes.position.count, 0), 21706);
+  assert.equal(rig.meshes.length, 1);
+  assert.equal(rig.meshes.reduce((sum, mesh) => sum + mesh.geometry.attributes.position.count, 0), vertexCount);
   for (const [index, mesh] of rig.meshes.entries()) {
     assert.equal(mesh.skeleton, rig.skeleton);
     assert.deepEqual(mesh.geometry.index.array, source.children[index].geometry.index.array);
@@ -97,6 +105,19 @@ test('final multipart model receives fresh shared bones and actual breathing/str
     for (const region of ['chest', 'leftArm', 'rightArm']) assert.ok(moved[region] > 20, `${time}: ${region}=${moved[region]}`);
     if (time === 7) assert.ok(moved.head > 20);
   }
+});
+}
+
+test('all character IDs select their own models and independent rigs release GPU resources', () => {
+  assert.deepEqual(Object.values(CHARACTERS).map(c => c.model.split('?')[0]).sort(), modelFixtures.map(([file]) => file).sort());
+  const rig = createHomeRig(fixture());
+  const scene = new THREE.Scene(); scene.add(rig.root);
+  let geometryDisposed = 0, materialDisposed = 0;
+  rig.meshes[0].geometry.addEventListener('dispose', () => geometryDisposed++);
+  rig.materials[0].addEventListener('dispose', () => materialDisposed++);
+  rig.dispose();
+  assert.equal(rig.root.parent, null);
+  assert.equal(geometryDisposed, 1); assert.equal(materialDisposed, 1);
 });
 
 test('runtime rig preserves supplied vertices, UVs, indices and material while adding seven bones', () => {
@@ -200,5 +221,5 @@ test('home starts loading the model without displaying a stationary preview', ()
   const html = readFileSync('sanggi-soldier.html', 'utf8');
   assert.ok(!html.includes('id="home-character-preview"'));
   assert.ok(!html.includes('soldier-home-model-preview.webp'));
-  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=3" crossorigin'));
+  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=4" crossorigin'));
 });

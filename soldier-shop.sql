@@ -43,5 +43,27 @@ begin
 end $$;
 revoke all on function public.soldier_shop_api(uuid,text,text) from public;
 grant execute on function public.soldier_shop_api(uuid,text,text) to anon,authenticated;
+
+create or replace function public.soldier_snapshot(p_room uuid,p_player uuid)
+returns jsonb language sql security definer set search_path=public as $$
+  select jsonb_build_object('room',jsonb_build_object('id',r.id,'name',r.name,'status',r.status,
+    'host',r.host,'ends_at',r.ends_at,'server_time',clock_timestamp()),'self',p_player,
+    'players',coalesce((select jsonb_agg(jsonb_build_object('id',p.id,'nickname',p.nickname,
+      'x',p.x,'y',p.y,'z',p.z,'yaw',p.yaw,'pitch',p.pitch,'crouch',p.crouch,'hp',p.hp,
+      'kills',p.kills,'deaths',p.deaths,'weapon',p.loadout->>p.slot,'last_shot',p.last_shot,
+      'protected_until',p.protected_until,'respawn_at',p.respawn_at,
+      'character',s.equipped_character))
+      from public.soldier_players p join public.soldier_profiles s on s.client_id=p.client_id
+      where p.room_id=r.id and p.last_seen>now()-interval '12 seconds'),'[]'::jsonb),
+    'ammo',(select ammo from public.soldier_players where id=p_player),
+    'reload_until',(select reload_until from public.soldier_players where id=p_player),
+    'xp',(select s.xp from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
+    'wins',(select s.wins from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
+    'gold',(select s.gold::text from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
+    'gems',(select s.gems::text from public.soldier_profiles s join public.soldier_players p on s.client_id=p.client_id where p.id=p_player),
+    'home_version',2)
+  from public.soldier_rooms r where r.id=p_room
+$$;
+revoke all on function public.soldier_snapshot(uuid,uuid) from public,anon,authenticated;
 notify pgrst,'reload schema';
 commit;

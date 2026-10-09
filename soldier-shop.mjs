@@ -1,4 +1,4 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=2';
+import { CHARACTERS } from './soldier-characters.mjs?v=3';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'normal', name: '일반보급함', price: 3, description: 'D클래스 이상의 무기 1개 획득' },
@@ -86,7 +86,7 @@ export function createShop({ getState, buy, refresh, isReady }) {
     keyboardOpened = event?.detail === 0;
     category = 'supply'; render(); dialog.showModal(); $('home').hidden = true;
     $('shop-status').textContent = isReady()
-      ? '보급함 확률은 설정 대기 중입니다. 캐릭터 특기는 소개 문구이며 전투 효과와 새 3D 모델은 아직 적용되지 않습니다.'
+      ? '보급함 확률은 설정 대기 중입니다. 구매한 캐릭터는 인벤토리에서 3D 모델을 장착할 수 있습니다. 특기 전투 효과는 준비 중입니다.'
       : '상점 연결 필요: soldier-shop.sql 실행 후 새로고침하세요.';
   };
   for (const tab of tabs) {
