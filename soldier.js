@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=13';
-import { createEquipmentInventory } from './soldier-inventory.mjs?v=1';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=2';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
@@ -22,6 +22,9 @@ const artwork = { k2: 'soldier-weapon-k2.webp?v=2', shotgun: 'soldier-weapon-sho
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
     throw new Error('서버 장비 정보를 확인할 수 없습니다.');
+  }
+  for (const slot of ['primary', 'secondary', 'melee', 'character']) {
+    if (inventoryWeapons(result.equipment, slot).length > INVENTORY_LIMIT) throw new Error('분류별 최대 보유 인벤토리 50개를 초과한 서버 데이터입니다.');
   }
   for (const [id, item] of Object.entries(result.equipment)) {
     if (!WEAPONS[id] || !item) throw new Error('서버 무기 정보를 확인할 수 없습니다.');

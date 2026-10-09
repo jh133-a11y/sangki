@@ -1,5 +1,9 @@
 import { WEAPONS, weaponLevelLabel } from './soldier-core.mjs?v=3';
 
+export const INVENTORY_LIMIT = 50;
+export function inventoryWeapons(equipment, slot) {
+  return Object.keys(equipment).filter(id => WEAPONS[id]?.slot === slot);
+}
 export function weaponInventoryStats(id) {
   const weapon = WEAPONS[id];
   if (!weapon) throw new Error('무기 정보를 확인할 수 없습니다.');
@@ -61,10 +65,15 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
     $('inventory-current').replaceChildren(content(current));
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);
-    let ids = slot === 'character' ? ['character'] : [...new Set([current, ...Object.keys(equipment).filter(id => WEAPONS[id]?.slot === slot)])];
+    let ids = inventoryWeapons(equipment, slot);
     if (sorted) ids = ids.sort((a, b) => (WEAPONS[a]?.name || a).localeCompare(WEAPONS[b]?.name || b, 'ko'));
-    $('inventory-count').textContent = `${ids.length}개 보유`;
+    $('inventory-count').textContent = `${ids.length} / ${INVENTORY_LIMIT}`;
     $('inventory-items').replaceChildren();
+    if (!ids.length) {
+      const empty = document.createElement('p');
+      empty.textContent = '보유 장비가 없습니다.';
+      $('inventory-items').append(empty);
+    }
     for (const id of ids) {
       const button = document.createElement('button'); button.type = 'button';
       button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || 'Black Water'} 비교`);

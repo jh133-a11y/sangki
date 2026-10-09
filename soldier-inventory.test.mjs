@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WEAPONS } from './soldier-core.mjs';
-import { weaponInventoryStats } from './soldier-inventory.mjs';
+import { weaponInventoryStats, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs';
+
+test('empty inventory stays empty and only stored equipment counts toward the 50-item limit', () => {
+  assert.equal(INVENTORY_LIMIT, 50);
+  for (const slot of ['primary', 'secondary', 'melee', 'character']) {
+    assert.deepEqual(inventoryWeapons({}, slot), []);
+  }
+  assert.deepEqual(inventoryWeapons({ k2: { grade: 'D', level: 1 }, shotgun: { grade: 'D', level: 1 } }, 'primary'), ['k2']);
+});
 
 test('every weapon exposes the seven reference inventory fields using actual game values', () => {
   const labels = ['탄창/보유탄환', '위력', '연사속도', '정확도', '반동제어', '무게', '크리티컬 확률'];
