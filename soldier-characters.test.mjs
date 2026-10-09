@@ -19,6 +19,13 @@ test('character stats use actual health and do not invent evasion bonuses', () =
   assert.throws(() => characterInventoryStats('invalid'), /캐릭터/);
 });
 
+test('numeric level outline scales with the card and does not cover the white fill', () => {
+  const css = readFileSync('soldier.css', 'utf8');
+  assert.match(css, /font-family: 'Arial Black', Arial, sans-serif/);
+  assert.match(css, /font-size: 20\.5cqw/);
+  assert.match(css, /-webkit-text-stroke: 1\.5cqw #080808; paint-order: stroke fill; text-shadow: none/);
+});
+
 test('character cards retain artwork names and Lv lettering, overlaying only numeric levels', () => {
   const previous = globalThis.document;
   globalThis.document = {

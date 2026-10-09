@@ -191,7 +191,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #shop-open span { color: #edc65b; }
 .character-card .character-level { font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; font-weight: 900; font-style: italic; color: white; z-index: 1; }
 .character-card { container-type: inline-size; }
-.character-card .character-level { top: 4.5%; left: 36%; right: auto; font-family: Arial, sans-serif; font-size: 22cqw; line-height: 1; -webkit-text-stroke: 1px black; text-shadow: -2px -2px #000, 2px 2px #000; }
+.character-card .character-level { top: 4%; left: 36%; right: auto; font-family: 'Arial Black', Arial, sans-serif; font-size: 20.5cqw; line-height: 1; color: #f4f5f6; -webkit-text-stroke: 1.5cqw #080808; paint-order: stroke fill; text-shadow: none; }
 #shop-dialog { inset: 0; margin: auto; width: 100vw; max-width: 1600px; height: 100dvh; max-height: 100dvh; padding: 0; border-radius: 0; background: #e6ebef; color: #27363e; border: 1px solid #738290; overflow: auto; }
 .shop-wallet { display: flex; gap: 14px; width: min(600px, 70%); }
 .shop-wallet > span { flex: 1; display: flex; justify-content: space-between; gap: 14px; padding: 8px 14px; border: 1px solid #536479; border-radius: 8px; background: #182838; color: #bfe7ee; font-size: clamp(15px, 2vw, 27px); }
