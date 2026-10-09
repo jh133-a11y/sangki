@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
-  <link rel="preload" as="fetch" href="soldier-home-model.glb?v=1" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=9">
+  <link rel="preload" as="fetch" href="soldier-home-model.glb?v=2" crossorigin>
+  <link rel="stylesheet" href="soldier.css?v=11">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -31,10 +31,11 @@
     </header>
     <div class="home-mode-label"><strong>PVP</strong><span>상기 솔져 · 기본 장비</span></div>
     <section class="loadout" aria-label="무기 선택">
-      <label class="equipment-card"><span class="equipment-grade">주 무기</span><svg class="weapon-art" viewBox="0 0 130 64" aria-hidden="true"><path d="m12 20 22 4 8-5h48v6h27v4H90v7H60l-5 16H44l4-17H31L12 42Z" fill="#c2c9cc" stroke="#2b3038" stroke-width="2"/><path d="M64 35v18h13l-4-18M85 15h18v5H85" fill="#6c7881"/></svg><select id="primary" aria-label="주 무기"></select></label>
-      <label class="equipment-card"><span class="equipment-grade">보조 무기</span><svg class="weapon-art" viewBox="0 0 130 64" aria-hidden="true"><path d="M28 13h73v18H66L58 56H38l9-26H28Z" fill="#c2c9cc" stroke="#2b3038" stroke-width="2"/><path d="M68 31v13H54" fill="none" stroke="#89969e" stroke-width="4"/></svg><select id="secondary" aria-label="보조 무기"></select></label>
-      <label class="equipment-card"><span class="equipment-grade">근접 무기</span><svg class="weapon-art" viewBox="0 0 130 64" aria-hidden="true"><path d="m15 49 32-19 10 6-31 22Z" fill="#5e5047" stroke="#23242a" stroke-width="2"/><path d="m47 30 28-17 42-4-25 20-36 7Z" fill="#c2c9cc" stroke="#2b3038" stroke-width="2"/></svg><select id="melee" aria-label="칼"></select></label>
+      <div class="equipment-slot"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-name">K2</span></div><select id="primary" aria-label="주 무기"></select></div>
+      <div class="equipment-slot"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-name">M870</span></div><select id="secondary" aria-label="보조 무기"></select></div>
+      <div class="equipment-slot"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-name">M9</span></div><select id="melee" aria-label="근접 무기"></select></div>
       <div class="character-card"><img src="soldier-character-card.png" alt="기본 캐릭터 Black Water, 레벨 1"></div>
+      <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
@@ -84,6 +85,6 @@
   <dialog id="result"><h2>경기 종료</h2><div id="result-scores"></div><p>온라인 처치당 20 XP · 단독 1위 승리 보너스 100 XP · AI 연습은 계급에 반영되지 않습니다.</p><button id="result-close" type="button">홈으로</button></dialog>
   <div id="rotate" role="status">휴대폰을 가로로 돌려 주세요.<br>상기 솔져는 가로 화면으로 플레이합니다.</div>
   <script src="soldier-music.js?v=1"></script>
-  <script type="module" src="soldier.js?v=17"></script>
+  <script type="module" src="soldier.js?v=19"></script>
 </body>
 </html>

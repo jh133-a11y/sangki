@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=7';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=8';
 
 export { idlePose };
 
 export async function createHomeViewer(canvas, status) {
-  status.textContent = '제공된 3D 모델을 불러오는 중입니다 (약 65 MB)…';
+  status.textContent = '제공된 3D 모델을 불러오는 중입니다 (약 19 MB)…';
   const rig = await loadHomeRig();
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setClearColor(0, 0); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -108,7 +108,5 @@ export async function createHomeViewer(canvas, status) {
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });
   canvas.dataset.view = '0';
   labels(); sync(); canvas.dataset.viewReady = 'true';
-  const preview = home.querySelector('#home-character-preview');
-  if (preview) preview.hidden = true;
   return { cancelDrag };
 }

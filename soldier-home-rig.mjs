@@ -12,7 +12,7 @@ export function idlePose(seconds) {
 export async function loadHomeRig() {
   let gltf;
   try {
-    gltf = await new GLTFLoader().loadAsync(`${HOME_MODEL}?v=1`);
+    gltf = await new GLTFLoader().loadAsync(`${HOME_MODEL}?v=2`);
   } catch (error) {
     throw new Error('제공된 3D 캐릭터 파일을 불러오지 못했습니다.', { cause: error });
   }
@@ -82,7 +82,7 @@ export function createHomeRig(source) {
     for (const m of Array.isArray(material) ? material : [material]) materials.add(m);
     const mesh = new THREE.SkinnedMesh(geometry, material); mesh.name = part.name || 'supplied-soldier';
     // Small idle deformations stay inside the camera frame; avoid per-frame bounds
-    // recomputation over the supplied model's nearly one million vertices.
+    // recomputation over all supplied vertices.
     mesh.frustumCulled = false;
     root.add(mesh); mesh.bind(skeleton); meshes.push(mesh);
   });

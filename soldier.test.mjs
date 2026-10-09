@@ -1,8 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WEAPONS, RANKS, RANK_STEPS, rankName, rankProgress, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs';
+import { WEAPONS, DEFAULT_LOADOUT, weaponLevelLabel, weaponUpgradeCost, RANKS, RANK_STEPS, rankName, rankProgress, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs';
 const sql = readFileSync(new URL('./soldier-schema.sql', import.meta.url), 'utf8');
+test('default equipment and upgrade prices match D through S progression', () => {
+  assert.deepEqual(Object.values(DEFAULT_LOADOUT).map(id => WEAPONS[id].name), ['K2', 'M870', 'M9']);
+  for (const [grade, costs] of Object.entries({
+    D: [1000,2000,3000,4000,5000,6000], C: [3000,4000,5000,6000,7000,8000],
+    B: [5000,7000,9000,11000,13000,15000], A: [10000,15000,20000,25000,30000,35000],
+    S: [20000,30000,40000,50000,60000,70000]
+  })) {
+    assert.deepEqual(costs.map((_, index) => weaponUpgradeCost(grade, index + 1)), costs);
+    assert.equal(weaponUpgradeCost(grade, 7), null);
+  }
+  assert.deepEqual([1,2,3,4,5,6,7].map(weaponLevelLabel), ['Lv.1','Lv.2','Lv.3','Lv.4','Lv.5','Lv.6','MAX']);
+  assert.throws(() => weaponUpgradeCost('X', 1), RangeError);
+  assert.throws(() => weaponUpgradeCost('D', 0), RangeError);
+});
+test('home displays weapon cards and saved levels without level-up buttons', () => {
+  const html = readFileSync(new URL('./sanggi-soldier.html', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('./soldier.js', import.meta.url), 'utf8');
+  assert.equal((html.match(/class="equipment-slot"/g) || []).length, 3);
+  assert.equal((html.match(/class="weapon-level"/g) || []).length, 3);
+  assert.doesNotMatch(html, /weapon-upgrade|>레벨업</);
+  assert.doesNotMatch(client, /p_weapon:|p_level:/);
+  assert.match(client, /rpc\('soldier_equipment_api', \{ p_token: identity.token \}\)/);
+});
 test('all ten weapons match server-authoritative specifications', () => {
   assert.equal(Object.keys(WEAPONS).length, 10);
   for (const [id, spec] of Object.entries(WEAPONS)) {

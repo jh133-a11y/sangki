@@ -63,8 +63,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
 .home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
 .home-character { position: absolute; height: 81%; width: 37%; bottom: 10%; left: 51%; transform: translateX(-50%); pointer-events: auto; touch-action: none; cursor: grab; }
-.home-character-preview { object-fit: contain; pointer-events: none; }
-.home-character-preview[hidden] { display: none; }
 .home-character:active { cursor: grabbing; }
 .home-character:focus { outline: none; }
 .home-character:focus-visible ~ .character-rotate-hint { text-decoration: underline; }
@@ -98,8 +96,17 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 .home-mode-label { position: absolute; top: 36%; left: 2.3%; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #b8c3cd; background: linear-gradient(90deg, #172330aa, transparent); }
 .home-mode-label strong { background: #efbe3e; color: #1e2630; min-width: 60px; text-align: center; padding: 5px 12px; font-size: 16px; }
 #home .loadout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; position: absolute; left: 2.3%; top: 46%; bottom: auto; width: 30%; max-width: 380px; padding: 0; border: 0; background: transparent; }
-#home .equipment-card, .character-card { display: flex; flex-direction: column; position: relative; min-width: 0; height: clamp(94px, 20vh, 155px); overflow: hidden; border: 1px solid #9d8193; box-shadow: 1px 2px 4px #000; margin: 0; background: linear-gradient(130deg, #99939844, transparent 35%), linear-gradient(155deg, #333641, #804144); }
-#home .equipment-card:first-child { background: linear-gradient(145deg, #725aca, #272546); border-color: #a087d9; }
+#home .equipment-card, .character-card { position: relative; min-width: 0; aspect-ratio: 1091 / 1442; height: auto; overflow: hidden; border: 0; box-shadow: none; margin: 0; background: transparent; }
+#home .equipment-card { border-radius: 5% / 4%; }
+.equipment-slot { min-width: 0; }
+.grade-frame { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+.weapon-level { position: absolute; top: 8%; right: 10%; font-size: clamp(9px, 1.3vw, 17px); font-weight: 900; font-style: italic; color: white; text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 2px #000; }
+.weapon-image { position: absolute; width: 88%; height: 70%; object-fit: contain; left: 6%; top: 23%; }
+.weapon-name { position: absolute; left: 4%; bottom: 5%; width: 92%; text-align: center; font-size: 10px; font-weight: bold; color: white; text-shadow: 0 1px 3px #000; }
+.weapon-image:not([hidden]) + .weapon-name { display: none; }
+#home .equipment-slot select { display: block; width: 100%; min-height: 28px; padding: 3px 0; margin-top: 3px; font-size: 10px; }
+.equipment-slot:focus-within { outline: 2px solid #ffe39c; }
+#equipment-status { grid-column: 1 / -1; margin: 0; font-size: 9px; overflow-wrap: anywhere; }
 .equipment-grade { font-size: 9px; padding: 3px 4px; color: #fff0c2; font-weight: 800; text-shadow: 0 1px 2px #000; }
 .weapon-art { width: 100%; height: calc(100% - 45px); filter: drop-shadow(2px 3px 2px #0008); transform: rotate(-20deg); }
 #home .equipment-card select { position: absolute; bottom: 0; width: 100%; min-height: 44px; padding: 4px 1px; border: 0; border-radius: 0; background: #161b2ca6; font-size: 11px; text-align: center; font-weight: bold; }
@@ -116,7 +123,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
 #home .home-status { right: 2%; bottom: calc(6% + 80px); max-width: 29%; padding: 6px; font-size: 11px; line-height: 1.4; background: #0e1924bb; border: 0; border-radius: 0; text-shadow: 0 1px 2px #000; }
 @media (max-height: 420px) {
   .currency-bar { top: 5px; } .currency { height: 26px; } .currency svg { width: 22px; height: 22px; }
-  #home .profile { top: 16%; } #home .loadout { top: 46%; } #home .equipment-card, .character-card { height: 100px; }
+  #home .profile { top: 16%; } #home .loadout { top: 46%; }
   #home .play-button { min-height: 66px; bottom: 3%; } #home .home-status { bottom: calc(3% + 70px); }
-  .home-bottom-mark { bottom: 3%; }
+  .home-bottom-mark { display: none; }
 }

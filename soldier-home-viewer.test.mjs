@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import * as THREE from './vendor/three.module.min.js';
 import { createHomeRig, idlePose, jointWeights, HOME_MODEL } from './soldier-home-rig.mjs';
 
@@ -18,6 +19,7 @@ function fixture() {
 
 test('supplied GLB is embedded, intact and unrigged, with original PBR maps', () => {
   const binary = readFileSync(HOME_MODEL);
+  assert.equal(createHash('sha256').update(binary).digest('hex'), 'aeb250d7666092dd0a0c02e3e8cf524d080444b15d072368a5d8e3fcb6bad702');
   assert.equal(binary.readUInt32LE(0), 0x46546c67);
   assert.equal(binary.readUInt32LE(4), 2);
   assert.equal(binary.readUInt32LE(8), binary.length);
@@ -30,6 +32,62 @@ test('supplied GLB is embedded, intact and unrigged, with original PBR maps', ()
   assert.ok(material.pbrMetallicRoughness.baseColorTexture);
   assert.ok(material.pbrMetallicRoughness.metallicRoughnessTexture);
   assert.ok(material.normalTexture);
+});
+
+test('new basic model receives fresh bones and actual breathing/stretch deformations', () => {
+  const binary = readFileSync(HOME_MODEL);
+  const jsonLength = binary.readUInt32LE(12);
+  const gltf = JSON.parse(binary.subarray(20, 20 + jsonLength));
+  const binaryOffset = 20 + jsonLength + 8;
+  const geometry = new THREE.BufferGeometry();
+  const primitive = gltf.meshes[0].primitives[0];
+  for (const [name, index] of Object.entries(primitive.attributes)) {
+    const accessor = gltf.accessors[index], view = gltf.bufferViews[accessor.bufferView];
+    const size = { VEC3: 3, VEC2: 2 }[accessor.type];
+    const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
+    const values = new Float32Array(accessor.count * size);
+    for (let i = 0; i < values.length; i++) values[i] = binary.readFloatLE(offset + i * 4);
+    geometry.setAttribute({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv' }[name], new THREE.BufferAttribute(values, size));
+  }
+  const accessor = gltf.accessors[primitive.indices], view = gltf.bufferViews[accessor.bufferView];
+  const offset = binaryOffset + (view.byteOffset || 0) + (accessor.byteOffset || 0);
+  const indices = new Uint32Array(accessor.count);
+  for (let i = 0; i < indices.length; i++) indices[i] = binary.readUInt32LE(offset + i * 4);
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  const source = new THREE.Group();
+  source.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial()));
+  const rig = createHomeRig(source), mesh = rig.meshes[0];
+  const secondRig = createHomeRig(source);
+  assert.notEqual(rig.skeleton, secondRig.skeleton);
+  assert.ok(rig.skeleton.bones.every((bone, i) => bone !== secondRig.skeleton.bones[i]));
+  assert.equal(mesh.geometry.attributes.position.count, 17701);
+  assert.deepEqual(mesh.geometry.index.array, indices);
+  assert.deepEqual(mesh.geometry.attributes.uv.array, geometry.attributes.uv.array);
+  const rest = [];
+  rig.root.updateMatrixWorld(true); rig.skeleton.update();
+  for (let i = 0; i < 17701; i++) {
+    rest.push(mesh.applyBoneTransform(i, new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i)));
+  }
+  for (const time of [1.125, 7]) {
+    rig.animate(time); rig.root.updateMatrixWorld(true); rig.skeleton.update();
+    const moved = { chest: 0, leftArm: 0, rightArm: 0, head: 0 };
+    for (let i = 0; i < rest.length; i++) {
+      const position = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i);
+      const actual = mesh.applyBoneTransform(i, position.clone());
+      const displacement = actual.distanceTo(rest[i]);
+      assert.ok(Number.isFinite(displacement));
+      if (position.y < .4) assert.ok(displacement < 1e-6);
+      if (displacement <= .001) continue;
+      if (position.y > .86) moved.head++;
+      else if (position.y > .5 && position.y < .75) {
+        if (position.x < -.14) moved.leftArm++;
+        else if (position.x > .14) moved.rightArm++;
+        else if (Math.abs(position.x) < .08) moved.chest++;
+      }
+    }
+    for (const region of ['chest', 'leftArm', 'rightArm']) assert.ok(moved[region] > 20, `${time}: ${region}=${moved[region]}`);
+    if (time === 7) assert.ok(moved.head > 20);
+  }
 });
 
 test('runtime rig preserves supplied vertices, UVs, indices and material while adding seven bones', () => {
@@ -133,5 +191,5 @@ test('home starts loading the model without displaying a stationary preview', ()
   const html = readFileSync('sanggi-soldier.html', 'utf8');
   assert.ok(!html.includes('id="home-character-preview"'));
   assert.ok(!html.includes('soldier-home-model-preview.webp'));
-  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=1" crossorigin'));
+  assert.ok(html.includes('as="fetch" href="soldier-home-model.glb?v=2" crossorigin'));
 });
