@@ -114,7 +114,10 @@ test('home has automatic motion without pose or motion buttons', () => {
   assert.ok(!html.includes('data-character-view'));
   assert.ok(!html.includes('character-motion-toggle'));
   const viewer = readFileSync('soldier-home-viewer.mjs', 'utf8');
-  assert.ok(viewer.includes("const idle = () => !reduced.matches;"));
+  assert.ok(viewer.includes('const active = () => visible();'));
+  assert.ok(viewer.includes('rig.animate(seconds);'));
+  assert.ok(!viewer.includes('reduced'));
+  assert.ok(!viewer.includes('matchMedia'));
   assert.ok(!viewer.includes('motionButton'));
   const css = readFileSync('soldier.css', 'utf8');
   assert.ok(css.includes('.home-character:focus { outline: none; }'));

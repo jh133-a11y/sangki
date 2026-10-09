@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=5';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=6';
 
 export { idlePose };
 
@@ -16,20 +16,17 @@ export async function createHomeViewer(canvas, status) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x777d86, 2));
   const light = new THREE.DirectionalLight(0xfff5e8, 2.2);
   light.position.set(-2, 3, 4); scene.add(light);
-  const home = canvas.closest('#home'), reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const home = canvas.closest('#home');
   let yaw = 0, targetYaw = 0, seconds = 0, last = null, request = null, drag = null;
   let pageActive = true, contextLost = false, cssWidth = 0, cssHeight = 0;
   const visible = () => !home.hidden && !document.hidden && pageActive && !contextLost;
   const turning = () => Math.abs(targetYaw - yaw) > .0001;
-  const idle = () => !reduced.matches;
-  const active = () => visible() && (idle() || turning());
+  const active = () => visible();
   function labels() {
-    status.textContent = reduced.matches
-      ? '기기의 동작 줄이기 설정으로 자동 모션 정지 · 드래그/방향키 회전'
-      : '제공된 3D 모델 · 드래그/방향키 회전 · 자동 호흡·몸풀기';
+    status.textContent = '제공된 3D 모델 · 드래그/방향키 회전 · 자동 호흡·몸풀기';
   }
   function draw() {
-    canvas.dataset.motion = visible() && turning() ? 'turn' : visible() && idle() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
+    canvas.dataset.motion = visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
     canvas.dataset.yaw = yaw.toFixed(5);
     canvas.dataset.seconds = seconds.toFixed(3);
     canvas.dataset.rig = 'articulated';
@@ -45,7 +42,7 @@ export async function createHomeViewer(canvas, status) {
     camera.left = -viewHeight * width / height / 2; camera.right = -camera.left;
     camera.updateProjectionMatrix();
     rig.setYaw(yaw);
-    rig.animate(reduced.matches ? 0 : seconds);
+    rig.animate(seconds);
     renderer.render(scene, camera);
   }
   function frame(time) {
@@ -53,7 +50,7 @@ export async function createHomeViewer(canvas, status) {
     if (!active()) { last = null; return; }
     const dt = last === null ? 0 : Math.max(0, (time - last) / 1000);
     last = time;
-    if (idle()) seconds += dt;
+    seconds += dt;
     if (turning()) {
       yaw += (targetYaw - yaw) * (1 - Math.exp(-dt * 12));
       if (Math.abs(targetYaw - yaw) < .0001) yaw = targetYaw;
@@ -67,7 +64,6 @@ export async function createHomeViewer(canvas, status) {
   }
   function rotate(nextYaw) {
     targetYaw = nextYaw;
-    if (reduced.matches) yaw = targetYaw;
     canvas.dataset.view = '0'; sync();
   }
   canvas.setAttribute('aria-label', '제공된 3D 캐릭터. 드래그·좌우 방향키로 회전, Home 키로 정면.');
@@ -101,9 +97,6 @@ export async function createHomeViewer(canvas, status) {
   new ResizeObserver(draw).observe(canvas);
   new MutationObserver(sync).observe(home, { attributes: true, attributeFilter: ['hidden'] });
   document.addEventListener('visibilitychange', sync);
-  reduced.addEventListener('change', () => {
-    if (reduced.matches) yaw = targetYaw; labels(); sync();
-  });
   canvas.addEventListener('webglcontextlost', event => {
     event.preventDefault(); contextLost = true; sync();
     status.textContent = '캐릭터 표시가 중단되었습니다. 그래픽 연결 복구를 기다리는 중입니다.';

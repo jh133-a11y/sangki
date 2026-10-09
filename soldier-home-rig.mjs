@@ -89,16 +89,17 @@ export function createHomeRig(source) {
   if (!meshes.length) throw new Error('3D 캐릭터에 표시할 메시가 없습니다.');
   function animate(seconds) {
     const { breath, stretch } = idlePose(seconds);
-    spine.scale.set(1 + breath * .012, 1 + breath * .006, 1 + breath * .035);
-    spine.position.y = .12 + breath * .0025;
-    joints.neck.rotation.set(breath * .008 + stretch * .1,
-      stretch * .12 * Math.sin(seconds * .8), stretch * .07);
+    const breathing = breath, loosening = stretch;
+    spine.scale.set(1 + breathing * .012, 1 + breathing * .006, 1 + breathing * .035);
+    spine.position.y = .12 + breathing * .0025;
+    joints.neck.rotation.set(breathing * .008 + loosening * .1,
+      loosening * .12 * Math.sin(seconds * .8), loosening * .07);
     for (const sign of [-1, 1]) {
       const side = sign < 0 ? 'left' : 'right';
-      joints[`${side}Shoulder`].position.y = .14 + breath * .0015;
-      joints[`${side}Shoulder`].rotation.set(breath * .025 + stretch * .07,
-        0, sign * (breath * .018 + stretch * .08));
-      joints[`${side}Elbow`].rotation.set(breath * .018 + stretch * .13, 0, 0);
+      joints[`${side}Shoulder`].position.y = .14 + breathing * .0015;
+      joints[`${side}Shoulder`].rotation.set(breathing * .025 + loosening * .07,
+        0, sign * (breathing * .018 + loosening * .08));
+      joints[`${side}Elbow`].rotation.set(breathing * .018 + loosening * .13, 0, 0);
     }
     root.userData.motion = stretch > .001 ? 'stretch' : 'breathe';
   }
