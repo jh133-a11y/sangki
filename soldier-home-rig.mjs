@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=3';
+import { CHARACTERS } from './soldier-characters.mjs?v=4';
 
 export const HOME_MODEL = 'soldier-home-model.glb';
 
@@ -54,12 +54,14 @@ export const JOINT_NAMES = ['hips', 'spine', 'chest', 'neck', 'head',
   'leftShoulder', 'leftElbow', 'leftWrist', 'rightShoulder', 'rightElbow', 'rightWrist',
   'leftHip', 'leftKnee', 'leftAnkle', 'leftToe', 'rightHip', 'rightKnee', 'rightAnkle', 'rightToe'];
 
-export function jointWeights(x, y, z = 0, width = 1) {
+export function jointWeights(x, y, z = 0, width = 1, armRegion) {
   const neck = smooth(.81, .86, y);
   const head = smooth(.89, .94, y);
   const torso = smooth(.49, .59, y);
   const chest = smooth(.66, .73, y);
-  const arm = smooth(.097 * width, .137 * width, Math.abs(x)) * (1 - smooth(.79, .83, y)) * smooth(.42, .48, y);
+  const lateral = smooth(.097 * width, .137 * width, Math.abs(x)) * (1 - smooth(.79, .83, y)) * smooth(.42, .48, y);
+  const blend = smooth(.58, .68, y);
+  const arm = armRegion === undefined ? lateral : armRegion * (1 - blend) + lateral * blend;
   const elbow = 1 - smooth(.60, .67, y);
   const wrist = 1 - smooth(.53, .59, y);
   const leg = (1 - neck) * (1 - arm) * (1 - smooth(.42, .49, y));
@@ -85,6 +87,79 @@ export function jointWeights(x, y, z = 0, width = 1) {
   ].filter(([, weight]) => weight > 0).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const sum = weights.reduce((total, [, weight]) => total + weight, 0);
   return weights.map(([index, weight]) => [index, weight / sum]);
+}
+
+// Follow the surface from elbow/torso seeds, not proximity: resting hands can
+// sit beside the thighs but must never pull their vertices into the arm chain.
+export function armRegions(geometry, width) {
+  const positions = geometry.attributes.position, nodes = [], lookup = new Map();
+  const vertices = new Uint32Array(positions.count);
+  for (let i = 0; i < positions.count; i++) {
+    const point = new THREE.Vector3().fromBufferAttribute(positions, i);
+    const key = point.toArray().map(value => value.toFixed(5)).join(',');
+    if (!lookup.has(key)) {
+      lookup.set(key, nodes.length);
+      nodes.push({ point, edges: new Set(), cost: Infinity, arm: false });
+    }
+    vertices[i] = lookup.get(key);
+  }
+  const indices = geometry.index?.array || Uint32Array.from({ length: positions.count }, (_, i) => i);
+  for (let i = 0; i < indices.length; i += 3) {
+    for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
+      const first = vertices[indices[i + a]], second = vertices[indices[i + b]];
+      nodes[first].edges.add(second); nodes[second].edges.add(first);
+    }
+  }
+  const queue = [];
+  function push(index, cost) {
+    const entry = { index, cost }; let i = queue.length; queue.push(entry);
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (queue[parent].cost <= cost) break;
+      queue[i] = queue[parent]; i = parent;
+    }
+    queue[i] = entry;
+  }
+  function pop() {
+    const first = queue[0], last = queue.pop();
+    if (queue.length) {
+      let i = 0;
+      while (i * 2 + 1 < queue.length) {
+        let child = i * 2 + 1;
+        if (child + 1 < queue.length && queue[child + 1].cost < queue[child].cost) child++;
+        if (queue[child].cost >= last.cost) break;
+        queue[i] = queue[child]; i = child;
+      }
+      queue[i] = last;
+    }
+    return first;
+  }
+  nodes.forEach((node, index) => {
+    const { x, y } = node.point;
+    const arm = y >= .60 && y <= .68 && Math.abs(x) >= .135 * width;
+    const body = y < .38 || (y < .68 && Math.abs(x) < .085 * width);
+    if (arm || body) {
+      node.cost = 0; node.arm = arm; push(index, 0);
+    }
+  });
+  while (queue.length) {
+    const { index, cost } = pop(), node = nodes[index];
+    if (cost !== node.cost) continue;
+    for (const next of node.edges) {
+      const neighbor = nodes[next];
+      // Do not take a shortcut from the elbow through the shoulders/head.
+      if (neighbor.point.y > .69) continue;
+      const distance = cost + node.point.distanceTo(neighbor.point);
+      if (distance < neighbor.cost) {
+        neighbor.cost = distance; neighbor.arm = node.arm; push(next, distance);
+      }
+    }
+  }
+  return Uint8Array.from(vertices, index => {
+    const node = nodes[index];
+    if (Number.isFinite(node.cost)) return Number(node.arm);
+    return Number(Math.abs(node.point.x) > .16 * width && node.point.y > .42);
+  });
 }
 
 export function createHomeRig(source) {
@@ -127,12 +202,13 @@ export function createHomeRig(source) {
     geometry.translate(-center.x, -bounds.min.y, -center.z);
     geometry.scale(1 / height, 1 / height, 1 / height);
     const positions = geometry.attributes.position;
+    const regions = armRegions(geometry, width);
     const indices = new Uint16Array(positions.count * 4);
     const weights = new Float32Array(positions.count * 4);
     const expansion = new Float32Array(positions.count * 3);
     for (let i = 0; i < positions.count; i++) {
       expansion.set(chestExpansion(positions.getX(i), positions.getY(i), positions.getZ(i), width), i * 3);
-      jointWeights(positions.getX(i), positions.getY(i), positions.getZ(i), width).forEach(([bone, weight], slot) => {
+      jointWeights(positions.getX(i), positions.getY(i), positions.getZ(i), width, regions[i]).forEach(([bone, weight], slot) => {
         indices[i * 4 + slot] = bone; weights[i * 4 + slot] = weight;
       });
     }
@@ -157,10 +233,10 @@ export function createHomeRig(source) {
       loosening * .12 * Math.sin(seconds * .8), loosening * .07);
     for (const sign of [-1, 1]) {
       const side = sign < 0 ? 'left' : 'right';
-      joints[`${side}Shoulder`].position.y = .05 + breathing * .002;
-      joints[`${side}Shoulder`].rotation.set(-breathing * .065 - loosening * .07,
-        0, sign * (breathing * .035 + loosening * .08));
-      joints[`${side}Elbow`].rotation.set(-breathing * .12 - loosening * .24, 0,
+      joints[`${side}Shoulder`].position.y = .05 + breathing * .004;
+      joints[`${side}Shoulder`].rotation.set(-breathing * .09 - loosening * .07,
+        0, sign * (breathing * .075 + loosening * .08));
+      joints[`${side}Elbow`].rotation.set(-breathing * .085 - loosening * .24, 0,
         sign * breathing * .045);
       joints[`${side}Wrist`].rotation.set(breathing * .035 + loosening * .045, 0,
         -sign * breathing * .012);

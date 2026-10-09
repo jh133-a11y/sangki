@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { CHARACTERS, characterCard } from './soldier-characters.mjs';
+import { CHARACTERS, characterCard, characterStats, characterLevelLabel, evadesAttack, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs';
 import { characterInventoryStats } from './soldier-inventory.mjs';
 import { SUPPLY_PRODUCTS } from './soldier-shop.mjs';
 
@@ -10,13 +10,28 @@ test('shop products use reference prices and separate portrait assets', () => {
   for (const id of ['normal', 'advanced', 'fsb-agent', 'roka-swc']) assert.ok(readFileSync(`soldier-shop-${id}.webp`).length);
 });
 
-test('character stats use actual health and do not invent evasion bonuses', () => {
+test('all character levels follow the requested health and evasion progression', () => {
+  assert.equal(CHARACTER_MAX_LEVEL, 10);
+  assert.equal(CHARACTER_UPGRADE_COST, 10000);
+  const specs = { 'black-water': [110, 5, 4, .1], 'roka-swc': [125, 8, 4, .1], 'fsb-agent': [98, 5, 20, 1] };
   for (const id of Object.keys(CHARACTERS)) {
-    const stats = characterInventoryStats(id);
-    assert.deepEqual(stats.map(([name, value]) => [name, value]), [['체력', 100], ['회피율', '미설정']]);
+    const [health, healthStep, evade, evadeStep] = specs[id];
+    for (let level = 1; level <= 10; level++) {
+      const stats = characterStats(id, level);
+      assert.equal(stats.hp, health + healthStep * (level - 1));
+      assert.ok(Math.abs(stats.evasion * 100 - (evade + evadeStep * (level - 1))) < 1e-10);
+      assert.deepEqual(characterInventoryStats(id, level).map(([name, value]) => [name, value]), [
+        ['체력', stats.hp], ['회피율', `${Number((stats.evasion * 100).toFixed(1))}%`]
+      ]);
+      assert.equal(characterLevelLabel(level), level === 10 ? 'MAX' : `Lv.${level}`);
+      assert.equal(evadesAttack(stats.evasion, 0), true);
+      assert.equal(evadesAttack(stats.evasion, stats.evasion), false);
+      assert.equal(evadesAttack(stats.evasion, .999), false);
+    }
   }
-  assert.match(readFileSync('soldier-schema.sql', 'utf8'), /hp integer not null default 100/);
   assert.throws(() => characterInventoryStats('invalid'), /캐릭터/);
+  for (const level of [0,11,1.5,NaN]) assert.throws(() => characterStats('black-water',level), /레벨/);
+  assert.throws(() => evadesAttack(-.1), /회피/);
 });
 
 test('numeric level outline scales with the card and does not cover the white fill', () => {
@@ -36,12 +51,12 @@ test('character cards retain artwork names and Lv lettering, overlaying only num
   };
   try {
     for (const [id, character] of Object.entries(CHARACTERS)) {
-      for (const level of [1, 2, 7]) {
+      for (const level of [1, 2, 7, 9, 10]) {
         const card = characterCard(id, level);
         assert.equal(card.children.length, 2);
         assert.equal(card.children[0].src, `${character.image}?v=2`);
         assert.equal(card.children[0].alt, character.name);
-        assert.equal(card.children[1].textContent, String(level));
+        assert.equal(card.children[1].textContent, level === 10 ? 'MAX' : String(level));
         assert.equal(card.children[1].attributes['aria-label'], `레벨 ${level}`);
       }
       assert.ok(readFileSync(character.image).length > 0);
@@ -50,4 +65,13 @@ test('character cards retain artwork names and Lv lettering, overlaying only num
     assert.equal(CHARACTERS['roka-swc'].price, 125);
     assert.throws(() => characterCard('invalid'), /캐릭터/);
   } finally { globalThis.document = previous; }
+});
+
+test('shop purchase confirmation uses an app dialog, not a browser prompt', () => {
+  const shop = readFileSync('soldier-shop.mjs','utf8'), html = readFileSync('sanggi-soldier.html','utf8');
+  assert.doesNotMatch(shop, /window\.(confirm|prompt)/);
+  assert.match(html, /id="shop-confirm-dialog"/);
+  assert.match(html, /id="shop-confirm-cancel"/);
+  assert.match(html, /id="shop-confirm-buy"/);
+  assert.match(shop, /confirmation\.showModal\(\)/);
 });

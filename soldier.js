@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=12';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=16';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=7';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=1';
-import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=3';
-import { createShop } from './soldier-shop.mjs?v=3';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=14';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=18';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=10';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=2';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=4';
+import { createShop } from './soldier-shop.mjs?v=4';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
@@ -21,7 +21,7 @@ function save(key, value) {
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
 let equipment = {}, weaponItems = [];
-let characterState = { characters: {}, equipped: 'black-water' }, shopReady = false, characterBusy = false;
+let characterState = { characters: {}, equipped: 'black-water', defaultLevel: 1, upgradeReady: false }, shopReady = false, characterBusy = false;
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
     throw new Error('서버 장비 정보를 확인할 수 없습니다.');
@@ -52,8 +52,9 @@ const inventory = createEquipmentInventory({
   getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
+  upgradeCharacter: (id, level) => id ? refreshCharacters('upgrade', id, level) : refreshCharacters(),
   renderCard(id, item) {
-    if (CHARACTERS[id]) return characterCard(id, characterState.characters[id]?.level || 1);
+    if (CHARACTERS[id]) return characterCard(id, ownedCharacterLevel(characterState, id));
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
     fillWeaponCard(card, id, item); return card;
   }
@@ -77,28 +78,33 @@ const shop = createShop({
   getState: () => characterState, isReady: () => shopReady,
   buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters()
 });
-async function refreshCharacters(action = 'read', id = null) {
+async function refreshCharacters(action = 'read', id = null, level = null) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
   if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
   characterBusy = true;
   try {
     if (action === 'equip') await loadCharacterSource(id);
-    const result = await rpc('soldier_shop_api', { p_token: identity.token, p_action: action, p_character: id });
+    const result = action === 'upgrade'
+      ? await rpc('soldier_character_upgrade_api', { p_token: identity.token, p_character: id, p_level: level })
+      : await rpc('soldier_shop_api', { p_token: identity.token, p_action: action, p_character: id });
     if (!result || !CHARACTERS[result.equipped] || !result.characters || Array.isArray(result.characters) || typeof result.characters !== 'object'
       || !/^\d+$/.test(String(result.gold)) || !/^\d+$/.test(String(result.gems))
-      || Object.keys(result.characters).length > INVENTORY_LIMIT) throw new Error('상점 정보를 확인할 수 없습니다.');
+      || Object.keys(result.characters).length + 1 > INVENTORY_LIMIT) throw new Error('상점 정보를 확인할 수 없습니다.');
     for (const [key, item] of Object.entries(result.characters)) {
-      if (!CHARACTERS[key] || !item || !Number.isInteger(item.level) || item.level < 1 || item.level > 7) throw new Error('캐릭터 정보를 확인할 수 없습니다.');
+      if (!CHARACTERS[key] || !item || !Number.isInteger(item.level) || item.level < 1 || item.level > CHARACTER_MAX_LEVEL) throw new Error('캐릭터 정보를 확인할 수 없습니다.');
     }
     if (result.equipped !== 'black-water' && !result.characters[result.equipped]) throw new Error('장착 캐릭터의 보유 정보를 확인할 수 없습니다.');
-    await homeCharacter.setCharacter(result.equipped);
-    characterState = { characters: result.characters, equipped: result.equipped };
+    const defaultLevel = result.character_version === 2 ? result.default_level : 1;
+    if (!Number.isInteger(defaultLevel)) throw new Error('기본 캐릭터 레벨을 확인할 수 없습니다.');
+    characterStats('black-water', defaultLevel);
+    characterState = { characters: result.characters, equipped: result.equipped, defaultLevel, upgradeReady: result.character_version === 2 };
     identity.gold = result.gold; identity.gems = result.gems;
     updateWallet(identity); shopReady = true;
-    const card = characterCard(result.equipped, result.characters[result.equipped]?.level || 1);
+    const card = characterCard(result.equipped, ownedCharacterLevel(characterState, result.equipped));
     $('character').replaceChildren(...card.childNodes);
     $('character').setAttribute('aria-label', `캐릭터 ${CHARACTERS[result.equipped].name}`);
     inventory.refresh(); shop.refresh();
+    await homeCharacter.setCharacter(result.equipped);
   } finally { characterBusy = false; }
 }
 let identity = null, room = null, myId = null, mode = 'home', online = false;
@@ -148,7 +154,12 @@ async function connect() {
       console.error('장비 불러오기 오류', error);
     }
     Object.keys(loadout).forEach(renderWeaponCard);
-    try { await changeWeaponItem(); }
+    try {
+      await changeWeaponItem();
+      if (!['k2', 'shotgun', 'stick'].every(weapon => weaponItems.some(item => item.weapon === weapon && item.source === 'default'))) {
+        $('equipment-status').textContent += ' 기본 무기 보유 저장에는 soldier-default-inventory.sql 실행 후 새로고침하세요.';
+      }
+    }
     catch (error) {
       $('equipment-status').textContent += ` 보상 장비 불러오기 실패: ${error.message} soldier-weapon-rewards.sql 실행 후 새로고침하세요.`;
       console.error('보상 장비 불러오기 오류', error);
@@ -462,14 +473,16 @@ function startMatch(isOnline) {
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
-  player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: 100, kills: 0, deaths: 0 };
+  const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
+  player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: stats.hp, maxHp: stats.hp, evasion: stats.evasion, lastDodge: null, kills: 0, deaths: 0 };
   velocityY = 0; matchEnds = performance.now() / 1000 + 180; nextShot = 0;
   clearEntities();
   if (!online) {
     for (let i = 1; i <= 5; i++) {
       const [x, z] = SPAWNS[i];
       const body = makeSoldier('black-water', `AI ${i}`); scene.add(body);
-      entities.push({ id: `bot${i}`, nickname: `AI ${i}`, x, y: 0, z, yaw: 0, crouch: false, hp: 100, kills: 0, deaths: 0, body, nextShot: 0, respawn: 0, protected: 0 });
+      const botStats = characterStats('black-water', 1);
+      entities.push({ id: `bot${i}`, nickname: `AI ${i}`, x, y: 0, z, yaw: 0, crouch: false, hp: botStats.hp, maxHp: botStats.hp, evasion: botStats.evasion, kills: 0, deaths: 0, body, nextShot: 0, respawn: 0, protected: 0 });
     }
   }
   $('match-name').textContent = online ? room.name : 'AI 연습';
@@ -499,8 +512,12 @@ function applySnapshot(state) {
   const respawned = player.hp <= 0 && own.hp > 0;
   if (respawned || Math.hypot(player.x - own.x, player.z - own.z) > 1.5) { player.x = own.x; player.z = own.z; player.y = own.y; velocityY = 0; }
   if (player.hp > own.hp) $('game-status').textContent = own.hp ? '피격!' : '전투불능 · 3초 후 부활';
+  if (own.last_dodge && own.last_dodge !== player.lastDodge && !startingMatch) $('game-status').textContent = '회피!';
+  player.lastDodge = own.last_dodge || null;
+  player.maxHp = own.max_hp ?? 100; player.evasion = own.evasion ?? 0;
   player.hp = own.hp; player.kills = own.kills; player.deaths = own.deaths;
   if (respawned) $('game-status').textContent = '';
+  if (startingMatch && state.character_version !== 2) $('game-status').textContent = '캐릭터 능력 적용에는 soldier-character-upgrade.sql 실행이 필요합니다.';
   ammo = state.ammo;
   reloadEnds = state.reload_until ? performance.now() / 1000 + Math.max(0, (Date.parse(state.reload_until) - Date.parse(room.server_time)) / 1000) : 0;
   matchEnds = performance.now() / 1000 + Math.max(0, (Date.parse(room.ends_at) - Date.parse(room.server_time)) / 1000);
@@ -514,9 +531,11 @@ function applySnapshot(state) {
     let entity = entities.find(p => p.id === other.id);
     if (!entity) {
       const body = makeSoldier(other.character || 'black-water', other.nickname); scene.add(body);
-      entity = { ...other, body, tx: other.x, tz: other.z }; entities.push(entity);
+      entity = { ...other, body, tx: other.x, tz: other.z, lastDodge: other.last_dodge || null }; entities.push(entity);
     }
     setSoldierCharacter(entity.body, other.character || 'black-water');
+    if (other.last_dodge && entity.lastDodge !== other.last_dodge) $('game-status').textContent = '상대가 공격을 회피했습니다.';
+    entity.lastDodge = other.last_dodge || null;
     entity.tx = other.x; entity.tz = other.z; entity.y = other.y; entity.yaw = other.yaw;
     entity.hp = other.hp; entity.crouch = other.crouch; entity.kills = other.kills;
   }
@@ -538,7 +557,7 @@ async function networkAction(action, data) {
 }
 function updateHud() {
   if (!player) return;
-  $('health').textContent = `HP ${player.hp}`;
+  $('health').textContent = `HP ${player.hp} / ${player.maxHp || 100}`;
   $('score').textContent = `${player.kills} 처치 · ${player.deaths} 사망`;
   const weapon = WEAPONS[loadout[slot]];
   const reloading = reloadEnds > performance.now() / 1000;
@@ -602,6 +621,7 @@ function shoot() {
     if (slot !== 'melee') ammo[slot]--;
     const target = targeted();
     if (target && now >= target.protected) {
+      if (evadesAttack(target.evasion)) { $('game-status').textContent = 'AI가 공격을 회피했습니다.'; updateHud(); return; }
       target.hp = Math.max(0, target.hp - weapon.damage); $('game-status').textContent = '명중';
       if (target.hp === 0) { player.kills++; target.deaths++; target.respawn = now + 3; $('game-status').textContent = 'AI 처치'; }
     }
@@ -704,7 +724,7 @@ function updateBots(dt, now) {
     if (bot.hp <= 0) {
       if (now >= bot.respawn) {
         const spawn = SPAWNS[Math.floor(Math.random() * SPAWNS.length)];
-        Object.assign(bot, { x: spawn[0], z: spawn[1], hp: 100, protected: now + 2 });
+        Object.assign(bot, { x: spawn[0], z: spawn[1], hp: bot.maxHp, protected: now + 2 });
       } else continue;
     }
     const dx = player.x - bot.x, dz = player.z - bot.z, dist = Math.hypot(dx, dz);
@@ -718,6 +738,7 @@ function updateBots(dt, now) {
       bot.nextShot = now + .8 + Math.random() * .5;
       const o = { x: bot.x, y: 1.65, z: bot.z }, diff = new THREE.Vector3(player.x - bot.x, origin().y - 1.65, player.z - bot.z).normalize();
       if (coverDistance(o, diff) > dist && Math.random() < .42) {
+        if (evadesAttack(player.evasion)) { $('game-status').textContent = '회피!'; continue; }
         player.hp = Math.max(0, player.hp - 12); $('game-status').textContent = player.hp ? 'AI에게 피격!' : '전투불능 · 3초 후 부활';
         if (player.hp === 0) { player.deaths++; bot.kills++; respawnAt = now + 3; releaseFire(true); }
         updateHud();
@@ -736,7 +757,7 @@ function frame(time) {
     if (!online && now >= matchEnds) { finish(); return; }
     if (!online && player.hp <= 0 && now >= respawnAt) {
       const [x, z] = SPAWNS[(player.deaths + 2) % SPAWNS.length];
-      Object.assign(player, { x, z, y: 0, hp: 100 }); velocityY = 0; protectionEnds = now + 2; resetAmmo(); reloadEnds = 0; $('game-status').textContent = ''; updateHud();
+      Object.assign(player, { x, z, y: 0, hp: player.maxHp }); velocityY = 0; protectionEnds = now + 2; resetAmmo(); reloadEnds = 0; $('game-status').textContent = ''; updateHud();
     }
     if (player.hp > 0 && !dialogOpen()) {
       const forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) - joystick.y;

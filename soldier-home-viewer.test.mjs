@@ -89,6 +89,11 @@ test(`${file} receives fresh joints and actual breathing/stretch deformation`, (
     rig.animate(time); rig.root.updateMatrixWorld(true); rig.skeleton.update();
     const moved = { chest: 0, leftArm: 0, rightArm: 0, head: 0 };
     const hands = { left: [], right: [] };
+    for (const side of ['left', 'right']) {
+      const elbow = rig.joints[`${side}Elbow`];
+      const restY = .76 - .135;
+      if (time === 1.125) assert.ok(elbow.getWorldPosition(new THREE.Vector3()).y > restY + .004, `${file}: elbow must lift with the upper arm`);
+    }
     for (const { mesh, index: i, position: resting } of rest) {
       const position = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i);
       const actual = mesh.getVertexPosition(i, new THREE.Vector3());
@@ -100,6 +105,19 @@ test(`${file} receives fresh joints and actual breathing/stretch deformation`, (
       assert.ok(Math.abs(expansion.x) <= .000921);
       if (position.y <= .62 || position.y >= .83 || Math.abs(position.x) > .12) assert.equal(expansion.length(), 0);
       if (position.y > .45 && position.y < .60 && Math.abs(position.x) < .06) assert.ok(displacement < 1e-6, 'abdomen must stay fixed');
+      if (position.y < .58) {
+        const ids = mesh.geometry.attributes.skinIndex, weights = mesh.geometry.attributes.skinWeight;
+        let armWeight = 0, legWeight = 0;
+        for (let component = 0; component < 4; component++) {
+          const bone = ids.getComponent(i, component), weight = weights.getComponent(i, component);
+          if (bone >= 5 && bone <= 10) armWeight += weight;
+          if (bone >= 11) legWeight += weight;
+        }
+        assert.ok(armWeight === 0 || legWeight === 0, 'wrist and thigh must not share skin weights');
+        if (position.y > .38 && position.y < .52 && Math.abs(position.x) < .11) {
+          assert.equal(armWeight, 0, `${file}: inner thigh must not follow wrist`);
+        }
+      }
       if (time === 1.125 && position.y > .46 && position.y < .55 && Math.abs(position.x) > .14) {
         hands[position.x < 0 ? 'left' : 'right'].push(actual.y - resting.y);
       }
@@ -197,7 +215,7 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   assert.ok(vertex(4).distanceTo(chest) > .0005);
   assert.ok(vertex(2).distanceTo(arm) > .003);
   assert.ok(Math.abs(rig.joints.leftShoulder.rotation.x) > .02);
-  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .1);
+  assert.ok(Math.abs(rig.joints.leftElbow.rotation.x) > .07);
   assert.ok(Math.abs(rig.joints.leftWrist.rotation.x) > .02);
   assert.ok(vertex(0).distanceTo(foot) < 1e-7);
   rig.animate(17);

@@ -1,4 +1,4 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=3';
+import { CHARACTERS } from './soldier-characters.mjs?v=4';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'normal', name: '일반보급함', price: 3, description: 'D클래스 이상의 무기 1개 획득' },
@@ -7,7 +7,19 @@ export const SUPPLY_PRODUCTS = [
 export function createShop({ getState, buy, refresh, isReady }) {
   const $ = id => document.getElementById(id);
   const dialog = $('shop-dialog'), tabs = [...dialog.querySelectorAll('[data-shop-tab]')];
-  let category = 'supply', buying = false, keyboardOpened = false;
+  let category = 'supply', buying = false, confirming = false, keyboardOpened = false;
+  const confirmation = $('shop-confirm-dialog');
+  function confirmPurchase(product) {
+    $('shop-confirm-name').textContent = product.name;
+    $('shop-confirm-price').textContent = `${product.price} 보석`;
+    const image = $('shop-confirm-image');
+    image.src = `soldier-shop-${product.id}.webp`; image.alt = product.name;
+    confirmation.returnValue = 'cancel';
+    return new Promise(resolve => {
+      confirmation.addEventListener('close', () => resolve(confirmation.returnValue === 'buy'), { once: true });
+      confirmation.showModal(); $('shop-confirm-cancel').focus();
+    });
+  }
   for (const name of ['gold', 'gems']) {
     const icon = document.querySelector(`.currency.${name} svg`).cloneNode(true);
     for (const gradient of icon.querySelectorAll('[id]')) {
@@ -63,9 +75,13 @@ export function createShop({ getState, buy, refresh, isReady }) {
       }
       button.textContent = category === 'supply' ? '확률 설정 대기' : owned ? '보유 중' : '구매';
       if (category === 'character') button.setAttribute('aria-label', `${product.name} ${owned ? '보유 중' : '125보석 구매'}`);
-      button.disabled = buying || category === 'supply' || owned || !isReady();
+      button.disabled = buying || confirming || category === 'supply' || owned || !isReady();
       button.addEventListener('click', async () => {
-        if (!window.confirm(`${product.name}을 ${product.price}보석으로 구매할까요?`)) return;
+        if (buying || confirming) return;
+        confirming = true;
+        const confirmed = await confirmPurchase(product);
+        confirming = false;
+        if (!confirmed) { button.focus(); return; }
         buying = true; render();
         try {
           await buy(product.id);
@@ -77,7 +93,11 @@ export function createShop({ getState, buy, refresh, isReady }) {
             $('shop-status').textContent += ` 잔액 재확인 실패: ${refreshError.message} 새로고침하세요.`;
             console.error('상점 재확인 오류', refreshError);
           }
-        } finally { buying = false; render(); }
+        } finally {
+          buying = false; render();
+          if (getState().characters[product.id]) $('shop-tab-character').focus();
+          else dialog.querySelector(`[data-product="${product.id}"]`).focus();
+        }
       });
       article.append(price, image, title, text, button); $('shop-products').append(article);
     }
@@ -86,7 +106,7 @@ export function createShop({ getState, buy, refresh, isReady }) {
     keyboardOpened = event?.detail === 0;
     category = 'supply'; render(); dialog.showModal(); $('home').hidden = true;
     $('shop-status').textContent = isReady()
-      ? '보급함 확률은 설정 대기 중입니다. 구매한 캐릭터는 인벤토리에서 3D 모델을 장착할 수 있습니다. 특기 전투 효과는 준비 중입니다.'
+      ? '보급함 확률은 설정 대기 중입니다. 구매한 캐릭터는 인벤토리에서 장착·강화할 수 있습니다. 강화 설치: soldier-character-upgrade.sql'
       : '상점 연결 필요: soldier-shop.sql 실행 후 새로고침하세요.';
   };
   for (const tab of tabs) {

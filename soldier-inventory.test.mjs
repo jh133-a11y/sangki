@@ -1,9 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WEAPONS } from './soldier-core.mjs';
-import { weaponInventoryStats, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs';
+import { weaponInventoryStats, inventoryWeapons, inventoryCharacters, characterInventoryCount, INVENTORY_LIMIT } from './soldier-inventory.mjs';
+import { readFileSync } from 'node:fs';
 
-test('empty inventory stays empty and only stored equipment counts toward the 50-item limit', () => {
+test('character slots swap without duplicating the equipped character or losing the default', () => {
+  const characters = { 'fsb-agent': { level: 1 }, 'roka-swc': { level: 1 } };
+  assert.deepEqual(inventoryCharacters({ characters: {}, equipped: 'black-water' }), []);
+  assert.deepEqual(inventoryCharacters({ characters: { 'fsb-agent': { level: 1 } }, equipped: 'fsb-agent' }), ['black-water']);
+  assert.deepEqual(inventoryCharacters({ characters, equipped: 'black-water' }), ['fsb-agent', 'roka-swc']);
+  assert.deepEqual(inventoryCharacters({ characters, equipped: 'fsb-agent' }), ['black-water', 'roka-swc']);
+  assert.deepEqual(inventoryCharacters({ characters, equipped: 'roka-swc' }), ['black-water', 'fsb-agent']);
+  assert.equal(Object.keys(characters).length, 2);
+  assert.equal(characterInventoryCount({ characters: {} }), 1);
+  assert.equal(characterInventoryCount({ characters }), 3);
+  assert.doesNotMatch(readFileSync('soldier-inventory.mjs','utf8'), /기본 D급 무기 장착|기본 캐릭터 장착/);
+});
+
+test('legacy equipment lookup does not fabricate default items supplied by the item API', () => {
   assert.equal(INVENTORY_LIMIT, 50);
   for (const slot of ['primary', 'secondary', 'melee', 'character']) {
     assert.deepEqual(inventoryWeapons({}, slot), []);

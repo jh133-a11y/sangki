@@ -38,6 +38,8 @@ export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
   if (!WEAPONS[weapon]) throw new Error('무기 정보를 확인할 수 없습니다.');
   weaponUpgradeCost(item.grade, item.level);
   card.dataset.grade = item.grade;
+  card.dataset.source = item.source || '';
+  card.dataset.itemId = item.id || '';
   const frame = card.querySelector('.grade-frame');
   frame.src = `soldier-grade-${item.grade.toLowerCase()}.webp`;
   frame.alt = `${item.grade}급`;

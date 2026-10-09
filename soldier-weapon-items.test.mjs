@@ -39,6 +39,22 @@ test('duplicate rewards are separate items and capacity is per category', () => 
   assert.throws(() => validateWeaponItems({ gold: '-1', items: [] }), /서버/);
 });
 
+test('default weapons remain ordinary owned items and card reuse clears previous item metadata', () => {
+  const items = ['k2', 'shotgun', 'stick'].map(weapon => ({
+    id: `default-${weapon}`, weapon, grade: 'D', level: 2, equipped: true, source: 'default'
+  }));
+  assert.deepEqual(validateWeaponItems({ gold: '0', items }), items);
+  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
+  const card = { dataset: {}, querySelector: key => elements[key] };
+  fillWeaponCard(card, 'k2', items[0]);
+  assert.equal(card.dataset.source, 'default');
+  assert.equal(card.dataset.itemId, 'default-k2');
+  assert.equal(elements['.weapon-level'].textContent, 'Lv.2');
+  fillWeaponCard(card, 'shotgun');
+  assert.equal(card.dataset.source, '');
+  assert.equal(card.dataset.itemId, '');
+});
+
 test('rewards are administrator-only, durable and idempotent', () => {
   const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
   assert.match(sql, /unique \(client_id,reward_key\)/);
@@ -46,4 +62,14 @@ test('rewards are administrator-only, durable and idempotent', () => {
   assert.match(sql, /enable row level security/);
   assert.match(sql, /item\.level<>p_level/);
   assert.match(sql, /total>=50/);
+});
+
+test('default inventory migration issues idempotent real items for existing and new profiles without replacing equipped rewards', () => {
+  const sql = readFileSync('soldier-default-inventory.sql', 'utf8');
+  assert.match(sql, /soldier_grant_weapon\(p_client,weapon_id,'D','default','default-'\|\|weapon_id\)/);
+  assert.match(sql, /where client_id=p_client and weapon=weapon_id and equipped/);
+  assert.match(sql, /after insert on public\.soldier_profiles/);
+  assert.match(sql, /select client_id from public\.soldier_profiles/);
+  assert.match(sql, /revoke all on function public\.soldier_default_weapons\(uuid\) from public,anon,authenticated/);
+  assert.doesNotMatch(sql, /\bdelete\s+from\b/i);
 });

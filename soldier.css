@@ -119,7 +119,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 #inventory-status { font-size: 12px; margin: 10px 0 0; }
 .character-inventory .inventory-equipped h2, .character-inventory .inventory-list-panel > header { background: #bfc1c3; color: #3c4247; }
 .character-inventory .inventory-equipped > button { display: none; }
-.character-inventory #inventory-current > .character-restore { display: block; margin: 8px 0 0 auto; }
 .character-inventory .inventory-item-detail { grid-template-columns: minmax(80px, 28%) 1fr auto; align-items: start; gap: 10px; }
 .character-inventory .character-item-detail .character-card { grid-column: 1; grid-row: 1 / 3; }
 .character-inventory .character-item-detail dl { grid-column: 2; grid-row: 1; align-self: center; padding-top: 20px; }
@@ -201,6 +200,9 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .character-card .character-level { font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; font-weight: 900; font-style: italic; color: white; z-index: 1; }
 .character-card { container-type: inline-size; }
 .character-card .character-level { top: 4%; left: 36%; right: auto; font-family: 'Arial Black', Arial, sans-serif; font-size: 20.5cqw; line-height: 1; color: #f4f5f6; -webkit-text-stroke: 1.5cqw #080808; paint-order: stroke fill; text-shadow: none; }
+.character-card .character-max { font-size: 12cqw; top: 6%; }
+#shop-confirm-image { display: block; width: min(180px, 45%); margin: 0 auto; }
+.shop-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 #shop-dialog { inset: 0; margin: auto; width: 100vw; max-width: 1600px; height: 100dvh; max-height: 100dvh; padding: 0; border-radius: 0; background: #e6ebef; color: #27363e; border: 1px solid #738290; overflow: auto; }
 .shop-wallet { display: flex; gap: 14px; width: min(600px, 70%); }
 .shop-wallet > span { flex: 1; display: flex; justify-content: space-between; gap: 14px; padding: 8px 14px; border: 1px solid #536479; border-radius: 8px; background: #182838; color: #bfe7ee; font-size: clamp(15px, 2vw, 27px); }
