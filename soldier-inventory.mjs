@@ -1,4 +1,5 @@
 import { WEAPONS, weaponLevelLabel } from './soldier-core.mjs?v=3';
+import { CHARACTERS } from './soldier-characters.mjs?v=1';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryWeapons(equipment, slot) {
@@ -17,8 +18,15 @@ export function weaponInventoryStats(id) {
     ['크리티컬 확률', '미설정', '확률 기반 크리티컬 피해는 아직 구현되지 않았습니다.']
   ];
 }
+export function characterInventoryStats(id) {
+  if (!CHARACTERS[id]) throw new Error('캐릭터 정보를 확인할 수 없습니다.');
+  return [
+    ['체력', 100, '현재 모든 경기 캐릭터의 기본 체력입니다. 캐릭터별 보너스는 아직 적용되지 않습니다.'],
+    ['회피율', '미설정', '확률 기반 회피는 아직 구현되지 않았습니다.']
+  ];
+}
 
-export function createEquipmentInventory({ getEquipment, getLoadout, renderCard }) {
+export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard }) {
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
@@ -38,8 +46,8 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
   }
   function stats(id) {
     const list = document.createElement('dl');
-    const values = id === 'character'
-      ? [['이름', 'Black Water'], ['분류', '기본 캐릭터'], ['레벨', 'Lv.1']]
+    const values = CHARACTERS[id]
+      ? characterInventoryStats(id)
       : weaponInventoryStats(id);
     for (const [name, value, explanation] of values) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
@@ -51,22 +59,52 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
   }
   function content(id) {
     const body = document.createElement('div'); body.className = 'inventory-item-detail';
-    body.append(renderCard(id), stats(id)); return body;
+    body.append(renderCard(id), stats(id));
+    if (CHARACTERS[id]) {
+      body.classList.add('character-item-detail');
+      const specialty = document.createElement('p'); specialty.className = 'character-specialty';
+      specialty.textContent = '특기: 없음';
+      specialty.title = '상점의 특기 소개 문구는 아직 전투 효과로 적용되지 않습니다.';
+      const upgrade = document.createElement('button'); upgrade.type = 'button'; upgrade.className = 'character-upgrade';
+      upgrade.textContent = '강화'; upgrade.disabled = true; upgrade.title = '캐릭터 강화는 준비 중입니다.';
+      body.append(specialty, upgrade);
+    }
+    return body;
   }
   function render() {
     const equipment = getEquipment(), loadout = getLoadout();
-    const current = slot === 'character' ? 'character' : loadout[slot];
+    const current = slot === 'character' ? getCharacters().equipped : loadout[slot];
+    dialog.classList.toggle('character-inventory', slot === 'character');
     for (const tab of tabs) {
       const selected = tab.dataset.equipmentTab === slot;
       tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
     }
     $('equipment-panel').setAttribute('aria-labelledby', `tab-${slot}`);
-    $('inventory-level').textContent = weaponLevelLabel(equipment[current]?.level || 1);
+    $('inventory-level').textContent = weaponLevelLabel(slot === 'character' ? getCharacters().characters[current]?.level || 1 : equipment[current]?.level || 1);
+    if (slot === 'character') {
+      const level = getCharacters().characters[current]?.level || 1;
+      const progress = document.createElement('span'); progress.className = 'character-level-bar';
+      progress.setAttribute('role', 'meter'); progress.setAttribute('aria-label', '캐릭터 레벨');
+      progress.setAttribute('aria-valuemin', '1'); progress.setAttribute('aria-valuemax', '7'); progress.setAttribute('aria-valuenow', String(level));
+      for (let index = 1; index <= 7; index++) {
+        const segment = document.createElement('i'); segment.classList.toggle('filled', index <= level); progress.append(segment);
+      }
+      $('inventory-level').append(progress);
+    }
     $('inventory-current').replaceChildren(content(current));
+    if (slot === 'character' && current !== 'black-water') {
+      const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = '기본 캐릭터 카드 장착';
+      restore.addEventListener('click', async () => {
+        restore.disabled = true;
+        try { await equipCharacter('black-water'); render(); }
+        catch (error) { $('inventory-status').textContent = `장착 실패: ${error.message}`; console.error(error); restore.disabled = false; }
+      });
+      $('inventory-current').append(restore);
+    }
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);
-    let ids = inventoryWeapons(equipment, slot);
-    if (sorted) ids = ids.sort((a, b) => (WEAPONS[a]?.name || a).localeCompare(WEAPONS[b]?.name || b, 'ko'));
+    let ids = slot === 'character' ? Object.keys(getCharacters().characters) : inventoryWeapons(equipment, slot);
+    if (sorted) ids = ids.sort((a, b) => (WEAPONS[a]?.name || CHARACTERS[a]?.name || a).localeCompare(WEAPONS[b]?.name || CHARACTERS[b]?.name || b, 'ko'));
     $('inventory-count').textContent = `${ids.length} / ${INVENTORY_LIMIT}`;
     $('inventory-items').replaceChildren();
     if (!ids.length) {
@@ -76,12 +114,24 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
     }
     for (const id of ids) {
       const button = document.createElement('button'); button.type = 'button';
-      button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || 'Black Water'} 비교`);
+      button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || CHARACTERS[id]?.name} 비교`);
       button.append(renderCard(id));
       button.addEventListener('click', () => {
         const title = document.createElement('h2');
         title.textContent = id === current ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
         $('inventory-comparison').replaceChildren(title, content(id));
+        if (slot === 'character' && id !== current) {
+          const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 카드 장착';
+          equip.addEventListener('click', async () => {
+            equip.disabled = true;
+            try { await equipCharacter(id); render(); }
+            catch (error) {
+              $('inventory-status').textContent = `장착 실패: ${error.message}`;
+              console.error('캐릭터 장착 오류', error); equip.disabled = false;
+            }
+          });
+          $('inventory-comparison').append(equip);
+        }
       });
       $('inventory-items').append(button);
     }
@@ -110,6 +160,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, renderCard 
   });
   $('equipment-back').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
+    if ($('shop-dialog').open) return;
     $('home').hidden = false;
     if (keyboardOpened) $(slot).focus();
     else if (document.activeElement instanceof HTMLElement) document.activeElement.blur();

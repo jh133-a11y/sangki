@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-home-model.glb?v=3" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=14">
+  <link rel="stylesheet" href="soldier.css?v=15">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -34,11 +34,12 @@
       <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-name">K2</span></div></div>
       <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-name">M870</span></div></div>
       <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-name">M9</span></div></div>
-      <div id="character" class="character-card"><img src="soldier-character-card.png" alt="기본 캐릭터 Black Water, 레벨 1"></div>
+      <div id="character" class="character-card"><img src="soldier-character-black-water.webp" alt="Black Water"><span class="character-level" aria-label="레벨 1">1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
+    <button id="shop-open" type="button"><span aria-hidden="true">▤</span> 상점</button>
     <p id="home-status" class="home-status" role="status">투자 닉네임으로 접속합니다.</p>
   </main>
   <section id="hud" hidden aria-label="게임 조작">
@@ -92,7 +93,7 @@
       <button id="tab-secondary" type="button" role="tab" data-equipment-tab="secondary" aria-controls="equipment-panel">보조무기</button>
       <button id="tab-melee" type="button" role="tab" data-equipment-tab="melee" aria-controls="equipment-panel">근접무기</button>
       <button id="tab-character" type="button" role="tab" data-equipment-tab="character" aria-controls="equipment-panel">캐릭터</button>
-      <button type="button" disabled title="상점은 준비 중입니다.">상점</button>
+      <button id="inventory-shop" type="button">상점</button>
     </div>
     <section id="equipment-panel" role="tabpanel" tabindex="0">
       <div class="inventory-details">
@@ -103,9 +104,23 @@
         <header><strong id="inventory-count"></strong><h2>PVP 인벤토리</h2><button id="inventory-sort" type="button">이름순 정렬</button><button type="button" disabled title="분해 기능은 준비 중입니다.">분해</button><button type="button" disabled title="판매 기능은 준비 중입니다.">판매</button></header>
         <div id="inventory-items"></div>
       </section>
-      <p id="inventory-status" role="status">미설정 항목은 아직 게임에 반영되지 않은 수치입니다. 상점·옵션·분해·판매는 준비 중입니다.</p>
+      <p id="inventory-status" role="status">미설정 항목은 아직 게임에 반영되지 않은 수치입니다. 옵션·분해·판매는 준비 중이며, 캐릭터 장착은 카드에만 적용됩니다.</p>
     </section>
   </dialog>
-  <script type="module" src="soldier.js?v=25"></script>
+  <dialog id="shop-dialog" aria-label="솔져 상점">
+    <header class="inventory-topbar"><button id="shop-back" type="button" aria-label="상점 닫기">↶</button><div class="shop-wallet"><span aria-label="골드">⬡ <strong id="shop-gold">0</strong></span><span aria-label="보석">◆ <strong id="shop-gems">0</strong></span></div></header>
+    <div class="shop-tabs" role="tablist" aria-label="상점 분류">
+      <button id="shop-tab-supply" type="button" role="tab" data-shop-tab="supply" aria-controls="shop-products">보급함</button>
+      <button id="shop-tab-character" type="button" role="tab" data-shop-tab="character" aria-controls="shop-products">캐릭터</button>
+      <button id="shop-tab-grenade" type="button" role="tab" data-shop-tab="grenade" aria-controls="shop-products">수류탄</button>
+      <button id="shop-tab-convenience" type="button" role="tab" data-shop-tab="convenience" aria-controls="shop-products">편의</button>
+      <button id="shop-tab-gold" type="button" role="tab" data-shop-tab="gold" aria-controls="shop-products">골드</button>
+      <button id="shop-tab-gems" type="button" role="tab" data-shop-tab="gems" aria-controls="shop-products">보석</button>
+    </div>
+    <section id="shop-products" role="tabpanel"></section>
+    <p class="shop-notice">캐릭터 특기는 소개 문구입니다. 회피·체력 보너스와 새 3D 모델은 아직 적용되지 않습니다.</p>
+    <p id="shop-status" role="status"></p>
+  </dialog>
+  <script type="module" src="soldier.js?v=26"></script>
 </body>
 </html>

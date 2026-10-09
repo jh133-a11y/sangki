@@ -1,7 +1,9 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSoldierModel, loadCharacterTextures } from './soldier-character.mjs?v=4';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=13';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=3';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=4';
+import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=1';
+import { createShop } from './soldier-shop.mjs?v=1';
 import { WEAPONS, rankProgress, DEFAULT_LOADOUT, weaponLevel, weaponLevelLabel, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=3';
 
 const $ = id => document.getElementById(id);
@@ -18,6 +20,7 @@ function save(key, value) {
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
 let equipment = {};
+let characterState = { characters: {}, equipped: 'black-water' }, shopReady = false, characterBusy = false;
 const artwork = { k2: 'soldier-weapon-k2.webp?v=2', shotgun: 'soldier-weapon-shotgun.webp?v=2', stick: 'soldier-weapon-stick.webp?v=2' };
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
@@ -56,16 +59,40 @@ for (const slot of Object.keys(loadout)) {
 }
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
+  getCharacters: () => characterState,
+  equipCharacter: id => refreshCharacters('equip', id),
   renderCard(id) {
-    if (id === 'character') {
-      const card = $('character').cloneNode(true);
-      card.removeAttribute('id'); card.removeAttribute('role'); card.removeAttribute('tabindex'); card.removeAttribute('aria-haspopup');
-      return card;
-    }
+    if (CHARACTERS[id]) return characterCard(id, characterState.characters[id]?.level || 1);
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
     fillWeaponCard(card, id); return card;
   }
 });
+const shop = createShop({
+  getState: () => characterState, isReady: () => shopReady,
+  buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters()
+});
+async function refreshCharacters(action = 'read', id = null) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
+  characterBusy = true;
+  try {
+    const result = await rpc('soldier_shop_api', { p_token: identity.token, p_action: action, p_character: id });
+    if (!result || !CHARACTERS[result.equipped] || !result.characters || Array.isArray(result.characters) || typeof result.characters !== 'object'
+      || !/^\d+$/.test(String(result.gold)) || !/^\d+$/.test(String(result.gems))
+      || Object.keys(result.characters).length > INVENTORY_LIMIT) throw new Error('상점 정보를 확인할 수 없습니다.');
+    for (const [key, item] of Object.entries(result.characters)) {
+      if (!CHARACTERS[key] || !item || !Number.isInteger(item.level) || item.level < 1 || item.level > 7) throw new Error('캐릭터 정보를 확인할 수 없습니다.');
+    }
+    if (result.equipped !== 'black-water' && !result.characters[result.equipped]) throw new Error('장착 캐릭터의 보유 정보를 확인할 수 없습니다.');
+    characterState = { characters: result.characters, equipped: result.equipped };
+    identity.gold = result.gold; identity.gems = result.gems;
+    updateWallet(identity); shopReady = true;
+    const card = characterCard(result.equipped, result.characters[result.equipped]?.level || 1);
+    $('character').replaceChildren(...card.childNodes);
+    $('character').setAttribute('aria-label', `캐릭터 ${CHARACTERS[result.equipped].name}`);
+    inventory.refresh(); shop.refresh();
+  } finally { characterBusy = false; }
+}
 let identity = null, room = null, myId = null, mode = 'home', online = false;
 let ready = false, networkBusy = false, networkErrors = 0, lastNet = 0, lobbyTimer = null;
 let entities = [], matchEnds = 0, lastFrame = performance.now(), slot = 'primary';
@@ -113,6 +140,11 @@ async function connect() {
       console.error('장비 불러오기 오류', error);
     }
     Object.keys(loadout).forEach(renderWeaponCard);
+    try { await refreshCharacters(); }
+    catch (error) {
+      $('shop-status').textContent = `상점 연결 실패: ${error.message} soldier-shop.sql 실행 후 새로고침하세요.`;
+      console.error('상점 불러오기 오류', error);
+    }
     ready = true;
     $('play-open').disabled = false;
     $('home-status').textContent = identity.home_version === 2 ? '장비를 선택하고 게임을 시작하세요.' : '계급 승리 보너스·재화 기능은 soldier-home-upgrade.sql 실행 후 새로고침하세요.';
