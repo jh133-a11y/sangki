@@ -1,5 +1,5 @@
 import { WEAPONS, weaponLevelLabel } from './soldier-core.mjs?v=3';
-import { CHARACTERS } from './soldier-characters.mjs?v=1';
+import { CHARACTERS } from './soldier-characters.mjs?v=2';
 
 export const INVENTORY_LIMIT = 50;
 export function inventoryWeapons(equipment, slot) {

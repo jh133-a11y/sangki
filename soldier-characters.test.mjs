@@ -39,7 +39,7 @@ test('character cards retain artwork names and Lv lettering, overlaying only num
       for (const level of [1, 2, 7]) {
         const card = characterCard(id, level);
         assert.equal(card.children.length, 2);
-        assert.equal(card.children[0].src, character.image);
+        assert.equal(card.children[0].src, `${character.image}?v=2`);
         assert.equal(card.children[0].alt, character.name);
         assert.equal(card.children[1].textContent, String(level));
         assert.equal(card.children[1].attributes['aria-label'], `레벨 ${level}`);
