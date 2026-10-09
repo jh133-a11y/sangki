@@ -11,7 +11,20 @@ export const WEAPONS = {
   stick: { name: '막대', slot: 'melee', damage: 35, delay: .4, range: 3.2, magazine: 0, reload: 0, automatic: false }
 };
 export const RANKS = ['이등병', '일등병', '상등병', '병장', '하사', '중사', '상사', '원사', '준위', '소위', '중위', '대위', '소령', '중령', '대령', '준장', '소장', '중장', '대장', '원수'];
-export const rankName = xp => RANKS[Math.min(RANKS.length - 1, Math.floor(Math.max(0, xp) / 200))];
+export const WIN_XP = 100;
+export const RANK_STEPS = RANKS.slice(0, -1).map((_, index) => Math.ceil(200 * 1.5 ** index));
+export function rankProgress(xp) {
+  const total = Math.max(0, Number(xp) || 0);
+  let index = 0, floor = 0;
+  while (index < RANK_STEPS.length && total >= floor + RANK_STEPS[index]) {
+    floor += RANK_STEPS[index++];
+  }
+  const required = RANK_STEPS[index] || 0, earned = total - floor;
+  const remaining = required ? required - earned : 0;
+  return { index, name: RANKS[index], next: RANKS[index + 1] || null, earned, required, remaining,
+    percent: required ? Math.min(100, earned / required * 100) : 100, winsNeeded: Math.ceil(remaining / WIN_XP) };
+}
+export const rankName = xp => rankProgress(xp).name;
 export const DEFAULT_LOADOUT = { primary: 'k2', secondary: 'pistol', melee: 'kukri' };
 export const DEFAULT_CONTROLS = {
   joystick: { name: '이동', x: 12, y: 73, size: 92 },

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 800">
+  <defs>
+    <linearGradient id="wall" x2=".7" y2="1"><stop stop-color="#26343b"/><stop offset="1" stop-color="#0e1419"/></linearGradient>
+    <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#485451"/><stop offset="1" stop-color="#101a20"/></linearGradient>
+    <radialGradient id="light"><stop stop-color="#f0dcaa" stop-opacity=".5"/><stop offset="1" stop-color="#ebd5aa" stop-opacity="0"/></radialGradient>
+    <filter id="texture"><feTurbulence baseFrequency=".12" numOctaves="3" seed="9"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".09"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+  </defs>
+  <g filter="url(#texture)">
+    <path fill="url(#wall)" d="M0 0h1400v800H0z"/>
+    <path fill="#303d40" d="M0 0 410 150v460L0 800ZM1400 0 1040 150v460l360 190Z"/>
+    <path fill="#1a242b" d="M410 150h630v460H410z"/>
+    <path fill="#42504e" d="M440 190h360v340H440z"/>
+    <path fill="#6c7064" d="M450 205h125v290H450z"/><path fill="#515b55" d="M585 205h205v290H585z"/>
+    <path stroke="#111b21" stroke-width="14" d="M578 190v340M440 350h360"/>
+    <path fill="#162127" d="M836 190h176v350H836z"/><path stroke="#3a4648" stroke-width="4" d="M836 260h176m-176 75h176m-176 75h176m-176 75h176"/>
+    <path fill="url(#floor)" d="m0 800 410-190h630l360 190Z"/>
+    <g stroke="#71807a" opacity=".18"><path d="m700 610-250 190m250-190 200 190m-510-105h760M160 760h1070"/></g>
+    <g fill="#1b282d" stroke="#0c151b" stroke-width="6"><path d="M50 440h260v125H50zM70 350h230v90H70zM1060 500h230v90h-230zM1075 415h185v85h-185z"/></g>
+    <g stroke="#5d695f" stroke-width="5" opacity=".5"><path d="M50 470h260m-260 55h260m750 5h230m-230 40h230"/></g>
+    <g stroke="#101a21" stroke-width="22"><path d="M0 80h1400M80 0l430 155M1290 0l-270 155M380 0v640M1030 0v650"/></g>
+    <ellipse fill="url(#light)" cx="640" cy="350" rx="320" ry="420"/>
+    <path stroke="#72827f" stroke-width="5" d="M645 25v90"/><ellipse fill="#bdad80" cx="645" cy="120" rx="40" ry="12"/>
+  </g>
+</svg>

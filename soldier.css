@@ -4,7 +4,7 @@ body { margin: 0; overflow: hidden; overscroll-behavior: none; }
 [hidden] { display: none !important; }
 #world { position: fixed; inset: 0; width: 100%; height: 100%; touch-action: none; }
 #home, #hud { position: fixed; inset: 0; pointer-events: none; }
-#home button, #home .panel, #hud button, #hud .control { pointer-events: auto; }
+#home button, #home select, #home .panel, #hud button, #hud .control { pointer-events: auto; }
 button, input, select { font: inherit; }
 button, select, input { border: 1px solid #718295; border-radius: 8px; background: #243649; color: #fff; padding: 10px; min-height: 44px; }
 button { cursor: pointer; }
@@ -57,4 +57,50 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid #526377; ma
   .loadout { bottom: 8px; left: 8px; width: 260px; padding: 8px; } .loadout h2, .loadout p { display: none; }
   .loadout select { padding: 5px; } .loadout label { margin: 2px 0; font-size: 12px; }
   .home-status { bottom: 75px; font-size: 12px; padding: 8px; max-width: 32vw; }
+}
+
+/* Home uses the supplied portrait and a separate warehouse backdrop; match rendering stays 3D. */
+#home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
+.home-atmosphere { position: absolute; inset: 0; background: linear-gradient(90deg, #06101c90, transparent 40%, #06101c50), linear-gradient(#07101a88, transparent 25%, #08121c55); }
+.home-character { position: absolute; height: 145%; width: auto; max-width: 48%; object-fit: contain; bottom: -60%; left: 51%; transform: translateX(-50%); filter: drop-shadow(8px 8px 10px #000b); image-rendering: auto; }
+.currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
+.currency { display: flex; gap: 5px; align-items: center; min-width: 0; flex: 1; height: 32px; background: linear-gradient(#3e495acc, #151e29e0); border-radius: 18px; border: 1px solid #75869855; box-shadow: 0 2px 4px #0008; padding: 3px 10px 3px 3px; }
+.currency svg { width: 26px; height: 26px; flex-shrink: 0; }
+.currency-name { font-size: 10px; color: #d5dfec; }
+.currency strong { text-align: right; margin-left: auto; font-size: clamp(12px, 1.6vw, 18px); overflow: hidden; text-overflow: ellipsis; }
+.home-top-actions { position: absolute; top: 8px; right: 14px; display: flex; gap: 10px; pointer-events: auto; }
+.home-top-actions button, .home-top-actions a { display: grid; place-items: center; border: 0; border-radius: 0; background: transparent; color: #bbc9e2; font-size: 30px; padding: 0; min-width: 44px; min-height: 44px; text-decoration: none; }
+#home .profile { display: flex; gap: 10px; top: 17%; left: 2.3%; width: 30%; max-width: 380px; padding: 0; background: linear-gradient(90deg, #111b2799, transparent); border: 0; border-radius: 0; align-items: center; }
+.rank-badge { flex-shrink: 0; width: clamp(44px, 6vw, 72px); height: clamp(44px, 6vw, 72px); padding: 2px; border: 1px solid #b4b7ad; border-radius: 0; background: linear-gradient(140deg, #314954, #293329 70%, #897545); box-shadow: inset 0 0 5px #000, 0 0 5px #000; }
+.rank-badge svg { width: 100%; height: 100%; }
+.profile-copy { min-width: 0; flex: 1; position: relative; padding-right: 35px; }
+#nickname { display: block; font-size: clamp(14px, 1.8vw, 22px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 2px 3px #000; }
+#home #rank { font-size: 10px; color: #ced8d9; margin: 3px 0 5px; }
+.rank-meter { height: 4px; background: #7a8287; box-shadow: 0 1px 2px #000; }
+.rank-meter span { display: block; height: 100%; background: #e0ac39; width: 0; }
+#rank-percent { position: absolute; right: 0; bottom: -4px; font-size: 10px; }
+.home-mode-label { position: absolute; top: 36%; left: 2.3%; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #b8c3cd; background: linear-gradient(90deg, #172330aa, transparent); }
+.home-mode-label strong { background: #efbe3e; color: #1e2630; min-width: 60px; text-align: center; padding: 5px 12px; font-size: 16px; }
+#home .loadout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; position: absolute; left: 2.3%; top: 46%; bottom: auto; width: 30%; max-width: 380px; padding: 0; border: 0; background: transparent; }
+#home .equipment-card, .character-card { display: flex; flex-direction: column; position: relative; min-width: 0; height: clamp(94px, 20vh, 155px); overflow: hidden; border: 1px solid #9d8193; box-shadow: 1px 2px 4px #000; margin: 0; background: linear-gradient(130deg, #99939844, transparent 35%), linear-gradient(155deg, #333641, #804144); }
+#home .equipment-card:first-child { background: linear-gradient(145deg, #725aca, #272546); border-color: #a087d9; }
+.equipment-grade { font-size: 9px; padding: 3px 4px; color: #fff0c2; font-weight: 800; text-shadow: 0 1px 2px #000; }
+.weapon-art { width: 100%; height: calc(100% - 45px); filter: drop-shadow(2px 3px 2px #0008); transform: rotate(-20deg); }
+#home .equipment-card select { position: absolute; bottom: 0; width: 100%; min-height: 44px; padding: 4px 1px; border: 0; border-radius: 0; background: #161b2ca6; font-size: 11px; text-align: center; font-weight: bold; }
+.equipment-card:focus-within { outline: 2px solid #ffe39c; }
+.character-card { background: linear-gradient(140deg, #6a747e, #222b33); border-color: #90a0aa; }
+.character-card img { height: calc(100% - 20px); width: 100%; object-fit: cover; object-position: top; }
+.character-card span { position: absolute; top: 3px; left: 3px; z-index: 1; font-size: 9px; text-shadow: 0 1px 3px #000; }
+.character-card strong { position: absolute; bottom: 0; width: 100%; padding: 5px; background: #17202ac9; text-align: center; font-size: 11px; }
+.home-bottom-mark { position: absolute; left: 2.3%; bottom: 5%; color: #bfcfea; font-weight: 800; font-size: clamp(12px, 1.8vw, 20px); text-shadow: 0 0 8px #438acd; }
+.home-bottom-mark span { font-size: 28px; color: #c7ddff; } .home-bottom-mark small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 2px; color: #9dabbe; }
+#home .play-button { border: 1px solid #a0b8da; border-radius: 0; background: linear-gradient(145deg, #657fa899, #253767e0); color: #ecf4ff; width: 29%; min-width: 0; bottom: 6%; right: 2%; min-height: 75px; font-size: clamp(18px, 2.4vw, 30px); box-shadow: inset 0 0 20px #789bd344, 0 0 8px #000; text-shadow: 0 2px 2px #24324c; }
+.play-button small { display: block; margin-top: 4px; font-size: 11px; color: #bfcede; }
+.play-button > span { color: #172f50; font-size: 32px; vertical-align: middle; }
+#home .home-status { right: 2%; bottom: calc(6% + 80px); max-width: 29%; padding: 6px; font-size: 11px; line-height: 1.4; background: #0e1924bb; border: 0; border-radius: 0; text-shadow: 0 1px 2px #000; }
+@media (max-height: 420px) {
+  .currency-bar { top: 5px; } .currency { height: 26px; } .currency svg { width: 22px; height: 22px; }
+  #home .profile { top: 16%; } #home .loadout { top: 46%; } #home .equipment-card, .character-card { height: 100px; }
+  #home .play-button { min-height: 66px; bottom: 3%; } #home .home-status { bottom: calc(3% + 70px); }
+  .home-bottom-mark { bottom: 3%; }
 }

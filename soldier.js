@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { WEAPONS, rankName, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs';
+import { WEAPONS, rankProgress, DEFAULT_LOADOUT, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=2';
 
 const $ = id => document.getElementById(id);
 const endpoint = 'https://ejrwrwjsgizzxhqybtff.supabase.co/rest/v1/rpc';
@@ -62,9 +62,10 @@ async function connect() {
     });
     $('nickname').textContent = identity.nickname;
     updateRank(identity.xp);
+    updateWallet(identity);
     ready = true;
     $('play-open').disabled = false;
-    $('home-status').textContent = '장비를 선택하고 게임을 시작하세요.';
+    $('home-status').textContent = identity.home_version === 2 ? '장비를 선택하고 게임을 시작하세요.' : '계급 승리 보너스·재화 기능은 soldier-home-upgrade.sql 실행 후 새로고침하세요.';
   } catch (error) {
     $('nickname').textContent = '투자 닉네임 필요';
     $('home-status').textContent = `${error.message} 메인에서 투자 닉네임을 설정하세요. 온라인 서버를 처음 설정할 때는 soldier-schema.sql 실행이 필요합니다.`;
@@ -73,8 +74,63 @@ async function connect() {
 }
 function updateRank(xp) {
   identity.xp = Number(xp);
-  $('rank').textContent = `${rankName(identity.xp)} · ${identity.xp} XP`;
+  const progress = rankProgress(identity.xp);
+  $('rank').textContent = `${progress.name} · ${identity.xp.toLocaleString('ko-KR')} XP`;
+  $('rank-fill').style.width = `${progress.percent}%`;
+  $('rank-percent').textContent = `${Math.floor(progress.percent)}%`;
+  $('rank-meter').setAttribute('aria-valuenow', String(Math.floor(progress.percent)));
+  $('rank-meter').setAttribute('aria-valuetext', progress.next ? `${progress.earned.toLocaleString('ko-KR')} / ${progress.required.toLocaleString('ko-KR')} XP` : '최고 계급');
+  $('rank-open').setAttribute('aria-label', `${progress.name} 계급 및 승급 정보`);
+  drawRankBadge(progress.index, progress.name);
+  renderRankDetail();
 }
+function updateWallet(profile) {
+  if (profile.home_version !== 2) {
+    $('gold').textContent = '—'; $('gems').textContent = '—'; return;
+  }
+  for (const name of ['gold', 'gems']) {
+    const value = String(profile[name]);
+    if (!/^\d+$/.test(value)) throw new Error('재화 정보를 확인할 수 없습니다.');
+    $(name).textContent = BigInt(value).toLocaleString('ko-KR');
+    identity[name] = value;
+  }
+  identity.wins = Number(profile.wins);
+  identity.home_version = profile.home_version;
+  renderRankDetail();
+}
+function drawRankBadge(index, name) {
+  const svg = $('rank-badge'), ns = 'http://www.w3.org/2000/svg';
+  svg.replaceChildren(); svg.setAttribute('aria-label', `${name} 계급`);
+  function shape(tag, attributes) {
+    const element = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+    svg.append(element); return element;
+  }
+  if (index < 8) {
+    const count = index < 4 ? index + 1 : index - 3;
+    for (let i = 0; i < count; i++) shape('path', { d: `M10 ${28 + i * 7} 32 ${10 + i * 7} 54 ${28 + i * 7} 54 ${35 + i * 7} 32 ${17 + i * 7} 10 ${35 + i * 7}Z`, fill: '#f1ce67', stroke: '#8e6c20', 'stroke-width': 1 });
+    if (index >= 4) shape('path', { d: 'M16 53h32v5H16Z', fill: '#f1ce67' });
+  } else if (index < 15) {
+    const count = index < 12 ? Math.max(1, index - 8) : index - 11;
+    for (let i = 0; i < count; i++) {
+      const x = 32 - (count - 1) * 8 + i * 16;
+      shape('path', { d: `M${x} 20 ${x + 7} 32 ${x} 44 ${x - 7} 32Z`, fill: index >= 12 ? '#eac568' : '#d1dde2', stroke: '#8d764c' });
+    }
+  } else {
+    for (let i = 0; i < index - 14; i++) {
+      const count = index - 14, x = 32 - (count - 1) * 5.5 + i * 11;
+      shape('path', { d: `m${x} 23 2.6 6 6.4 .5-4.8 4.3 1.5 6.2-5.7-3.3-5.7 3.3 1.5-6.2-4.8-4.3 6.4-.5Z`, fill: '#f1ce67', stroke: '#9c7f35', 'stroke-width': .5 });
+    }
+  }
+}
+function renderRankDetail() {
+  const progress = rankProgress(identity?.xp || 0);
+  $('rank-detail').textContent = `현재 계급: ${progress.name} · 누적 ${(identity?.xp || 0).toLocaleString('ko-KR')} XP${identity?.home_version === 2 ? ` · ${identity.wins || 0}승` : ''}`;
+  $('rank-next').textContent = progress.next ? `다음 계급: ${progress.next} · 승급까지 ${progress.remaining.toLocaleString('ko-KR')} XP 필요 (${progress.earned.toLocaleString('ko-KR')} / ${progress.required.toLocaleString('ko-KR')} XP)` : '최고 계급 원수입니다.';
+  $('rank-wins').textContent = progress.next ? `승리 보너스만 기준으로 ${progress.winsNeeded.toLocaleString('ko-KR')}판 더 승리하면 승급합니다. 처치 경험치가 더해지면 더 빨리 승급할 수 있습니다.` : '더 이상 승급할 계급이 없습니다.';
+}
+$('rank-open').addEventListener('click', () => { renderRankDetail(); $('rank-dialog').showModal(); });
+$('home-character').addEventListener('error', () => { $('home-status').textContent = '캐릭터 이미지를 불러오지 못했습니다. 새로고침하세요.'; });
 
 let renderer, scene, camera, preview, hand, flash;
 try {
@@ -324,7 +380,7 @@ function applySnapshot(state) {
   }
   const startingMatch = room.status === 'playing' && mode !== 'game';
   if (startingMatch) startMatch(true);
-  if (room.status === 'finished') { finish(state.players); return; }
+  if (room.status === 'finished') { updateRank(state.xp); updateWallet(state); finish(state.players); return; }
   const own = state.players.find(p => p.id === myId);
   if (!own) throw new Error('방 연결이 끊겼습니다.');
   if (startingMatch) player.yaw = Math.atan2(own.x, own.z);
@@ -337,6 +393,7 @@ function applySnapshot(state) {
   reloadEnds = state.reload_until ? performance.now() / 1000 + Math.max(0, (Date.parse(state.reload_until) - Date.parse(room.server_time)) / 1000) : 0;
   matchEnds = performance.now() / 1000 + Math.max(0, (Date.parse(room.ends_at) - Date.parse(room.server_time)) / 1000);
   updateRank(state.xp);
+  updateWallet(state);
   const others = state.players.filter(p => p.id !== myId);
   for (const entity of [...entities]) {
     if (!others.some(p => p.id === entity.id)) { dispose(entity.body); entities.splice(entities.indexOf(entity), 1); }
@@ -615,5 +672,5 @@ window.addEventListener('pagehide', () => {
       body: JSON.stringify({ p_token: identity.token, p_action: 'leave', p_room: room.id }), keepalive: true }).catch(error => console.warn('방 나가기 전송 오류', error));
   }
 });
-buildSettings(); applyControls();
+drawRankBadge(0, '이등병'); buildSettings(); applyControls();
 if (renderer) { connect(); requestAnimationFrame(frame); }
