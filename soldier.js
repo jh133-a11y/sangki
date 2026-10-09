@@ -388,6 +388,7 @@ $('result').addEventListener('cancel', event => { event.preventDefault(); $('res
 $('leave').addEventListener('click', () => { if (confirm('경기를 나가시겠습니까?')) leaveRoom(); });
 function goHome() {
   mode = 'home'; resetInput(); clearEntities(); document.exitPointerLock?.();
+  camera.fov = 75; camera.updateProjectionMatrix();
   $('hud').hidden = true; $('home').hidden = false; preview.visible = true; hand.visible = false;
 }
 function resetInput() {
