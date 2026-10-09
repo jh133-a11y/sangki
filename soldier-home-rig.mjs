@@ -42,6 +42,12 @@ export async function loadHomeRig(id = 'black-water') {
 
 const smooth = (min, max, value) => THREE.MathUtils.smoothstep(value, min, max);
 
+export function chestExpansion(x, y, z, width = 1) {
+  const mask = smooth(.62, .69, y) * (1 - smooth(.78, .83, y))
+    * (1 - smooth(.07 * width, .115 * width, Math.abs(x)));
+  return [x * .008 * mask, 0, THREE.MathUtils.clamp(z * .03, -.0025, .0025) * mask];
+}
+
 // The supplied GLB has no skin. Blend inferred joints across all mesh regions,
 // rather than cutting its geometry or replacing the supplied silhouette/textures.
 export const JOINT_NAMES = ['hips', 'spine', 'chest', 'neck', 'head',
@@ -123,13 +129,17 @@ export function createHomeRig(source) {
     const positions = geometry.attributes.position;
     const indices = new Uint16Array(positions.count * 4);
     const weights = new Float32Array(positions.count * 4);
+    const expansion = new Float32Array(positions.count * 3);
     for (let i = 0; i < positions.count; i++) {
+      expansion.set(chestExpansion(positions.getX(i), positions.getY(i), positions.getZ(i), width), i * 3);
       jointWeights(positions.getX(i), positions.getY(i), positions.getZ(i), width).forEach(([bone, weight], slot) => {
         indices[i * 4 + slot] = bone; weights[i * 4 + slot] = weight;
       });
     }
     geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
     geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
+    geometry.morphTargetsRelative = true;
+    geometry.morphAttributes.position = [new THREE.Float32BufferAttribute(expansion, 3)];
     const material = Array.isArray(part.material) ? part.material.map(m => m.clone()) : part.material.clone();
     for (const m of Array.isArray(material) ? material : [material]) materials.add(m);
     const mesh = new THREE.SkinnedMesh(geometry, material); mesh.name = part.name || 'supplied-soldier';
@@ -142,9 +152,7 @@ export function createHomeRig(source) {
   function animate(seconds) {
     const { breath, stretch } = idlePose(seconds);
     const breathing = breath, loosening = stretch;
-    spine.rotation.x = breathing * .004;
-    chest.rotation.x = breathing * .008;
-    chest.position.y = .09 + breathing * .001;
+    for (const mesh of meshes) mesh.morphTargetInfluences[0] = breathing;
     joints.neck.rotation.set(breathing * .008 + loosening * .1,
       loosening * .12 * Math.sin(seconds * .8), loosening * .07);
     for (const sign of [-1, 1]) {

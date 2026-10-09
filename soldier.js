@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=11';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=15';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=12';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=16';
 import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=7';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=1';
 import { CHARACTERS, characterCard } from './soldier-characters.mjs?v=3';

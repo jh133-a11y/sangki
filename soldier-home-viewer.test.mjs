@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import * as THREE from './vendor/three.module.min.js';
-import { createHomeRig, idlePose, jointWeights, JOINT_NAMES, HOME_MODEL } from './soldier-home-rig.mjs';
+import { createHomeRig, idlePose, jointWeights, chestExpansion, JOINT_NAMES, HOME_MODEL } from './soldier-home-rig.mjs';
 import { CHARACTERS } from './soldier-characters.mjs';
 
 const modelFixtures = [
@@ -91,10 +91,15 @@ test(`${file} receives fresh joints and actual breathing/stretch deformation`, (
     const hands = { left: [], right: [] };
     for (const { mesh, index: i, position: resting } of rest) {
       const position = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, i);
-      const actual = mesh.applyBoneTransform(i, position.clone());
+      const actual = mesh.getVertexPosition(i, new THREE.Vector3());
       const displacement = actual.distanceTo(resting);
       assert.ok(Number.isFinite(displacement));
       if (position.y < .4) assert.ok(displacement < 1e-6);
+      const expansion = new THREE.Vector3().fromBufferAttribute(mesh.geometry.morphAttributes.position[0], i);
+      assert.ok(Math.abs(expansion.z) <= .002501);
+      assert.ok(Math.abs(expansion.x) <= .000921);
+      if (position.y <= .62 || position.y >= .83 || Math.abs(position.x) > .12) assert.equal(expansion.length(), 0);
+      if (position.y > .45 && position.y < .60 && Math.abs(position.x) < .06) assert.ok(displacement < 1e-6, 'abdomen must stay fixed');
       if (time === 1.125 && position.y > .46 && position.y < .55 && Math.abs(position.x) > .14) {
         hands[position.x < 0 ? 'left' : 'right'].push(actual.y - resting.y);
       }
@@ -185,8 +190,7 @@ test('automatic breathing/stretching are continuous, deform the supplied mesh an
   const rig = createHomeRig(fixture()), mesh = rig.meshes[0];
   function vertex(index) {
     rig.root.updateMatrixWorld(true); rig.skeleton.update();
-    const p = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position, index);
-    return mesh.applyBoneTransform(index, p);
+    return mesh.getVertexPosition(index, new THREE.Vector3());
   }
   const foot = vertex(0), chest = vertex(4), head = vertex(5), arm = vertex(2);
   rig.animate(1);
@@ -230,6 +234,17 @@ test('breathing rotates limb joints without scaling the waist, arms or hands', (
     assert.ok(Math.abs(shoulder.distanceTo(elbow) - upperLength) < 1e-10);
     assert.ok(Math.abs(elbow.distanceTo(wrist) - foreLength) < 1e-10);
   }
+});
+
+test('only the thorax expands slightly; abdomen, head, hands and legs have no expansion', () => {
+  assert.deepEqual(chestExpansion(.04, .55, .07), [0, 0, 0]);
+  assert.deepEqual(chestExpansion(.18, .73, .07), [0, 0, 0]);
+  assert.deepEqual(chestExpansion(.04, .9, .07), [0, 0, 0]);
+  assert.deepEqual(chestExpansion(.04, .2, .07), [0, 0, 0]);
+  const delta = chestExpansion(.04, .73, .07);
+  assert.ok(delta[0] > 0 && delta[0] < .001);
+  assert.equal(delta[1], 0);
+  assert.ok(delta[2] > .002 && delta[2] <= .0025);
 });
 
 test('invalid model input produces an explicit error', () => {
