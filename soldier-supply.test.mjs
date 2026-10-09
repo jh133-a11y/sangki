@@ -40,11 +40,17 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/p_product='special' and p_index=1/);
   assert.doesNotMatch(sql,/p_(price|grade|weapon)\b/);
 });
-test('opening matches reference timing and includes reduced motion, skipping and sound controls',() => {
+test('opening keeps reference timing, tap-to-advance specials and no visible buttons',() => {
   const source=readFileSync('soldier-supply-opening.mjs','utf8');
   assert.match(source,/turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300/);
   assert.match(source,/prefers-reduced-motion/);
-  assert.match(source,/연출 건너뛰기/);
+  assert.doesNotMatch(source,/createElement\('button'\)/);
+  assert.match(source,/current\+\+; play\(\)/);
+  assert.match(source,/if \(special\) return/);
+  assert.match(source,/dialog\.addEventListener\('click',advance\)/);
+  assert.match(source,/counter\.hidden=!special/);
+  assert.match(source,/supply-accessible-status/);
   assert.match(source,/forceContextLoss/);
-  assert.match(source,/효과음 꺼짐/);
+  const shop=readFileSync('soldier-shop.mjs','utf8');
+  assert.doesNotMatch(shop,/shop-confirm-odds/);
 });

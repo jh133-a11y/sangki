@@ -5,7 +5,7 @@ import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './s
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=7';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop } from './soldier-shop.mjs?v=6';
+import { createShop } from './soldier-shop.mjs?v=7';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=1';
 import { WEAPONS, weaponStats, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=4';
 

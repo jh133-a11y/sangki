@@ -37,11 +37,12 @@ function crateModel(color) {
   return { root, hinge };
 }
 
-export function createSupplyOpening(renderCard) {
+export function createSupplyOpening(renderCard, reportError) {
   const dialog = document.createElement('dialog'); dialog.id = 'supply-opening-dialog';
   dialog.setAttribute('aria-labelledby','supply-opening-title');
-  const title = document.createElement('h2'); title.id = 'supply-opening-title';
-  const counter = document.createElement('span'); counter.className = 'supply-opening-counter';
+  const title = document.createElement('h2'); title.id = 'supply-opening-title'; title.className='supply-accessible-status';
+  const counter = document.createElement('span'); counter.className='supply-opening-counter';
+  counter.setAttribute('aria-label','남은 보급함');
   const stage = document.createElement('div'); stage.className = 'supply-opening-stage';
   let canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden','true');
   const burst = document.createElement('div'); burst.className = 'supply-burst';
@@ -53,18 +54,11 @@ export function createSupplyOpening(renderCard) {
   }
   const reward = document.createElement('div'); reward.className = 'supply-opening-reward';
   stage.append(canvas,burst,particles,reward);
-  const status = document.createElement('p'); status.setAttribute('role','status');
-  const warning = document.createElement('p'); warning.className='supply-opening-error'; warning.setAttribute('role','alert');
-  const results = document.createElement('div'); results.className = 'supply-opening-results';
-  const actions = document.createElement('div'); actions.className = 'supply-opening-actions';
-  const sound = document.createElement('button'); sound.type='button'; sound.textContent='효과음 켜짐';
-  sound.setAttribute('aria-pressed','true');
-  const skip = document.createElement('button'); skip.type='button'; skip.textContent='연출 건너뛰기';
-  const next = document.createElement('button'); next.type='button';
-  actions.append(sound,skip,next); dialog.append(title,counter,stage,status,warning,results,actions);
+  const status = document.createElement('p'); status.setAttribute('role','status'); status.className='supply-accessible-status';
+  dialog.append(title,counter,stage,status);
   document.body.append(dialog);
-  let renderer, scene, camera, crate, frame=0, current=0, rewards=[], finished=false, resolveClose;
-  let context, muted=false, timers=[];
+  let renderer, scene, camera, crate, frame=0, current=0, rewards=[], resolveClose, special=false, graphicsAvailable=false;
+  let context, timers=[];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   function clear() {
     cancelAnimationFrame(frame);
@@ -72,9 +66,9 @@ export function createSupplyOpening(renderCard) {
     timers=[];
   }
   function tone(frequency,duration,delay,volume) {
-    if (!context || muted || context.state !== 'running') return;
+    if (!context || context.state !== 'running') return;
     timers.push(setTimeout(() => {
-      if (!dialog.open || muted) return;
+      if (!dialog.open) return;
       const osc=context.createOscillator(), gain=context.createGain();
       osc.type='triangle'; osc.frequency.setValueAtTime(frequency,context.currentTime);
       osc.frequency.exponentialRampToValueAtTime(frequency*.45,context.currentTime+duration);
@@ -84,24 +78,26 @@ export function createSupplyOpening(renderCard) {
     },delay));
   }
   function finish() {
-    clear(); finished=true; dialog.dataset.phase='revealed';
+    clear(); dialog.dataset.phase='revealed';
     reward.replaceChildren(renderCard(rewards[current].weapon,rewards[current]));
     status.textContent=`${current+1}/${rewards.length} · ${rewards[current].grade}급 무기 획득 · 인벤토리에 저장됨`;
-    counter.textContent=`× ${rewards.length-current}`;
-    next.disabled=false; next.textContent=current+1<rewards.length?'다음 보급함':'확인';
-    skip.hidden=false;
+    counter.textContent=`× ${rewards.length-current-1}`;
+    if (special) return;
+    timers.push(setTimeout(() => {
+      if (!dialog.open) return;
+      if (current+1<rewards.length) { current++; play(); } else dialog.close();
+    },700));
   }
   function play() {
-    clear(); finished=false; results.hidden=true; stage.hidden=false;
-    next.disabled=true; next.textContent='개봉 중…'; skip.hidden=false;
+    clear();
     counter.textContent=`× ${rewards.length-current}`;
     status.textContent=`보급함 개봉 중 · ${current+1}/${rewards.length}`;
     reward.replaceChildren(renderCard(rewards[current].weapon,rewards[current]));
     dialog.dataset.phase='idle';
     void stage.offsetWidth;
     dialog.dataset.phase='opening';
-    if (reduced.matches || !renderer) {
-      if (renderer) {
+    if (reduced.matches || !graphicsAvailable) {
+      if (graphicsAvailable) {
         crate.root.rotation.y=Math.PI*.23; crate.hinge.rotation.x=-Math.PI*.6;
         renderer.render(scene,camera);
       }
@@ -132,41 +128,30 @@ export function createSupplyOpening(renderCard) {
       });
       materials.forEach(material => material.dispose());
     }
-    renderer?.dispose(); renderer?.forceContextLoss(); renderer=null; scene=null; crate=null;
+    renderer?.dispose(); renderer?.forceContextLoss(); renderer=null; scene=null; crate=null; graphicsAvailable=false;
   }
-  function showAll() {
-    clear(); finished=true; stage.hidden=true; results.hidden=false;
-    results.replaceChildren(...rewards.map(item => renderCard(item.weapon,item)));
-    status.textContent=`무기 ${rewards.length}개가 인벤토리에 저장되었습니다.`;
-    next.disabled=false; next.textContent='확인'; skip.hidden=true; current=rewards.length-1;
-  }
-  sound.addEventListener('click',() => {
-    muted=!muted; sound.textContent=muted?'효과음 꺼짐':'효과음 켜짐';
-    sound.setAttribute('aria-pressed',String(!muted));
-  });
-  skip.addEventListener('click',showAll);
-  next.addEventListener('click',() => {
-    if (!finished) return;
+  function advance() {
+    if (!special || dialog.dataset.phase!=='revealed') return;
     if (current+1<rewards.length) { current++; play(); } else dialog.close();
-  });
-  dialog.addEventListener('cancel',event => {
-    if (!finished || current+1<rewards.length) { event.preventDefault(); showAll(); }
+  }
+  dialog.addEventListener('click',advance);
+  dialog.addEventListener('keydown',event => {
+    if (event.key==='Enter' || event.key===' ') { event.preventDefault(); if (!event.repeat) advance(); }
   });
   dialog.addEventListener('close',() => { dispose(); resolveClose?.(); resolveClose=null; });
   return {
     async open(product,items) {
       const spec=SUPPLY_PRODUCTS.find(entry => entry.id===product);
       if (!spec || !items.length) throw new Error('개봉할 보급함 보상이 없습니다.');
-      rewards=items; current=0; title.textContent=spec.name; warning.textContent=''; dialog.showModal();
+      rewards=items; current=0; special=product==='special'; counter.hidden=!special;
+      title.textContent=spec.name; dialog.tabIndex=-1; dialog.showModal(); dialog.focus();
       try {
-        if (!muted) {
-          const Audio=window.AudioContext||window.webkitAudioContext;
-          if (Audio) {
-            context ||= new Audio();
-            await context.resume();
-          }
+        const Audio=window.AudioContext||window.webkitAudioContext;
+        if (Audio) {
+          context ||= new Audio();
+          await context.resume();
         }
-      } catch (error) { console.warn('보급함 효과음 시작 실패',error); warning.textContent='효과음을 재생할 수 없습니다.'; }
+      } catch (error) { console.warn('보급함 효과음 시작 실패',error); reportError('효과음을 재생할 수 없습니다.'); }
       try {
         const previousCanvas = canvas;
         canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden','true');
@@ -174,8 +159,8 @@ export function createSupplyOpening(renderCard) {
         canvas.addEventListener('webglcontextlost',event => {
           if (!dialog.open || event.target !== canvas) return;
           event.preventDefault();
-          warning.textContent='3D 그래픽 연결이 중단되어 획득 결과를 표시합니다.';
-          finish();
+          reportError('3D 그래픽 연결이 중단되어 획득 결과를 표시합니다.');
+          graphicsAvailable=false; finish();
         });
         renderer=new THREE.WebGLRenderer({ canvas,alpha:true,antialias:true });
         renderer.setSize(420,360); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -184,11 +169,12 @@ export function createSupplyOpening(renderCard) {
         scene.add(new THREE.HemisphereLight('#ffffff','#303745',3));
         const light=new THREE.DirectionalLight('#ffffff',4); light.position.set(-3,5,4); scene.add(light);
         crate=crateModel(spec.color); scene.add(crate.root);
+        graphicsAvailable=true;
       } catch (error) {
         console.error('보급함 3D 연출 시작 실패',error); dispose();
-        warning.textContent=`3D 연출을 표시할 수 없습니다: ${error.message}. 획득 결과를 표시합니다.`;
+        reportError(`3D 연출을 표시할 수 없습니다: ${error.message}. 획득 결과를 표시합니다.`);
       }
-      return new Promise(resolve => { resolveClose=resolve; play(); skip.focus(); });
+      return new Promise(resolve => { resolveClose=resolve; play(); });
     }
   };
 }

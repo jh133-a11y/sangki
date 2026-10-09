@@ -1,6 +1,6 @@
 import { CHARACTERS } from './soldier-characters.mjs?v=5';
 import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=1';
-import { createSupplyOpening } from './soldier-supply-opening.mjs?v=1';
+import { createSupplyOpening } from './soldier-supply-opening.mjs?v=2';
 
 export { SUPPLY_PRODUCTS };
 export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, renderCard }) {
@@ -8,7 +8,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
   const dialog = $('shop-dialog'), tabs = [...dialog.querySelectorAll('[data-shop-tab]')];
   let category = 'supply', buying = false, confirming = false, keyboardOpened = false;
   const confirmation = $('shop-confirm-dialog');
-  const opening = createSupplyOpening(renderCard);
+  const opening = createSupplyOpening(renderCard, message => { $('shop-status').textContent += ` ${message}`; });
   function confirmPurchase(product) {
     $('shop-confirm-title').textContent = category === 'supply' ? '보급함 구매 확인' : '캐릭터 구매 확인';
     $('shop-confirm-name').textContent = product.name;
@@ -16,8 +16,6 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     const image = $('shop-confirm-image');
     image.src = category === 'supply' ? `soldier-supply-${product.id}.webp?v=1` : `soldier-shop-${product.id}.webp`;
     image.dataset.supply = category === 'supply' ? product.id : ''; image.alt = product.name;
-    $('shop-confirm-odds').textContent = category === 'supply'
-      ? `${product.odds} · 무기 종류: K2 / M870 / M9 각각 1/3 · 구매 즉시 개봉하여 인벤토리에 저장됩니다.` : '';
     confirmation.returnValue = 'cancel';
     return new Promise(resolve => {
       confirmation.addEventListener('close', () => resolve(confirmation.returnValue === 'buy'), { once: true });
