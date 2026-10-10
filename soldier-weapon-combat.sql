@@ -88,11 +88,14 @@ begin
     and stats->'primary'->>'grade'=stats->'melee'->>'grade' then
     foreach slot_name in array array['primary','secondary','melee'] loop
       if stats->slot_name->>'color'='gold' then
-        stats:=jsonb_set(stats,array[slot_name,'damage'],to_jsonb((stats->slot_name->>'damage')::integer+3));
+        stats:=jsonb_set(stats,array[slot_name,'damage'],to_jsonb((stats->slot_name->>'damage')::integer+
+          case item_grade when 'D' then 1 when 'C' then 1 when 'B' then 2 when 'A' then 2 when 'S' then 3 when 'S+' then 4 end));
       elsif stats->slot_name->>'color'='red' then
-        stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb((stats->slot_name->>'critical')::integer+5));
+        stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb((stats->slot_name->>'critical')::integer+
+          case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 3 when 'A' then 4 when 'S' then 5 when 'S+' then 6 end));
       elsif stats->slot_name->>'color'='silver' and stats->slot_name->>'weight' is not null then
-        stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*0.9)::integer));
+        stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*
+          case item_grade when 'D' then 0.90 when 'C' then 0.88 when 'B' then 0.86 when 'A' then 0.84 when 'S' then 0.82 when 'S+' then 0.80 end)::integer));
       end if;
     end loop;
   end if;

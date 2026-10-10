@@ -1,4 +1,4 @@
-import { WEAPONS, weaponStats, weaponLevelLabel, weaponSetColor } from './soldier-core.mjs?v=7';
+import { WEAPONS, weaponStats, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=8';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=7';
 import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=11';
 
@@ -25,10 +25,13 @@ export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standa
   if (!weapon) throw new Error('무기 정보를 확인할 수 없습니다.');
   const matchingSet = typeof setColor === 'object' && setColor !== null
     ? setColor.grade === grade && setColor.color === color : setColor === color;
-  if (matchingSet && color === 'gold') weapon.damage += 3;
-  if (matchingSet && color === 'red') weapon.critical += 5;
-  if (matchingSet && color === 'silver' && Number.isInteger(weapon.weight)) {
-    weapon.weight = Math.round(weapon.weight * .9);
+  if (matchingSet) {
+    const bonus = weaponSetBonus(grade, color);
+    weapon.damage += bonus.damage;
+    weapon.critical += bonus.critical;
+    if (bonus.weightPercent && Number.isInteger(weapon.weight)) {
+      weapon.weight = Math.round(weapon.weight * (100 - bonus.weightPercent) / 100);
+    }
   }
   return [
     ['탄창/보유탄환', weapon.slot === 'melee' ? '-' : `${weapon.magazine} / ${weapon.reserve ?? '미설정'}`, '초기 탄창/추가 보유탄환입니다. 근접무기는 탄환을 소모하지 않습니다.'],
@@ -49,6 +52,17 @@ export function characterInventoryStats(id, level = 1) {
     ['위력 증가', `+${values.damageBonus ?? 0}`, '캐릭터 능력으로 추가되는 공격 위력입니다.'],
     ['크리티컬 확률 증가', `+${values.criticalBonus ?? 0}%`, '캐릭터 능력으로 추가되는 크리티컬 확률입니다.']
   ];
+}
+
+export function formatWeaponSetStats(values, set) {
+  if (!set) return values;
+  const bonus = weaponSetBonus(set.grade, set.color);
+  return values.map(([name, value, explanation]) => {
+    if (name === '위력' && bonus.damage) value = `${value} + ${bonus.damage}`;
+    if (name === '크리티컬 확률' && bonus.critical) value = `${value} + ${bonus.critical}%`;
+    if (name === '무게' && bonus.weightPercent && Number.isInteger(value)) value = `${value} - ${bonus.weightPercent}%`;
+    return [name, value, explanation];
+  });
 }
 
 export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard,
@@ -176,11 +190,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   function stats(id, item) {
     const list = document.createElement('dl');
     const set = item?.equipped ? equippedSet() : null;
-    const values = CHARACTERS[id]
+    let values = CHARACTERS[id]
       ? characterInventoryStats(id, ownedCharacterLevel(getCharacters(), id))
       : weaponInventoryStats(id, item?.grade || getEquipment()[id]?.grade || 'D',
-        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard', set);
-    if (!CHARACTERS[id]) addCharacterStats(values);
+        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard');
+    if (!CHARACTERS[id]) values = formatWeaponSetStats(addCharacterStats(values), set);
     for (const [name, value, explanation] of values) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
       dt.textContent = name; dd.textContent = value;
@@ -284,7 +298,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const detail = document.createElement('div'); detail.className = 'weapon-material-target-detail';
     const table = document.createElement('table'); table.className = 'weapon-material-stats';
     table.setAttribute('aria-label', '현재 능력치와 강화 후 능력치 비교');
-    const setColor = item.equipped ? equippedSetColor() : null;
+    const setColor = item.equipped ? equippedSet() : null;
     const before = addCharacterStats(weaponInventoryStats(item.weapon, item.grade, item.level, item.color, setColor));
     const rows = before.map(([name, value, explanation]) => {
       const row = document.createElement('tr');
@@ -603,9 +617,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     }
     $('inventory-current').replaceChildren(content(current, currentItem));
     const set = equippedSet();
-    $('inventory-set-effect').textContent = set
-      ? `${set.grade} ${set.color.toUpperCase()} 세트 적용 · ${set.color === 'gold' ? '위력 +3' : set.color === 'red' ? '크리티컬 +5%' : '무게 -10%'}`
-      : '';
+    $('inventory-set-effect').textContent = set ? weaponSetDescription(set.grade, set.color) : '';
     $('inventory-set-effect').hidden = !set;
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);

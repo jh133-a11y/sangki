@@ -25,7 +25,7 @@ test('grade assets share the common card canvas and S content has normalized alp
 test('shop and inventory import the finalized parent-owned module versions', () => {
   const inventory = readFileSync('soldier-inventory.mjs', 'utf8');
   const shop = readFileSync('soldier-shop.mjs', 'utf8');
-  assert.match(inventory, /soldier-core\.mjs\?v=7/);
+  assert.match(inventory, /soldier-core\.mjs\?v=8/);
   assert.match(inventory, /soldier-weapon-items\.mjs\?v=11/);
   assert.match(inventory, /soldier-characters\.mjs\?v=7/);
   assert.match(shop, /soldier-characters\.mjs\?v=7/);

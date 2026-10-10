@@ -64,10 +64,10 @@ test('matching-grade color sets apply the correct inventory preview bonuses', ()
   const redBase = weaponInventoryStats('k2', 'A', 1, 'red')[6][1];
   const redSet = weaponInventoryStats('k2', 'A', 1, 'red', { grade: 'A', color: 'red' })[6][1];
   const wrongGrade = weaponInventoryStats('k2', 'A', 1, 'red', { grade: 'S', color: 'red' })[6][1];
-  assert.equal(Number.parseFloat(redSet) - Number.parseFloat(redBase), 5);
+  assert.equal(Number.parseFloat(redSet) - Number.parseFloat(redBase), 4);
   assert.equal(wrongGrade, redBase);
   assert.equal(weaponInventoryStats('k2', 'A', 1, 'gold', { grade: 'A', color: 'gold' })[1][1]
-    - weaponInventoryStats('k2', 'A', 1, 'gold')[1][1], 3);
+    - weaponInventoryStats('k2', 'A', 1, 'gold')[1][1], 2);
 });
 
 test('character inventory shows health, evasion, damage and critical abilities', () => {

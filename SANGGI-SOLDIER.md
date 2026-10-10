@@ -109,7 +109,7 @@ A·S급 크리티컬 증가는 Lv.1 이후 레벨업 두 번마다, 즉 Lv.3·5�
 
 `soldier-weapon-combat.sql`은 기존 보유·강화 기록을 유지하고 온라인 입장 시 서버 소유의 장착 무기 등급/레벨을 캡처합니다. 클라이언트가 보내는 위력·등급·레벨을 믿지 않으며, 입장 뒤 강화/장착 변화는 다음 입장부터 적용됩니다. AI 연습도 시작 시 같은 성장 수치를 캡처합니다. 크리티컬 피해 배율은 별도 지정이 없어 **2배**로 적용하며, 캐릭터 회피 성공 시 크리티컬도 무효화됩니다.
 
-각 무기는 기본(색상 없음)·GOLD·RED·SILVER 색상별 그림을 사용하며, 카드 이름 위에 해당 색상 라벨을 같은 글꼴로 표시합니다. GOLD는 무기 위력 +5, RED는 크리티컬 확률 +5%p, SILVER는 총기 무게 10% 감소를 적용합니다. 주·보조·근접 슬롯 세 무기의 등급과 색상이 모두 같으면 해당 색 세트 보너스를 **각 장착 무기마다** 추가 적용합니다: GOLD 위력 +3, RED 크리티컬 +5%p, SILVER 무게 10% 추가 감소(무게가 있는 총기에 적용). 보급함은 네 색상(기본 포함)을 각각 무작위로 지급합니다. 전투 SQL이 서버에서 색상별 수치와 세트 효과를 계산하므로 `soldier-weapon-combat.sql`도 최신 버전이어야 합니다.
+각 무기는 기본(색상 없음)·GOLD·RED·SILVER 색상별 그림을 사용하며, 카드 이름 위에 해당 색상 라벨을 같은 글꼴로 표시합니다. 개별 색상 효과는 기존대로 GOLD 위력 +5, RED 크리티컬 확률 +5%p, SILVER 총기 무게 10% 감소입니다. 주·보조·근접 슬롯 세 무기의 등급과 색상이 모두 같으면 아래 등급별 세트 보너스를 **각 장착 무기마다** 추가 적용합니다. 보급함은 네 색상(기본 포함)을 각각 무작위로 지급합니다. 전투 SQL이 서버에서 색상별 수치와 세트 효과를 계산하므로 `soldier-weapon-combat.sql`도 최신 버전이어야 합니다.
 
 모든 총기는 지정된 초기 탄창·보유탄환을 가지며 장전 시 부족한 탄창 분량만큼 보유탄환에서 이동합니다. 잔량이 부족하면 부분 장전하고, 모두 소모하면 추가 장전할 수 없습니다. 무기 교체 중 장전 완료는 원래 장전한 무기에 적용하며 부활 시 초기 탄창·보유탄환을 복구합니다. M9는 탄환 소모·장전이 없습니다. HUD는 현재 탄창/남은 보유탄환을 표시합니다. 온라인 SQL 미설치 시 적용 안내를 표시하고 기존 서버와 호환합니다.
 
@@ -199,7 +199,36 @@ JAMES는 새 기본 캐릭터이며 기존 기본 캐릭터의 보유 및 레벨
 
 같은 등급의 S MAX 무기 두 개는 100보석으로 S+ Lv.1 한 개로 조합할 수 있습니다. S+는 조합할 수 없으며 미장착 S+를 분해하면 같은 분류의 S Lv.1 두 개를 지급합니다. 기존 S 분해 결과는 같은 분류의 A Lv.1 두 개입니다. S+ 비용과 경험치는 기존 등급의 배증 규칙을 확장한 값이며 보급함 확률은 변경하지 않습니다.
 
-주무기·보조무기·근접무기가 모두 같은 등급과 같은 특수 색상일 때만 세트 효과가 적용됩니다. GOLD는 세 무기 각각 위력 +3, RED는 크리티컬 +5, SILVER는 무게 -10%를 추가합니다. 개별 색상 효과와 중첩되며 서로 다른 등급은 세트 효과를 받지 않습니다. 홈과 인벤토리는 해당 색상의 테두리와 적용 내용을 표시합니다.
+주무기·보조무기·근접무기가 모두 같은 등급과 같은 특수 색상일 때만 세트 효과가 적용됩니다. 개별 색상 효과와 중첩되며 서로 다른 등급은 세트 효과를 받지 않습니다. 홈과 인벤토리 모두 해당 색상의 빛나는 테두리와 적용 내용을 표시합니다. 장착 무기 능력치는 개별 색상·캐릭터 보너스를 포함한 기본값과 세트 보너스를 분리해 `22% + 5%`, `40 + 3`, `3000 - 18%`처럼 표시합니다. 실제 전투와 강화 비교에는 합산·반올림된 값을 사용하며 무게가 없는 근접무기는 `-`를 유지합니다.
+
+| 등급 | GOLD 위력 | RED 크리티컬 확률 | SILVER 무게 |
+|---|---:|---:|---:|
+| D | +1 | +1%p | -10% |
+| C | +1 | +2%p | -12% |
+| B | +2 | +3%p | -14% |
+| A | +2 | +4%p | -16% |
+| S | +3 | +5%p | -18% |
+| S+ | +4 | +6%p | -20% |
+
+### SQL 전체 적용 순서
+
+사이트의 투자·계정 스키마가 이미 설치된 Supabase SQL Editor에서 아래 파일의 **전체 내용**을 하나씩 순서대로 실행합니다. 각 파일이 성공한 뒤 다음 파일로 진행하세요.
+
+1. `soldier-schema.sql`
+2. `soldier-home-upgrade.sql` (최신 schema와 중복되는 홈 보완이며 기존 설치에도 재실행 가능)
+3. `soldier-equipment-upgrade.sql`
+4. `soldier-inventory-limit.sql`
+5. `soldier-shop.sql`
+6. `soldier-weapon-rewards.sql`
+7. `soldier-weapon-sale.sql`
+8. `soldier-character-upgrade.sql`
+9. `soldier-default-inventory.sql`
+10. `soldier-weapon-material-upgrade.sql`
+11. `soldier-weapon-combat.sql`
+12. `soldier-supply.sql`
+13. `soldier-equipped-slot-fix.sql`
+
+이전 변경까지 전부 적용되어 있다면 이번 등급별 세트 변경은 최신 `soldier-weapon-combat.sql`만 재실행하면 됩니다. 온라인 경기 도중에는 적용하지 말고 적용 후 페이지를 새로고침해 다시 입장하세요. 웹 배포만으로 SQL은 실행되지 않습니다. 캐릭터 SQL은 요청한 대로 기존 FSB-AGENT 보유 기록을 제거하므로 필요한 백업을 먼저 준비하세요. `soldier-admin-test-rewards.sql`·`soldier-admin-material-rewards.sql`은 관리자 보상 지급용이므로 일반 업데이트에서 실행하지 않습니다. 투자 판매 수정은 별도로 `investment-sale-fix.sql`을 실행합니다.
 
 기존 계정에 적용할 때 최신 `soldier-equipment-upgrade.sql`, `soldier-shop.sql`, `soldier-weapon-rewards.sql`, `soldier-character-upgrade.sql`, `soldier-default-inventory.sql`, `soldier-weapon-material-upgrade.sql`, `soldier-weapon-combat.sql`, `soldier-supply.sql`, `soldier-equipped-slot-fix.sql` 순으로 실행합니다. 웹 배포만으로 Supabase SQL은 적용되지 않습니다. 기존 보유·레벨·재화와 요청 영수증을 유지하며 S+ 제약 조건은 기존 테이블에도 갱신합니다.
 

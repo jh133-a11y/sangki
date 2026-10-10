@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, weaponSetColor } from './soldier-core.mjs';
 import { materialCost, weaponLevelXp, weaponGradeArtwork } from './soldier-weapon-items.mjs';
+import { weaponInventoryStats, formatWeaponSetStats } from './soldier-inventory.mjs';
 
 test('every S+ Lv1 stat equals S MAX, then gains 3 damage and 1 critical each level', () => {
   for (const id of Object.keys(WEAPONS)) for (const color of WEAPON_COLORS) {
@@ -26,13 +27,40 @@ test('set effects require all slots matching both grade and color', () => {
     const set={primary:weaponStats('k2','S+',1,color),secondary:weaponStats('shotgun','S+',1,color),melee:weaponStats('stick','S+',1,color)};
     assert.equal(weaponSetColor(set),color);
     const enhanced=applyWeaponSetBonuses(set);
-    if (color==='gold') assert.equal(enhanced.primary.damage,set.primary.damage+3);
-    if (color==='red') assert.equal(enhanced.primary.critical,set.primary.critical+5);
-    if (color==='silver') assert.equal(enhanced.primary.weight,Math.round(set.primary.weight*.9));
+    if (color==='gold') assert.equal(enhanced.primary.damage,set.primary.damage+4);
+    if (color==='red') assert.equal(enhanced.primary.critical,set.primary.critical+6);
+    if (color==='silver') assert.equal(enhanced.primary.weight,Math.round(set.primary.weight*.8));
     set.melee=weaponStats('stick','S',7,color);
     assert.equal(weaponSetColor(set),null);
     assert.deepEqual(applyWeaponSetBonuses(set),set);
   }
+});
+
+test('all six grades apply exact set bonuses while preserving base color effects', () => {
+  const grades = ['D','C','B','A','S','S+'];
+  for (const [index,grade] of grades.entries()) for (const color of ['gold','red','silver']) {
+    const base = { primary:weaponStats('k2',grade,1,color), secondary:weaponStats('shotgun',grade,1,color), melee:weaponStats('stick',grade,1,color) };
+    const actual = applyWeaponSetBonuses(base);
+    for (const slot of Object.keys(base)) {
+      assert.equal(actual[slot].damage, base[slot].damage + (color === 'gold' ? [1,1,2,2,3,4][index] : 0));
+      assert.equal(actual[slot].critical, base[slot].critical + (color === 'red' ? index + 1 : 0));
+      assert.equal(actual[slot].weight, color === 'silver' && Number.isInteger(base[slot].weight)
+        ? Math.round(base[slot].weight * (90 - index * 2) / 100) : base[slot].weight);
+    }
+    const preview = weaponInventoryStats('k2',grade,1,color,{grade,color});
+    assert.equal(preview[1][1], actual.primary.damage);
+    assert.equal(preview[5][1], actual.primary.weight);
+    assert.equal(preview[6][1], `${actual.primary.critical}%`);
+  }
+});
+
+test('equipped stat display separates the base from the set bonus', () => {
+  const values = [['위력',40],['크리티컬 확률','22%'],['무게',3000],['정확도',80]];
+  assert.deepEqual(formatWeaponSetStats(values,{grade:'S',color:'red'}).map(row=>row[1]),[40,'22% + 5%',3000,80]);
+  assert.equal(formatWeaponSetStats(values,{grade:'S+',color:'gold'})[0][1],'40 + 4');
+  assert.equal(formatWeaponSetStats(values,{grade:'C',color:'silver'})[2][1],'3000 - 12%');
+  assert.equal(formatWeaponSetStats(values,null),values);
+  assert.equal(values[1][1],'22%');
 });
 
 test('S+ migration extends existing constraints, recipes and material progression', () => {

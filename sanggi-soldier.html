@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-james.glb?v=1" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=37">
+  <link rel="stylesheet" href="soldier.css?v=38">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -38,7 +38,7 @@
       <div id="character" class="character-card"><img class="character-background" src="soldier-character-frame.webp?v=1" alt="" aria-hidden="true"><img class="character-portrait" src="soldier-character-james-cutout.webp?v=1" alt="JAMES"><span class="character-name">JAMES</span><span class="character-level" aria-label="레벨 1">Lv.1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
-    <p id="weapon-set-effect" class="home-set-effect">3종 무기를 같은 등급·색상으로 맞추면 GOLD 위력 +3 · RED 크리티컬 +5 · SILVER 무게 -10% 효과가 적용됩니다.</p>
+    <p id="weapon-set-effect" class="home-set-effect" hidden></p>
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
     <button id="shop-open" type="button"><span aria-hidden="true">▤</span> 상점</button>
@@ -132,6 +132,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=58"></script>
+  <script type="module" src="soldier.js?v=59"></script>
 </body>
 </html>

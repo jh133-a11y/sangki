@@ -10,7 +10,7 @@ test('character power and critical bonuses stack with weapon color sets on every
     const weapons=applyCharacterBonuses(set,character);
     for(const slot of Object.keys(DEFAULT_LOADOUT)) {
       assert.equal(weapons[slot].damage,base[slot].damage+bonus);
-      assert.equal(weapons[slot].critical,base[slot].critical+5+bonus);
+      assert.equal(weapons[slot].critical,base[slot].critical+6+bonus);
       assert.equal(weapons[slot].weight,base[slot].weight);
       assert.equal(base[slot].critical,weaponStats(DEFAULT_LOADOUT[slot],'S+',7,'red').critical);
     }

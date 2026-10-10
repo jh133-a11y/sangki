@@ -41,14 +41,37 @@ export function weaponStats(id, grade = 'D', level = 1, color = 'standard') {
   if (color === 'silver' && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * .9);
   return stats;
 }
+export const WEAPON_SET_BONUSES = {
+  D: { damage: 1, critical: 1, weightPercent: 10 },
+  C: { damage: 1, critical: 2, weightPercent: 12 },
+  B: { damage: 2, critical: 3, weightPercent: 14 },
+  A: { damage: 2, critical: 4, weightPercent: 16 },
+  S: { damage: 3, critical: 5, weightPercent: 18 },
+  'S+': { damage: 4, critical: 6, weightPercent: 20 }
+};
+export function weaponSetBonus(grade, color) {
+  const bonus = WEAPON_SET_BONUSES[grade];
+  if (!bonus || !['gold', 'red', 'silver'].includes(color)) throw new RangeError('무기 세트 정보가 올바르지 않습니다.');
+  return { damage: color === 'gold' ? bonus.damage : 0, critical: color === 'red' ? bonus.critical : 0,
+    weightPercent: color === 'silver' ? bonus.weightPercent : 0 };
+}
+export function weaponSetDescription(grade, color) {
+  const bonus = weaponSetBonus(grade, color);
+  const effect = color === 'gold' ? `위력 +${bonus.damage}`
+    : color === 'red' ? `크리티컬 +${bonus.critical}%` : `무게 -${bonus.weightPercent}%`;
+  return `${grade} ${color.toUpperCase()} 세트 · 장착 무기 ${effect}`;
+}
 export function applyWeaponSetBonuses(weapons) {
   const entries = Object.entries(weapons);
   const setColor = weaponSetColor(weapons);
+  const bonus = setColor ? weaponSetBonus(weapons.primary.grade, setColor) : null;
   return Object.fromEntries(entries.map(([slot, weapon]) => {
     const stats = { ...weapon };
-    if (setColor === 'gold') stats.damage += 3;
-    if (setColor === 'red') stats.critical += 5;
-    if (setColor === 'silver' && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * .9);
+    if (bonus) {
+      stats.damage += bonus.damage;
+      stats.critical += bonus.critical;
+      if (bonus.weightPercent && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * (100 - bonus.weightPercent) / 100);
+    }
     return [slot, stats];
   }));
 }

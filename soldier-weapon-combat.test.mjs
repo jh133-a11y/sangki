@@ -107,7 +107,7 @@ test('weapon colors apply individual modifiers and same-color equipment set bonu
   const gold=applyWeaponSetBonuses(Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
     .map(([slot,id])=>[slot,weaponStats(id,'D',1,'gold')])));
   for(const [slot,id] of Object.entries(DEFAULT_LOADOUT)) {
-    assert.equal(gold[slot].damage,weaponStats(id,'D',1,'gold').damage+3);
+    assert.equal(gold[slot].damage,weaponStats(id,'D',1,'gold').damage+1);
   }
   const mixed=applyWeaponSetBonuses({...Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
     .map(([slot,id])=>[slot,weaponStats(id,'D',1,'gold')])),melee:weaponStats('stick','D',1,'red')});
@@ -132,7 +132,7 @@ test('combat snapshots require server-owned loadout stats and bounded finite amm
   const goldStats=applyWeaponSetBonuses(Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
     .map(([slot,id])=>[slot,{...weaponStats(id,'D',1,'gold'),weapon:id}])));
   const goldState={...state,weapon_stats:goldStats};
-  assert.equal(validateCombatWeapons(goldState,DEFAULT_LOADOUT).primary.damage,27);
+  assert.equal(validateCombatWeapons(goldState,DEFAULT_LOADOUT).primary.damage,25);
   assert.throws(()=>validateCombatWeapons({...goldState,weapon_stats:{...goldStats,melee:{...goldStats.melee,color:'red'}}},DEFAULT_LOADOUT),/능력치/);
 });
 
