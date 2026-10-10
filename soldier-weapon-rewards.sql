@@ -192,7 +192,7 @@ declare
   weapon_pool text[]:=array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'];
   color_pool text[]:=array['standard','gold','red','silver'];
   eligible_weapons text[]; weapon_id text; color_id text; reward_id uuid;
-  rewards jsonb:='[]'::jsonb; replayed boolean:=false; i integer;
+  rewards jsonb:='[]'::jsonb; replayed boolean:=false; i integer; slot_name text; replacement_id uuid;
 begin
   perform public.soldier_equipment_api(p_token);
   select client_id into owner_id from public.soldier_sessions where token=p_token;
@@ -217,15 +217,16 @@ begin
     select * into item_a from public.soldier_weapon_items
       where id=p_item and client_id=owner_id for update;
     if not found then raise exception '보유하지 않은 무기입니다.'; end if;
-    if (p_action='combine' and item_a.level<>7) or item_a.equipped or item_a.source='default' then
-      raise exception '장착 중이 아니고 기본 지급 무기가 아닌 MAX 무기만 조합할 수 있습니다.';
+    if (p_action='combine' and item_a.level<>7)
+      or (p_action='disassemble' and (item_a.equipped or item_a.source='default')) then
+      raise exception '조합은 MAX 무기만, 분해는 미장착 S급 무기만 가능합니다.';
     end if;
     if p_action='combine' then
       select * into item_b from public.soldier_weapon_items
         where id=p_other and client_id=owner_id for update;
-      if not found or item_b.level<>7 or item_b.equipped or item_b.source='default'
+      if not found or item_b.level<>7
         or item_b.grade<>item_a.grade then
-        raise exception '같은 등급의 미장착 MAX 무기 두 개가 필요합니다.';
+        raise exception '같은 등급의 MAX 무기 두 개가 필요합니다.';
       end if;
       cost:=case item_a.grade when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50 end;
       if cost is null then raise exception 'S급 무기는 조합할 수 없습니다.'; end if;
@@ -246,9 +247,19 @@ begin
         ) + (
           select count(*) from public.soldier_weapon_items wi
           where wi.client_id=owner_id and public.soldier_weapon(wi.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
-        ) < 50;
+        ) < 50
+        and not exists (
+          select 1 from (values(item_a.weapon,item_a.equipped),(item_b.weapon,item_b.equipped)) input(weapon,equipped)
+          where input.equipped
+            and public.soldier_weapon(input.weapon)->>'slot'<>public.soldier_weapon(candidate)->>'slot'
+            and not exists (
+              select 1 from public.soldier_weapon_items remaining
+              where remaining.client_id=owner_id
+                and public.soldier_weapon(remaining.weapon)->>'slot'=public.soldier_weapon(input.weapon)->>'slot'
+            )
+        );
         if coalesce(array_length(eligible_weapons,1),0)=0 then
-          raise exception '무기 분류별 인벤토리 공간을 확보한 뒤 다시 조합하세요.';
+          raise exception '조합 결과를 받을 공간과 소모되는 장착 무기를 대체할 무기를 확보하세요.';
         end if;
         weapon_id:=eligible_weapons[1+floor(random()*array_length(eligible_weapons,1))::integer];
         color_id:=color_pool[1+floor(random()*array_length(color_pool,1))::integer];
@@ -257,6 +268,29 @@ begin
       insert into public.soldier_weapon_items(client_id,weapon,color,grade,level,source,reward_key)
         values(owner_id,weapon_id,color_id,next_grade,1,'combine','operation-'||p_request::text||'-1')
         returning id into reward_id;
+      if item_a.equipped or item_b.equipped then
+        update public.soldier_weapon_items set equipped=false
+          where client_id=owner_id and equipped
+            and public.soldier_weapon(weapon)->>'slot'=public.soldier_weapon(weapon_id)->>'slot';
+        update public.soldier_weapon_items set equipped=true where id=reward_id;
+        for slot_name in
+          select distinct public.soldier_weapon(input.weapon)->>'slot'
+          from (values(item_a.weapon,item_a.equipped),(item_b.weapon,item_b.equipped)) input(weapon,equipped)
+          where input.equipped
+        loop
+          if not exists (select 1 from public.soldier_weapon_items
+            where client_id=owner_id and equipped and public.soldier_weapon(weapon)->>'slot'=slot_name) then
+            select id into replacement_id from public.soldier_weapon_items
+              where client_id=owner_id and public.soldier_weapon(weapon)->>'slot'=slot_name
+              order by created_at,id limit 1;
+            if replacement_id is not null then
+              update public.soldier_weapon_items set equipped=true where id=replacement_id;
+            else
+              raise exception '조합 후 장착할 무기가 없습니다. 해당 분류의 다른 무기를 확보하세요.';
+            end if;
+          end if;
+        end loop;
+      end if;
       rewards:=jsonb_build_array(jsonb_build_object(
         'id',reward_id,'weapon',weapon_id,'color',color_id,'grade',next_grade,'level',1));
     else

@@ -55,6 +55,44 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     button.value = value; button.textContent = label; saleForm.append(button);
   }
   saleDialog.append(saleMessage, saleForm); document.body.append(saleDialog);
+  const salePicker = document.createElement('dialog');
+  salePicker.id = 'weapon-sale-dialog'; salePicker.setAttribute('aria-label', '판매할 무기 선택');
+  document.body.append(salePicker);
+  function openSalePicker() {
+    if (weaponBusy || !sellWeaponItem || slot === 'character') return;
+    const header = document.createElement('header'); header.className = 'weapon-operation-header';
+    const title = document.createElement('h2'); title.textContent = '판매';
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = '×';
+    close.setAttribute('aria-label', '닫기'); close.addEventListener('click', () => salePicker.close());
+    header.append(title, close);
+    const target = document.createElement('section'); target.className = 'weapon-operation-slot';
+    target.textContent = '판매할 무기를 선택하세요';
+    const controls = document.createElement('section'); controls.className = 'weapon-operation-controls';
+    const price = document.createElement('strong'); price.textContent = '무기 1개당 100 골드';
+    controls.append(price);
+    const top = document.createElement('div'); top.className = 'weapon-operation-top'; top.append(target, controls);
+    const choices = document.createElement('div'); choices.className = 'weapon-operation-choices';
+    const candidates = [
+      ...inventoryWeapons(getEquipment(), slot).filter(id => id !== getLoadout()[slot]).map(id => ({ id })),
+      ...getWeaponItems().filter(item => !item.equipped && WEAPONS[item.weapon].slot === slot)
+        .map(item => ({ id: item.weapon, item }))
+    ];
+    for (const { id, item } of candidates) {
+      const option = document.createElement('button'); option.type = 'button'; option.className = 'weapon-operation-choice';
+      option.setAttribute('aria-label', `${WEAPONS[id].name} 판매 선택`);
+      option.append(renderCard(id, item));
+      option.addEventListener('click', () => {
+        choices.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', 'false'));
+        option.setAttribute('aria-pressed', 'true');
+        target.replaceChildren(renderCard(id, item));
+        controls.replaceChildren(price, sellWeaponAction(id, item));
+      });
+      choices.append(option);
+    }
+    if (!candidates.length) choices.textContent = '판매할 미장착 무기가 없습니다.';
+    const status = document.createElement('p'); status.className = 'weapon-operation-status'; status.setAttribute('role', 'status');
+    salePicker.replaceChildren(header, top, choices, status); salePicker.showModal();
+  }
   function confirmSale(id) {
     saleMessage.textContent = `${WEAPONS[id].name}을 100골드에 판매하시겠습니까?`;
     saleDialog.returnValue = 'cancel';
@@ -137,9 +175,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         render();
         $('inventory-status').textContent = '무기를 판매하는 중입니다…';
         await sellWeaponItem(item || null, id);
+        salePicker.close();
         $('inventory-status').textContent = `${WEAPONS[id].name} 판매 완료 · 100골드를 획득했습니다.`;
       } catch (error) {
         $('inventory-status').textContent = `무기 판매 실패: ${error.message}`;
+        salePicker.querySelector('.weapon-operation-status').textContent = `무기 판매 실패: ${error.message}`;
         console.error('무기 판매 오류', error);
       } finally { weaponBusy = false; render(); updateWallet(); }
     });
@@ -316,7 +356,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const results = document.createElement('div'); results.className = 'weapon-operation-results';
     const eligible = isCombine
       ? getWeaponItems().filter(candidate => candidate.id !== item.id && candidate.grade === item.grade
-        && candidate.level === 7 && !candidate.equipped && candidate.source !== 'default')
+        && candidate.level === 7)
       : [];
     function update() {
       const availableGems = Number(getGems());
@@ -339,7 +379,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         option.addEventListener('click', () => { selected = candidate; choices.querySelectorAll('.weapon-operation-choice').forEach(button => button.removeAttribute('aria-pressed')); option.setAttribute('aria-pressed', 'true'); update(); });
         choices.append(option);
       }
-      if (!eligible.length) choices.textContent = '같은 등급의 미장착 MAX 무기가 없습니다.';
+      if (!eligible.length) choices.textContent = '같은 등급의 MAX 무기가 없습니다.';
     }
     else choices.hidden = true;
     submit.addEventListener('click', async () => {
@@ -386,13 +426,14 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         body.append(button);
       }
       else {
-        const max = document.createElement('p'); max.textContent = '최대 레벨 (MAX)'; body.append(max);
+        const max = document.createElement('button'); max.type = 'button'; max.className = 'weapon-item-action';
+        max.textContent = '강화'; max.disabled = true; max.title = '최대 레벨 (MAX)'; body.append(max);
       }
     }
     if (item && operateWeapon) {
       const actions = document.createElement('div'); actions.className = 'weapon-operation-item-actions';
       const combine = document.createElement('button'); combine.type = 'button'; combine.className = 'weapon-item-action';
-      combine.textContent = '조합'; combine.disabled = weaponBusy || item.level !== 7 || item.grade === 'S' || item.equipped || item.source === 'default';
+      combine.textContent = '조합'; combine.disabled = weaponBusy || item.level !== 7 || item.grade === 'S';
       combine.title = item.level !== 7 ? 'MAX 레벨 무기만 조합할 수 있습니다.' : '같은 등급의 MAX 무기 2개를 조합합니다.';
       combine.addEventListener('click', () => openWeaponOperation('combine', item)); actions.append(combine);
       if (item.grade === 'S') {
@@ -428,12 +469,30 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       });
       body.append(specialty, upgrade);
     }
+    if (!CHARACTERS[id]) {
+      const actions = document.createElement('div'); actions.className = 'inventory-weapon-actions';
+      for (const child of [...body.children]) {
+        if (child.matches('.weapon-item-action')) actions.append(child);
+        else if (child.matches('.weapon-operation-item-actions')) {
+          actions.append(...child.children); child.remove();
+        }
+      }
+      const option = document.createElement('button'); option.type = 'button'; option.className = 'weapon-item-action';
+      option.textContent = '옵션'; option.disabled = true; option.title = '옵션 기능은 준비 중입니다.';
+      actions.append(option);
+      if (item && changeWeaponItem) {
+        const equip = weaponAction('장착', 'equip', item); equip.disabled = weaponBusy || item.equipped;
+        actions.append(equip);
+      }
+      body.append(actions);
+    }
     return body;
   }
   function render() {
     const equipment = getEquipment(), loadout = getLoadout();
     const current = slot === 'character' ? getCharacters().equipped : loadout[slot];
     const currentItem = getWeaponItems().find(item => item.weapon === current && item.equipped);
+    $('inventory-sell').disabled = slot === 'character' || weaponBusy || !sellWeaponItem;
     dialog.classList.toggle('character-inventory', slot === 'character');
     for (const tab of tabs) {
       const selected = tab.dataset.equipmentTab === slot;
@@ -506,12 +565,6 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
           title.append(levelLabel, selectedMeter);
         }
         $('inventory-comparison').replaceChildren(title, content(id, item));
-        if (item && !item.equipped && changeWeaponItem) {
-          $('inventory-comparison').append(weaponAction('무기 장착', 'equip', item));
-        }
-        if (slot !== 'character' && (item ? !item.equipped : id !== current)) {
-          $('inventory-comparison').append(sellWeaponAction(id, item));
-        }
         if (slot === 'character' && id !== current) {
           const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 장착';
           equip.addEventListener('click', async () => {
@@ -551,6 +604,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   $('inventory-sort').addEventListener('click', () => {
     sorted = !sorted; $('inventory-sort').textContent = sorted ? '기본순 정렬' : '이름순 정렬'; render();
   });
+  $('inventory-sell').addEventListener('click', openSalePicker);
   $('equipment-back').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
     if ($('shop-dialog').open) return;

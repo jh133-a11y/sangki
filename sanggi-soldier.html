@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-home-model.glb?v=5" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=30">
+  <link rel="stylesheet" href="soldier.css?v=31">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -98,14 +98,14 @@
     </div>
     <section id="equipment-panel" role="tabpanel" tabindex="0">
       <div class="inventory-details">
-        <section class="inventory-equipped"><h2><span>현재 장착된 장비</span><span id="inventory-level"></span><span id="inventory-progress" class="weapon-material-meter"><progress id="inventory-progress-value" max="100" value="0" aria-label="현재 장착된 무기 강화 진행률"></progress><span id="inventory-progress-percent">0%</span></span></h2><div id="inventory-current"></div><button type="button" disabled title="옵션 기능은 준비 중입니다.">옵션</button></section>
+        <section class="inventory-equipped"><h2><span>현재 장착된 장비</span><span id="inventory-level"></span><span id="inventory-progress" class="weapon-material-meter"><progress id="inventory-progress-value" max="100" value="0" aria-label="현재 장착된 무기 강화 진행률"></progress><span id="inventory-progress-percent">0%</span></span></h2><div id="inventory-current"></div></section>
         <section id="inventory-comparison" class="inventory-comparison" aria-label="장비 비교"><p>비교할 장비를 선택해 주세요</p></section>
       </div>
       <section class="inventory-list-panel" aria-label="보유 장비">
-        <header><strong id="inventory-count"></strong><h2>PVP 인벤토리</h2><button id="inventory-sort" type="button">이름순 정렬</button><button type="button" disabled title="분해 기능은 준비 중입니다.">분해</button><button type="button" disabled title="판매 기능은 준비 중입니다.">판매</button></header>
+        <header><strong id="inventory-count"></strong><h2>PVP 인벤토리</h2><button id="inventory-sort" type="button">이름순 정렬</button><button type="button" disabled title="분해는 S급 무기 상세 화면에서 가능합니다.">분해</button><button id="inventory-sell" type="button">판매</button></header>
         <div id="inventory-items"></div>
       </section>
-      <p id="inventory-status" role="status">미설정 항목은 아직 게임에 반영되지 않은 수치입니다. 옵션·분해·판매는 준비 중이며, 캐릭터 장착 시 3D 모델도 변경됩니다.</p>
+      <p id="inventory-status" role="status">판매 버튼에서 미장착 무기를 선택해 100골드에 판매할 수 있습니다. 캐릭터 장착 시 3D 모델도 변경됩니다.</p>
     </section>
   </dialog>
   <dialog id="shop-dialog" aria-label="솔져 상점">
@@ -131,6 +131,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=49"></script>
+  <script type="module" src="soldier.js?v=50"></script>
 </body>
 </html>

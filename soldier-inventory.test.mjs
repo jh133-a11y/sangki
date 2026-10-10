@@ -74,7 +74,9 @@ test('only unequipped weapons offer the fixed-price sale action', () => {
   const source = readFileSync('soldier-inventory.mjs', 'utf8');
   const sql = readFileSync('soldier-weapon-sale.sql', 'utf8');
   assert.match(source, /판매 · 100 골드/);
-  assert.match(source, /item \? !item\.equipped : id !== current/);
+  assert.match(source, /filter\(item => !item\.equipped && WEAPONS\[item\.weapon\]\.slot === slot\)/);
+  assert.match(source, /\$\('inventory-sell'\)\.addEventListener\('click', openSalePicker\)/);
+  assert.doesNotMatch(source, /inventory-comparison'\)\.append\(sellWeaponAction/);
   assert.match(source, /await confirmSale\(id\)/);
   assert.match(source, /saleForm\.method = 'dialog'/);
   assert.doesNotMatch(source, /window\.confirm\(`\$\{WEAPONS\[id\]\.name\}/);
@@ -91,4 +93,26 @@ test('selected weapons show their own level and progress using the equipped mete
   assert.match(source, /title\.append\(levelLabel, selectedMeter\)/);
   assert.match(source, /selectedMeter\.removeAttribute\('id'\)/);
   assert.match(source, /selectedMeter\.querySelectorAll\('\[id\]'\)/);
+});
+
+test('equipped and default MAX cards can be combined, including as material', () => {
+  const source = readFileSync('soldier-inventory.mjs', 'utf8');
+  assert.match(source, /combine\.disabled = weaponBusy \|\| item\.level !== 7 \|\| item\.grade === 'S';/);
+  assert.match(source, /candidate\.grade === item\.grade\s*&& candidate\.level === 7\)/);
+  const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
+  assert.match(sql, /if item_a\.equipped or item_b\.equipped then/);
+  assert.match(sql, /set equipped=true where id=reward_id/);
+});
+
+test('weapon art stays centered on every grade and color card', () => {
+  const css = readFileSync('soldier.css', 'utf8');
+  assert.match(css, /\.weapon-image \{[^}]*top: 50%; transform: translateY\(-50%\)/);
+});
+
+test('weapon actions share a vertical stack and compact landscape layout', () => {
+  const source = readFileSync('soldier-inventory.mjs', 'utf8');
+  const css = readFileSync('soldier.css', 'utf8');
+  assert.match(source, /actions\.className = 'inventory-weapon-actions'/);
+  assert.match(css, /\.inventory-weapon-actions \{ display: flex; flex-direction: column;/);
+  assert.match(css, /@media \(orientation: landscape\) and \(max-height: 600px\)/);
 });

@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=22';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=23';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
@@ -80,6 +80,10 @@ async function changeWeaponItem(action = 'read', item = null, weapon = null, mat
     }
   }
   weaponItems = items; identity.gold = result.gold; updateWallet(identity);
+  for (const slot of Object.keys(loadout)) {
+    const equipped = items.find(entry => entry.equipped && WEAPONS[entry.weapon].slot === slot);
+    if (equipped) loadout[slot] = equipped.weapon;
+  }
   Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
 }
 async function operateWeapon(action, item, other, request) {
@@ -130,6 +134,10 @@ async function operateWeapon(action, item, other, request) {
     throw new Error('분해 결과 등급을 확인할 수 없습니다.');
   }
   weaponItems = items; identity.gold = result.inventory.gold; identity.gems = result.gems;
+  for (const slot of Object.keys(loadout)) {
+    const equipped = items.find(entry => entry.equipped && WEAPONS[entry.weapon].slot === slot);
+    if (equipped) loadout[slot] = equipped.weapon;
+  }
   updateWallet(identity); Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
   localStorage.removeItem(pendingKey);
   return result;
@@ -154,10 +162,10 @@ const shop = createShop({
   buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters(),
   buyGold, isGoldReady: () => goldExchangeReady,
   getSupplyCapacity: product => {
-    const available = ['primary', 'secondary', 'melee'].reduce((total, slot) =>
-      total + INVENTORY_LIMIT - inventoryWeapons(equipment, slot).length
-        - weaponItems.filter(item => WEAPONS[item.weapon].slot === slot).length, 0);
-    return available >= product.count;
+    const spaces = ['primary', 'secondary', 'melee'].map(slot =>
+      INVENTORY_LIMIT - inventoryWeapons(equipment, slot).length
+        - weaponItems.filter(item => WEAPONS[item.weapon].slot === slot).length);
+    return spaces.every(space => space > 0) && spaces.reduce((total, space) => total + space, 0) >= product.count;
   },
   getSupplyError: () => supplyError,
   getSupplyErrorCode: () => supplyErrorCode,

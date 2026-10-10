@@ -43,6 +43,7 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/weapon_pool:=public\.soldier_supply_weapons\(\)/);
   assert.match(sql,/보급함 보상을 받을 인벤토리 공간이 부족합니다/);
   assert.match(sql,/selected_weapons/);
+  assert.match(sql,/used_primary>=50 or used_secondary>=50 or used_melee>=50/);
   assert.doesNotMatch(sql,/p_(price|grade|weapon)\b/);
 });
 test('legacy uncolored receipts are accepted without accepting mismatched colored rewards',() => {

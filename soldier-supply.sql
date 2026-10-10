@@ -85,7 +85,8 @@ begin
         union all
         select weapon from public.soldier_weapon_items where client_id=owner_id
       ) owned;
-      if used_primary+needed_primary>50 or used_secondary+needed_secondary>50 or used_melee+needed_melee>50 then
+      if used_primary>=50 or used_secondary>=50 or used_melee>=50
+        or used_primary+needed_primary>50 or used_secondary+needed_secondary>50 or used_melee+needed_melee>50 then
         raise exception '보급함 보상을 받을 인벤토리 공간이 부족합니다. 무기를 판매하거나 재료로 사용한 뒤 다시 시도하세요.';
       end if;
       for i in 1..quantity loop
