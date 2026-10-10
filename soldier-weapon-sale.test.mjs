@@ -18,5 +18,5 @@ test('all un equipped weapon cards can be sold for a fixed 100 gold with an idem
   assert.match(client, /sanggi-weapon-sale-pending-/);
   const inventory = read('soldier-inventory.mjs');
   assert.match(inventory, /판매 · 100 골드/);
-  assert.match(inventory, /id !== current && !item\?\.equipped/);
+  assert.match(inventory, /item \? !item\.equipped : id !== current/);
 });

@@ -46,6 +46,23 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
   let slot = 'primary', sorted = false, keyboardOpened = false, weaponBusy = false, characterBusy = false;
+  const saleDialog = document.createElement('dialog');
+  saleDialog.setAttribute('aria-label', '무기 판매 확인');
+  const saleMessage = document.createElement('p');
+  const saleForm = document.createElement('form'); saleForm.method = 'dialog';
+  for (const [value, label] of [['cancel', '취소'], ['sell', '판매']]) {
+    const button = document.createElement('button'); button.type = 'submit';
+    button.value = value; button.textContent = label; saleForm.append(button);
+  }
+  saleDialog.append(saleMessage, saleForm); document.body.append(saleDialog);
+  function confirmSale(id) {
+    saleMessage.textContent = `${WEAPONS[id].name}을 100골드에 판매하시겠습니까?`;
+    saleDialog.returnValue = 'cancel';
+    return new Promise(resolve => {
+      saleDialog.addEventListener('close', () => resolve(saleDialog.returnValue === 'sell'), { once: true });
+      saleDialog.showModal(); saleForm.querySelector('button').focus();
+    });
+  }
   const materialDialog = document.createElement('dialog');
   materialDialog.id = 'weapon-material-dialog'; materialDialog.setAttribute('aria-label', '무기 강화재료 선택');
   document.body.append(materialDialog);
@@ -113,11 +130,12 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     button.disabled = weaponBusy || !sellWeaponItem;
     button.title = '장착하지 않은 무기를 100골드에 판매합니다.';
     button.addEventListener('click', async () => {
-      if (weaponBusy || !sellWeaponItem
-        || !window.confirm(`${WEAPONS[id].name}을 100골드에 판매하시겠습니까?`)) return;
-      weaponBusy = true; render();
-      $('inventory-status').textContent = '무기를 판매하는 중입니다…';
+      if (weaponBusy || !sellWeaponItem) return;
+      weaponBusy = true;
       try {
+        if (!await confirmSale(id)) return;
+        render();
+        $('inventory-status').textContent = '무기를 판매하는 중입니다…';
         await sellWeaponItem(item || null, id);
         $('inventory-status').textContent = `${WEAPONS[id].name} 판매 완료 · 100골드를 획득했습니다.`;
       } catch (error) {
@@ -491,7 +509,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         if (item && !item.equipped && changeWeaponItem) {
           $('inventory-comparison').append(weaponAction('무기 장착', 'equip', item));
         }
-        if (slot !== 'character' && id !== current && !item?.equipped) {
+        if (slot !== 'character' && (item ? !item.equipped : id !== current)) {
           $('inventory-comparison').append(sellWeaponAction(id, item));
         }
         if (slot === 'character' && id !== current) {

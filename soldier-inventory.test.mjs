@@ -74,8 +74,10 @@ test('only unequipped weapons offer the fixed-price sale action', () => {
   const source = readFileSync('soldier-inventory.mjs', 'utf8');
   const sql = readFileSync('soldier-weapon-sale.sql', 'utf8');
   assert.match(source, /판매 · 100 골드/);
-  assert.match(source, /id !== current && !item\?\.equipped/);
-  assert.match(source, /window\.confirm\(`\$\{WEAPONS\[id\]\.name\}을 100골드에 판매하시겠습니까\?`\)/);
+  assert.match(source, /item \? !item\.equipped : id !== current/);
+  assert.match(source, /await confirmSale\(id\)/);
+  assert.match(source, /saleForm\.method = 'dialog'/);
+  assert.doesNotMatch(source, /window\.confirm\(`\$\{WEAPONS\[id\]\.name\}/);
   assert.match(sql, /if item\.equipped then raise exception/);
   assert.match(sql, /gold=gold\+100/);
 });

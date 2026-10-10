@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=21';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=22';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=11';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=3';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=12';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=4';
 import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=6';
 
 const $ = id => document.getElementById(id);
@@ -200,7 +200,7 @@ async function buySupply(product) {
     weaponItems = items; identity.gold = result.inventory.gold; identity.gems = result.gems;
     updateWallet(identity); Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
     localStorage.removeItem(key);
-    return result.rewards;
+    return result.rewards.map(reward => ({ ...reward, color: reward.color ?? 'standard' }));
   } finally { supplyBusy = false; }
 }
 async function buyGold(product) {

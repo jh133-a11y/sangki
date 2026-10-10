@@ -23,11 +23,12 @@ export function validateSupply(result, product = null, request = null) {
   if (result.rewards.length !== (spec?.count || 0)) throw new Error('보급함 보상 개수를 확인할 수 없습니다.');
   const ids = new Set();
   for (const reward of result.rewards) {
+    const color = reward?.color ?? 'standard';
     if (!reward || ids.has(reward.id) || !Object.hasOwn(WEAPON_ARTWORK, reward.weapon)
-      || !WEAPON_COLORS.includes(reward.color) || !['D','C','B','A','S'].includes(reward.grade) || reward.level !== 1
+      || !WEAPON_COLORS.includes(color) || !['D','C','B','A','S'].includes(reward.grade) || reward.level !== 1
       || typeof reward.id !== 'string' || !reward.id
       || (!result.replayed && !items.some(item => item.id === reward.id && item.weapon === reward.weapon && item.grade === reward.grade
-        && item.color === reward.color && item.source === `supply-${product}`))) throw new Error('보급함 보상 정보를 확인할 수 없습니다.');
+        && item.color === color && item.source === `supply-${product}`))) throw new Error('보급함 보상 정보를 확인할 수 없습니다. 구매가 이미 처리됐을 수 있으니 같은 보급함으로 다시 확인하세요. 최신 soldier-weapon-material-upgrade.sql과 soldier-supply.sql 적용 여부도 확인하세요.');
     ids.add(reward.id);
     if (product !== 'normal' && reward.grade === 'D') throw new Error('보급함 최소 등급이 올바르지 않습니다.');
   }

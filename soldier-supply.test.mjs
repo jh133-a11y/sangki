@@ -45,6 +45,17 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/selected_weapons/);
   assert.doesNotMatch(sql,/p_(price|grade|weapon)\b/);
 });
+test('legacy uncolored receipts are accepted without accepting mismatched colored rewards',() => {
+  const legacy = receipt('normal',['D']);
+  delete legacy.rewards[0].color;
+  delete legacy.inventory.items[0].color;
+  assert.equal(validateSupply(legacy,'normal',owner)[0].color,'standard');
+  legacy.inventory.items[0].color = 'gold';
+  assert.throws(() => validateSupply(legacy,'normal',owner), /보급함 보상/);
+  const mismatch = receipt('normal',['D']);
+  mismatch.rewards[0].color = 'red';
+  assert.throws(() => validateSupply(mismatch,'normal',owner), /보급함 보상/);
+});
 test('opening keeps reference timing, tap-to-advance specials and no visible buttons',() => {
   const source=readFileSync('soldier-supply-opening.mjs','utf8');
   assert.match(source,/turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300/);
