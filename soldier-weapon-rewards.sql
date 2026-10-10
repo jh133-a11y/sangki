@@ -242,6 +242,9 @@ begin
         select array_agg(candidate) into eligible_weapons
         from unnest(weapon_pool) candidate
         where (
+          public.soldier_weapon(item_a.weapon)->>'slot'<>public.soldier_weapon(item_b.weapon)->>'slot'
+          or public.soldier_weapon(candidate)->>'slot'=public.soldier_weapon(item_a.weapon)->>'slot'
+        ) and (
           select count(*) from public.soldier_equipment e
           where e.client_id=owner_id and public.soldier_weapon(e.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
         ) + (
