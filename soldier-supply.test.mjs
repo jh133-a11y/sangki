@@ -56,4 +56,5 @@ test('opening keeps reference timing, tap-to-advance specials and no visible but
   assert.match(source,/forceContextLoss/);
   const shop=readFileSync('soldier-shop.mjs','utf8');
   assert.doesNotMatch(shop,/shop-confirm-odds/);
+  assert.match(shop,/무기 9종 × 색상 4종 = 36가지 조합, 각각 1\/36/);
 });

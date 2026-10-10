@@ -152,7 +152,8 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         const supplyArt = document.createElement('div'); supplyArt.className = 'shop-supply-art'; supplyArt.append(art);
         const odds = document.createElement('details'); odds.className = 'shop-supply-odds';
         const summary = document.createElement('summary'); summary.textContent = '획득 확률';
-        const description = document.createElement('p'); description.textContent = `${product.odds} · 보상 무기 9종 각각 1/9`;
+        const description = document.createElement('p');
+        description.textContent = `${product.odds} · 무기 9종 × 색상 4종 = 36가지 조합, 각각 1/36`;
         odds.append(summary,description);
         article.append(price,supplyArt,title,text,button,odds);
       } else article.append(price, art, title, text, button);
