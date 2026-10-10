@@ -98,6 +98,7 @@ begin
   end if;
   select * into profile from public.soldier_profiles where client_id=sess.client_id;
   return jsonb_build_object('gold',profile.gold::text,'gems',profile.gems::text,
+    'gold_exchange_version',1,
     'equipped',profile.equipped_character,'default_level',profile.default_character_level,'character_version',2,
     'characters',coalesce((
       select jsonb_object_agg(character,jsonb_build_object('level',level))

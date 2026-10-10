@@ -1,6 +1,7 @@
 (() => {
   const audio = document.getElementById('soldier-lobby-music');
   const home = document.getElementById('home');
+  const menus = ['equipment-dialog', 'shop-dialog'].map(id => document.getElementById(id));
   const button = document.getElementById('soldier-music-toggle');
   const input = document.getElementById('soldier-music-volume');
   const output = document.getElementById('soldier-music-volume-label');
@@ -23,7 +24,7 @@
       console.warn('솔져 음악 설정 저장 오류', error);
     }
   }
-  const allowed = () => enabled && !home.hidden && pageActive;
+  const allowed = () => enabled && pageActive && (!home.hidden || menus.some(menu => menu.open));
   function applyVolume() {
     audio.volume = volume / 100; input.value = String(volume);
     output.textContent = `${volume}%`; input.setAttribute('aria-valuetext', `${volume}%`);
@@ -34,8 +35,8 @@
   }
   function reportFailure(error) {
     failed = true;
-    status.textContent = '홈 음악을 재생하지 못했습니다. 재시도를 눌러 주세요.';
-    console.error('솔져 홈 음악 오류', error); render();
+    status.textContent = '배경음악을 재생하지 못했습니다. 재시도를 눌러 주세요.';
+    console.error('솔져 배경음악 오류', error); render();
   }
   async function start() {
     if (!allowed() || starting || failed || !audio.paused) return;
@@ -47,7 +48,7 @@
     } catch (error) {
       if (!allowed() && error.name === 'AbortError') return;
       if (error.name === 'NotAllowedError') {
-        if (allowed()) status.textContent = '화면을 누르면 홈 음악이 시작됩니다.';
+        if (allowed()) status.textContent = '화면을 누르면 배경음악이 시작됩니다.';
       } else reportFailure(error);
     } finally { starting = false; }
   }
@@ -69,6 +70,7 @@
   }
   for (const type of ['pointerdown', 'click', 'keydown']) document.addEventListener(type, unlock, true);
   new MutationObserver(sync).observe(home, { attributes: true, attributeFilter: ['hidden'] });
+  for (const menu of menus) new MutationObserver(sync).observe(menu, { attributes: true, attributeFilter: ['open'] });
   audio.addEventListener('error', () => reportFailure(audio.error));
   window.addEventListener('pagehide', () => { pageActive = false; audio.pause(); });
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });

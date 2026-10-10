@@ -18,7 +18,7 @@ function fixture(saved = {}, play) {
     setAttribute(key, value) { this.attributes[key] = value; }
     closest() { return null; }
   }
-  const ids = ['soldier-lobby-music', 'home', 'soldier-music-toggle', 'soldier-music-volume', 'soldier-music-volume-label', 'soldier-music-status'];
+  const ids = ['soldier-lobby-music', 'home', 'equipment-dialog', 'shop-dialog', 'soldier-music-toggle', 'soldier-music-volume', 'soldier-music-volume-label', 'soldier-music-status'];
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const audio = nodes['soldier-lobby-music'], home = nodes.home;
   audio.paused = true; home.hidden = false;
@@ -28,14 +28,14 @@ function fixture(saved = {}, play) {
   const document = new Element(), window = new Element();
   document.getElementById = id => nodes[id];
   const storage = new Map(Object.entries(saved));
-  let observer;
+  const observers=[];
   runInNewContext(source, {
     document, window, Element,
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
-    MutationObserver: class { constructor(callback) { observer = callback; } observe() {} },
+    MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} },
     console: { warn() {}, error() {} }
   });
-  return { nodes, audio, home, window, storage, sync: () => observer() };
+  return { nodes, audio, home, window, storage, sync: () => observers.forEach(callback => callback()) };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
@@ -70,4 +70,20 @@ test('invalid saved volume is rejected and a file error exposes retry', async ()
   assert.equal(f.nodes['soldier-music-toggle'].textContent, '음악 재시도');
   f.audio.pause(); f.nodes['soldier-music-toggle'].on('click'); await settle();
   assert.equal(f.audio.paused, false);
+});
+
+test('original holiday music continues through inventory and shop with controls only in settings', async () => {
+  const f=fixture();await settle();
+  f.audio.currentTime=12;
+  f.home.hidden=true;f.nodes['equipment-dialog'].open=true;f.sync();await settle();
+  assert.equal(f.audio.paused,false);assert.equal(f.audio.currentTime,12);
+  f.nodes['equipment-dialog'].open=false;f.nodes['shop-dialog'].open=true;f.sync();await settle();
+  assert.equal(f.audio.paused,false);assert.equal(f.audio.currentTime,12);
+  f.nodes['shop-dialog'].open=false;f.sync();assert.equal(f.audio.paused,true);
+  const html=readFileSync('sanggi-soldier.html','utf8');
+  assert.match(html,/<dialog id="settings">[\s\S]*id="soldier-music-toggle"[\s\S]*id="soldier-music-volume"[\s\S]*?<\/dialog>/);
+  assert.doesNotMatch(html.slice(html.indexOf('<main'),html.indexOf('</main>')),/soldier-music-controls/);
+  assert.match(html,/soldier-holiday\.mp3\?v=1/);
+  assert.doesNotMatch(html,/src="soldier-lobby\.mp3/);
+  assert.ok(readFileSync('soldier-holiday.mp3').length>100000);
 });

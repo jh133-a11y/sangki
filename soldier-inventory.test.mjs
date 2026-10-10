@@ -86,7 +86,7 @@ test('enhancement UI keeps XP internal and exposes level-adjacent progress and a
   assert.match(source, /nextLevel\.textContent = `LV\$\{preview\.level\}`/);
   assert.match(source, /rows\.forEach/);
   assert.match(source, /선택초기화/);
-  assert.match(source, /input\.dataset\.grade === grade/);
+  assert.match(source, /selectBulkUpgradeMaterials\(item, candidates/);
 });
 
 test('progress is in the equipped heading next to the level, never on item artwork', () => {
@@ -103,11 +103,11 @@ test('progress is in the equipped heading next to the level, never on item artwo
 test('only unequipped weapons offer the fixed-price sale action', () => {
   const source = readFileSync('soldier-inventory.mjs', 'utf8');
   const sql = readFileSync('soldier-weapon-sale.sql', 'utf8');
-  assert.match(source, /판매 · 100 골드/);
+  assert.match(source, /선택 판매/);
   assert.match(source, /filter\(item => !item\.equipped && WEAPONS\[item\.weapon\]\.slot === slot\)/);
   assert.match(source, /\$\('inventory-sell'\)\.addEventListener\('click', openSalePicker\)/);
   assert.doesNotMatch(source, /inventory-comparison'\)\.append\(sellWeaponAction/);
-  assert.match(source, /await confirmSale\(id\)/);
+  assert.match(source, /await confirmSale\(entries\.length\)/);
   assert.match(source, /saleForm\.method = 'dialog'/);
   assert.doesNotMatch(source, /window\.confirm\(`\$\{WEAPONS\[id\]\.name\}/);
   assert.match(sql, /if item\.equipped then raise exception/);

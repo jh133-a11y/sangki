@@ -93,7 +93,7 @@ test('character cards layer the common frame, portrait, name, and complete level
         assert.equal(card.children[1].alt, character.name.replace('\n', ' '));
         assert.equal(card.children[2].className, 'character-name');
         assert.equal(card.children[2].textContent, character.name);
-        assert.equal(card.children[3].textContent, characterLevelLabel(level));
+        assert.equal(card.children[3].textContent, level === 10 ? 'MAX' : String(level));
         assert.equal(card.children[3].attributes['aria-label'], `레벨 ${level}`);
       }
     }

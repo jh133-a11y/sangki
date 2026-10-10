@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=7';
+import { CHARACTERS } from './soldier-characters.mjs?v=8';
 
 export const HOME_MODEL = 'soldier-james.glb';
 

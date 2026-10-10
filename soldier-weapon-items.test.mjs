@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { WEAPON_COLORS } from './soldier-core.mjs';
-import { WEAPON_REWARDS, weaponColorLabel, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
+import { WEAPON_REWARDS, weaponColorLabel, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, selectBulkUpgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
 
 test('all weapon colors and grades reuse the same card layout and colored assets', () => {
   assert.equal(WEAPON_REWARDS.length, 216);
@@ -119,6 +119,28 @@ test('material upgrades use requested per-card gold costs and protect equipped/d
   assert.throws(()=>validateWeaponItems({...state,items:[{...state.items[0],upgrade_progress:20}]}),/진행률/);
   assert.equal(validateWeaponItems({...state,material_version:1})[0].materialReady, undefined);
   assert.equal(validateWeaponItems({...state,material_rate:undefined})[0].materialReady, false);
+});
+
+test('D/C/B bulk materials select only untouched level-one items and stop at MAX', () => {
+  const target={id:'target',grade:'S+',level:1,upgrade_xp:0};
+  for (const grade of ['D','C','B']) {
+    const fresh={id:'fresh',grade,level:1,upgrade_xp:0,equipped:false,source:'supply'};
+    const candidates=[fresh,{...fresh,id:'partial',upgrade_xp:1},{...fresh,id:'leveled',level:2},
+      {...fresh,id:'max',level:7},{...fresh,id:'equipped',equipped:true},{...fresh,id:'default',source:'default'},
+      {...fresh,id:'target'},{...fresh,id:'other',grade:'A'}];
+    assert.deepEqual(selectBulkUpgradeMaterials(target,candidates,[],grade),[fresh]);
+    assert.deepEqual(selectBulkUpgradeMaterials(target,candidates,[fresh],grade),[fresh]);
+  }
+  const materials=Array.from({length:20},(_,index)=>({id:String(index),grade:'D',level:1,upgrade_xp:0}));
+  const almostMax={id:'target',grade:'D',level:6,upgrade_xp:0};
+  const selected=selectBulkUpgradeMaterials(almostMax,materials,[],'D');
+  assert.equal(selected.length,2);
+  assert.equal(weaponUpgradePreview(almostMax,selected).level,7);
+  assert.deepEqual(selectBulkUpgradeMaterials(almostMax,materials,selected,'D'),selected);
+  assert.deepEqual(selectBulkUpgradeMaterials({...almostMax,level:7},materials,[],'D'),[]);
+  const inventory=readFileSync('soldier-inventory.mjs','utf8');
+  assert.match(inventory,/input\.disabled = !input\.checked && preview\.level === 7/);
+  assert.match(inventory,/for \(const grade of \['C', 'D', 'B'\]\)/);
 });
 
 test('material XP preserves invested levels and percentages with multi-level carry and MAX overflow', () => {

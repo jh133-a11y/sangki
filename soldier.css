@@ -1,4 +1,4 @@
-:root { color-scheme: dark; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; color: #eef4ff; background: #121c2a; --ui-surface: #e6ebef; --ui-panel: #edf0f5; --ui-ink: #303c46; --ui-border: #aab6bf; --ui-metal: linear-gradient(#455364, #19222c); --ui-action: linear-gradient(#29acff, #0067b9); }
+:root { color-scheme: dark; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; color: #eef4ff; background: #101c28; --ui-surface: #f4f8fb; --ui-panel: #fff; --ui-ink: #243c4b; --ui-border: #c8d8e2; --ui-metal: linear-gradient(120deg, #20384a, #142735); --ui-action: linear-gradient(120deg, #118d99, #126f89); --ui-muted: #617b8c; --ui-selected: #dff3f2; }
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; overscroll-behavior: none; }
 [hidden] { display: none !important; }
@@ -147,7 +147,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-tabs button { flex: 1; border-radius: 8px 20px 0 0; background: #8c9aa4; color: #23343e; font-weight: 900; font-size: clamp(14px, 2.3vw, 30px); min-height: 65px; border: 0; }
 .inventory-tabs button[aria-selected="true"] { background: #dce0e9; }
 .inventory-tabs button:last-child { margin: 0 0 12px auto; background: linear-gradient(#22a5ff, #0067b9); color: white; border: 2px solid #718393; border-radius: 8px; }
-#equipment-panel { padding: 16px; }
+#equipment-panel { padding: 16px; min-width: 0; }
 .inventory-details { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .inventory-equipped, .inventory-comparison { padding: 8px; border: 2px solid #b2bcc9; border-radius: 8px; background: #edf0f5; min-width: 0; }
 .inventory-equipped h2, .inventory-comparison h2 { margin: 0 0 8px; padding: 6px 10px; background: #aebfda; color: #35444f; font-size: clamp(14px, 1.8vw, 23px); }
@@ -170,11 +170,11 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-item-detail dd { margin: 0; padding: 3px 8px; text-align: center; background: #515563; color: #fff; border-radius: 4px; }
 #equipment-dialog .equipment-card { position: relative; width: 100%; aspect-ratio: 1091 / 1442; overflow: hidden; border-radius: 5% / 4%; }
 #equipment-dialog .character-card { width: 100%; }
-.inventory-list-panel { margin-top: 16px; padding: 8px; border: 2px solid #b2bcc9; border-radius: 8px; background: #edf0f5; }
+.inventory-list-panel { margin-top: 16px; padding: 8px; border: 2px solid #b2bcc9; border-radius: 8px; background: #edf0f5; min-width: 0; }
 .inventory-list-panel > header { display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: #aebfda; }
 .inventory-list-panel h2 { flex: 1; text-align: center; margin: 0; color: #fff; font-size: clamp(14px, 2vw, 26px); }
 .inventory-list-panel button:not(.inventory-item) { padding: 4px 12px; min-height: 36px; border-radius: 4px; background: linear-gradient(#29acff, #0067b9); font-weight: 700; }
-#inventory-items { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; }
+#inventory-items { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; min-width: 0; max-width: 100%; }
 #inventory-items .inventory-item { flex: 0 0 clamp(80px, 10vw, 150px); padding: 0; background: transparent; border: 0; border-radius: 0; }
 #equipment-dialog:not(.character-inventory) #inventory-items .inventory-item { flex: 0 0 var(--inventory-weapon-card-width); align-self: flex-start; height: auto; }
 #inventory-status { font-size: 12px; margin: 10px 0 0; }
@@ -243,8 +243,19 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .rank-meter { height: 4px; background: #7a8287; box-shadow: 0 1px 2px #000; }
 .rank-meter span { display: block; height: 100%; background: #e0ac39; width: 0; }
 #rank-percent { position: absolute; right: 0; bottom: -4px; font-size: 10px; }
-.home-mode-label { position: absolute; top: 36%; left: 2.3%; display: flex; align-items: center; gap: 12px; font-size: 12px; color: #b8c3cd; background: linear-gradient(90deg, #172330aa, transparent); }
-.home-mode-label strong { background: #efbe3e; color: #1e2630; min-width: 60px; text-align: center; padding: 5px 12px; font-size: 16px; }
+.home-social-actions { position: absolute; top: 36%; left: 2.3%; display: flex; gap: 8px; }
+#home .home-social-actions button:disabled {
+  display: grid; gap: 2px; min-width: 84px; min-height: 44px; margin: 0;
+  padding: 6px 14px; border: 1px solid #618497; border-radius: 9px;
+  background: #203b4ddd; color: #dcebf3; font-size: 15px; font-weight: 700;
+  box-shadow: 0 3px 10px #07192744; opacity: 1;
+}
+.home-social-actions small { color: #9db8c7; font-size: 10px; font-weight: 400; }
+.character-rotate-hint:empty { display: none; }
+@media (max-height: 500px), (max-width: 600px) {
+  #home .home-social-actions button { min-width: 64px; min-height: 34px; padding: 3px 8px; font-size: 12px; }
+  .home-social-actions small { font-size: 9px; }
+}
 #home .loadout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; position: absolute; left: 2.3%; top: 46%; bottom: auto; width: 30%; max-width: 380px; padding: 0; border: 0; background: transparent; }
 #home .equipment-card, .character-card { position: relative; min-width: 0; aspect-ratio: 1091 / 1442; height: auto; overflow: hidden; border: 0; box-shadow: none; margin: 0; background: transparent; }
 #home .equipment-card { border-radius: 5% / 4%; }
@@ -504,7 +515,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   #equipment-dialog .inventory-topbar > button { min-height: 28px; font-size: 26px; margin: 0; }
   #equipment-dialog .inventory-tabs { flex: 0 0 36px; padding: 2px 8px 0; gap: 4px; }
   #equipment-dialog .inventory-tabs button { min-height: 30px; margin: 0; font-size: 12px; padding: 2px; }
-  #equipment-dialog #equipment-panel { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) calc(var(--inventory-weapon-card-height) + 34px) auto; gap: 4px; padding: 4px; }
+  #equipment-dialog #equipment-panel { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) calc(var(--inventory-weapon-card-height) + 34px) auto; gap: 4px; padding: 4px; }
   #equipment-dialog .inventory-details { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; gap: 4px; }
   #equipment-dialog .inventory-equipped, #equipment-dialog .inventory-comparison { min-height: 0; padding: 3px; display: flex; flex-direction: column; }
   #equipment-dialog .inventory-details h2 { flex: 0 0 auto; min-height: 23px; gap: 4px; padding: 2px 4px; margin: 0 0 3px; font-size: 11px; }
@@ -628,14 +639,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   .home-bottom-mark { display: none; }
 }
 
-:root {
-  --ui-surface: #e9eff4;
-  --ui-panel: #f2f6f8;
-  --ui-ink: #243644;
-  --ui-border: #9baeb8;
-  --ui-metal: linear-gradient(145deg, #203541, #101e29);
-  --ui-action: linear-gradient(145deg, #39c4d1, #087eaa);
-}
 button {
   border-color: #849aa7;
   border-radius: 8px;
@@ -656,10 +659,9 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
 }
 #equipment-status { color: #ffdc81; text-shadow: 0 1px 3px #000; }
 .home-set-effect {
-  position: absolute;
-  left: 2.3%;
-  bottom: calc(10% + clamp(40px, 12vw, 110px) + 5px);
-  width: min(36vw, 440px);
+  position: static;
+  grid-column: 1 / -1;
+  width: 100%;
   margin: 0;
   padding: 5px 8px;
   border: 1px solid #d1ad5b88;
@@ -670,18 +672,25 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
   line-height: 1.25;
   text-shadow: 0 1px 2px #000;
 }
+#home .loadout .home-set-effect { display: block; margin: 0; }
 .grade-frame { z-index: 0; }
 .equipment-card .weapon-image { z-index: 1; }
 .equipment-card .weapon-level,
 .equipment-card .weapon-name,
 .equipment-card .weapon-color-label { z-index: 3; }
 .equipment-card[data-set-color="gold"], #home .equipment-card[data-set-color="gold"] {
+  --set-glow: #f0b921b0;
+  --set-edge: #ffe078;
   box-shadow: inset 0 0 0 2px #ffe078, 0 0 12px 3px #f0b921b0;
 }
 .equipment-card[data-set-color="red"], #home .equipment-card[data-set-color="red"] {
+  --set-glow: #ee4b42b0;
+  --set-edge: #ff817d;
   box-shadow: inset 0 0 0 2px #ff817d, 0 0 12px 3px #ee4b42b0;
 }
 .equipment-card[data-set-color="silver"], #home .equipment-card[data-set-color="silver"] {
+  --set-glow: #b9d6efb0;
+  --set-edge: #e5f2ff;
   box-shadow: inset 0 0 0 2px #e5f2ff, 0 0 12px 3px #b9d6efb0;
 }
 #home .character-card { border-radius: 5% / 4%; }
@@ -976,10 +985,281 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
   #equipment-dialog .inventory-item-detail dl { font-size: 10px; }
 }
 @media (max-width: 600px) {
-  .home-set-effect { width: min(36vw, 440px); font-size: 8px; padding: 3px 4px; }
+  .home-set-effect { font-size: 8px; padding: 3px 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-left,
   .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-right { animation: none; }
   .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-results { transition: none; }
+}
+
+:is(#home, #hud, dialog) button {
+  border-color: #458395;
+  background: var(--ui-action);
+  color: #f8fcff;
+  box-shadow: 0 2px 5px #18384b18;
+  text-shadow: none;
+  transition: background-color .15s, border-color .15s, box-shadow .15s;
+}
+:is(#home, #hud, dialog) button:disabled {
+  background: #dce6ed;
+  border-color: #c8d6df;
+  color: #667e8d;
+  opacity: 1;
+  box-shadow: none;
+}
+:is(#home, #hud, dialog) button:focus-visible {
+  outline: 3px solid #35b7be;
+  outline-offset: 2px;
+}
+:is(#home, #hud, dialog) button:hover:not(:disabled) { filter: brightness(1.07); }
+dialog, #character-upgrade-dialog, #weapon-material-dialog, #weapon-operation-dialog, #weapon-sale-dialog {
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  box-shadow: 0 20px 65px #061b3359;
+}
+dialog::backdrop { background: #071b2bb5; }
+dialog > h2, .weapon-operation-header, .weapon-material-header {
+  border-color: #31566a;
+  background: var(--ui-metal);
+  color: #f3f9ff;
+  text-shadow: none;
+}
+:is(#home, #hud, dialog) button.close, #weapon-operation-dialog .weapon-operation-close,
+#weapon-sale-dialog .weapon-operation-close, #weapon-material-dialog .weapon-material-close {
+  border: 1px solid #8ca9ba;
+  border-radius: 8px;
+  background: #315063;
+  color: #fff;
+  box-shadow: none;
+}
+dialog form { border-color: var(--ui-border); }
+dialog input:not([type="range"]):not([type="checkbox"]), dialog select {
+  background: #fff;
+  border-color: #b9cfdb;
+  border-radius: 8px;
+  color: var(--ui-ink);
+}
+dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b98; }
+.panel, #hud .ammo, #hud .match-info {
+  background: var(--ui-metal);
+  border-color: #698b9f;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px #04152326;
+}
+#hud .round { border-radius: 50%; background: #203c50e6; border-color: #7b9db3; }
+#hud .weapons button { background: #203c50e6; border-radius: 8px; }
+#hud .weapons button[aria-pressed="true"], #hud .round[aria-pressed="true"] {
+  background: var(--ui-action); border-color: #6cdfdf;
+}
+#hud .game-status { background: #f4f8fbe8; border: 1px solid var(--ui-border); border-radius: 8px; }
+#hud .desktop-help { background: #142735d9; border-radius: 8px; }
+#joystick { border-color: #89b4c6; background: #173448a6; }
+#joystick span { background: #b2d9e5; border-color: #e6f5fb; }
+.home-top-actions button, .home-top-actions a {
+  border: 1px solid #7195a655; border-radius: 10px; background: #183447b8;
+}
+#home .play-button { border-radius: 12px; border-color: #62bbc8; box-shadow: 0 6px 24px #02152655; }
+#shop-open { border-color: #62bbc8; }
+#home .home-status, .soldier-music-controls { border-radius: 8px; background: #162f40dc; border: 1px solid #52788b; }
+.currency, .shop-wallet > span {
+  background: #172f42; border-color: #5b7d92; border-radius: 8px; box-shadow: none;
+}
+.inventory-topbar { background: var(--ui-metal); }
+#equipment-dialog .inventory-topbar > button, #shop-dialog .inventory-topbar > button { background: #315366; color: #d8f1fa; border-radius: 8px; box-shadow: none; }
+#equipment-dialog, #shop-dialog { background: var(--ui-surface); border-color: var(--ui-border); border-radius: 0; }
+.inventory-tabs, .shop-tabs { background: #e3ecf2; }
+#equipment-dialog .inventory-tabs button, #shop-dialog .shop-tabs button {
+  border: 1px solid #c3d5df; border-bottom: 0; border-radius: 10px 10px 0 0;
+  background: #d4e2ea; color: #4a6677; box-shadow: none;
+}
+#equipment-dialog .inventory-tabs button[aria-selected="true"], #shop-dialog .shop-tabs button[aria-selected="true"] {
+  background: #f4f8fb; color: #087d88; border-color: #b5d6dc;
+}
+#equipment-dialog .inventory-tabs button:last-child { border-radius: 8px; background: var(--ui-action); color: #fff; }
+.room-row, .setting-row, #lobby-players li, #result-scores > p {
+  border: 1px solid var(--ui-border); border-radius: 8px; background: #fff;
+}
+.room-row { padding: 8px; margin-top: 8px; }
+.setting-row { padding: 8px; margin-top: 8px; }
+#lobby-players { padding: 0; list-style: none; }
+#lobby-players li { padding: 8px 12px; margin: 6px 0; }
+#rank-dialog p, #result > p { color: var(--ui-muted); }
+.weapon-operation-slots, .weapon-operation-controls, .weapon-operation-choices,
+.weapon-material-target, .weapon-material-footer, .weapon-material-toolbar, .weapon-material-list {
+  border: 1px solid var(--ui-border); border-radius: 8px; background: #fff;
+}
+.weapon-material-target-heading, .weapon-material-toolbar { background: #e8eff4; color: var(--ui-ink); }
+.weapon-material-stats th { color: #486575; }
+.weapon-material-stats td[aria-label="현재"], .weapon-material-stat-next:not(:empty) {
+  background: #e8f0f5; color: #23495d; border-radius: 5px; font-variant-numeric: tabular-nums;
+}
+.weapon-material-stats .weapon-material-stat-next:not(:empty) { background: #dff3f2; color: #0c7980; }
+.weapon-material-tool-icon { border-color: #66b8c1; color: #118b98; background: #eaf7f7; box-shadow: none; }
+.weapon-material-warning, .weapon-operation-warning { color: #ac6429; text-shadow: none; }
+.weapon-material-warning::before { border-color: #d6b277; background: #fff1da; color: #996023; }
+.weapon-material-cost, .weapon-operation-cost { background: #203c50; border-radius: 8px; }
+.weapon-material-meter progress { border: 1px solid #a1bbc9; background: #d9e6ee; }
+.weapon-material-meter progress::-webkit-progress-bar { background: #d9e6ee; }
+.weapon-material-meter progress::-webkit-progress-value { background: #1698a5; }
+.weapon-material-meter progress::-moz-progress-bar { background: #1698a5; }
+.weapon-material-meter span { color: #16364a; text-shadow: 0 1px #ffffff66; }
+.weapon-operation-choice, .weapon-material-list label { border: 1px solid #c4d6e0; border-radius: 7px; background: #f4f8fb; }
+.weapon-operation-choice[aria-pressed="true"], .weapon-material-list label:has(input:checked) {
+  border-color: #148f9b; background: #e0f4f3; box-shadow: 0 0 0 1px #148f9b;
+}
+.weapon-material-check { background: #e6f8f5eb; border-color: #40afa8; color: #117b78; box-shadow: none; }
+.weapon-operation-empty { border-color: #b5cedb; background: #edf5f9; border-radius: 8px; }
+.shop-product {
+  display: flex; flex-direction: column; border: 1px solid #c4d7e1; border-radius: 14px;
+  background: #fff; color: var(--ui-ink); box-shadow: 0 6px 18px #17364b14;
+}
+.shop-product > h2, .shop-supply-product h2, .shop-character-product h2 {
+  background: #fff; color: #243e50; margin: 0; line-height: 1.15;
+}
+.shop-product > p, .shop-supply-product > p, .shop-character-product > p {
+  background: #f1f6f9; color: #526e7e; margin: 0; font-weight: 600;
+}
+.shop-product > button {
+  position: static; inset: auto; width: calc(100% - 24px); height: auto; min-height: 40px;
+  margin: 12px; padding: 8px; border: 1px solid #168695; border-radius: 8px; opacity: 1;
+}
+.shop-product > button:disabled { background: #e1ecf2; color: #5b7788; }
+.shop-price {
+  inset: 10px auto auto 10px; padding: 5px 10px; border: 1px solid #ffffff66;
+  border-radius: 9px; background: #193749e8; color: #e0f9ff; font-size: clamp(16px, 2vw, 26px);
+}
+.shop-supply-art { background: radial-gradient(ellipse at 50% 62%, #cbdde6, #e9f2f6 65%, #f5f9fb); }
+.shop-supply-art img { padding: 16px 10px 0; filter: none; }
+.shop-supply-odds { margin-top: auto; border-top: 1px solid #d5e3eb; background: #edf4f8; color: #4b687a; }
+.shop-character-ability {
+  border-color: #b5d9de; background: #e0f3f3; color: #176e78; box-shadow: none; border-radius: 10px;
+}
+.shop-character-ability small { color: #477d87; }
+.shop-character-ability strong { color: #176e78; }
+.shop-character-product[data-character="korean-girl"] > img { padding: 14% 7% 0; background: #303335; }
+.shop-character-product h2 { white-space: pre-line; min-height: 2.7em; display: grid; place-content: center; }
+.shop-owned-ribbon {
+  inset: 12px 12px auto auto; width: auto; aspect-ratio: auto; padding: 7px 12px;
+  background: #e1f5ee; border: 1px solid #9bcbb7; border-radius: 8px; color: #247a5d; clip-path: none; filter: none;
+}
+.shop-owned-ribbon > span { position: static; width: auto; transform: none; font-size: 13px; }
+.shop-gold-art { background: radial-gradient(ellipse, #fff4cf, #eee5c7); color: #765521; }
+.shop-gold-art strong { color: #765521; text-shadow: none; }
+.shop-gold-art small { color: #987837; }
+.shop-specialty { color: #9c7033; }
+.shop-notice, #shop-status { color: #587385; }
+.shop-confirm-actions { border: 0; justify-content: flex-end; }
+#shop-confirm-dialog #shop-confirm-cancel, #character-upgrade-dialog button[value="cancel"] {
+  background: #e3edf3; border-color: #b7ceda; color: #456475;
+}
+#shop-result-dialog { width: min(420px, 90vw); padding: 0 18px 18px; }
+#shop-result-dialog h2 { margin: 0 -18px 16px; padding: 14px 18px; font-size: 20px; }
+#shop-result-message { line-height: 1.65; overflow-wrap: anywhere; white-space: pre-line; }
+#shop-result-dialog form { display: flex; justify-content: flex-end; border: 0; }
+#shop-result-dialog[data-state="success"] h2 { background: #147d79; }
+#shop-result-dialog[data-state="error"] h2 { background: #8e3945; }
+#settings .soldier-music-controls {
+  position: static; inset: auto; width: auto; max-width: none;
+  display: grid; grid-template-columns: 1fr auto; gap: 10px;
+  padding: 12px; margin: 0 0 16px; border: 1px solid var(--ui-border);
+  background: #e9f2f6; color: var(--ui-ink); border-radius: 10px;
+}
+#settings .soldier-music-controls h3 { margin: 0; align-self: center; font-size: 16px; }
+#settings .soldier-music-controls button { min-height: 36px; font-size: 13px; }
+#settings .soldier-music-controls label { margin: 0; }
+#settings .soldier-music-controls input, #settings .soldier-music-controls [role="status"] { grid-column: 1 / -1; width: 100%; }
+#settings .soldier-music-controls [role="status"]:empty { display: none; }
+@media (max-width: 900px), (max-height: 600px) {
+  #shop-dialog[open] {
+    display: flex; flex-direction: column; overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #shop-dialog .inventory-topbar { flex: 0 0 auto; min-height: 42px; padding: 3px 8px; }
+  #shop-dialog .inventory-topbar > button { margin: 0; min-height: 32px; }
+  #shop-dialog .shop-wallet { min-width: 0; gap: 6px; }
+  #shop-dialog .shop-wallet > span { min-width: 0; gap: 5px; padding: 5px 8px; font-size: 14px; }
+  #shop-dialog .shop-wallet svg { width: 22px; height: 22px; }
+  #shop-dialog .shop-wallet strong { overflow-wrap: anywhere; }
+  #shop-dialog .shop-tabs { flex: 0 0 auto; overflow-x: auto; padding: 5px 8px 0; gap: 5px; touch-action: pan-x; }
+  #shop-dialog .shop-tabs button { min-height: 36px; padding: 5px; font-size: 13px; }
+  #shop-products {
+    flex: 1; min-height: 0; min-width: 0; max-width: 100%;
+    align-items: flex-start; overflow: auto; padding: 10px 8px;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  #shop-status { flex: 0 0 auto; max-height: 3.8em; overflow-y: auto; padding: 6px 8px; font-size: 11px; line-height: 1.3; }
+}
+#equipment-dialog #inventory-items .inventory-item[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px #ffe36d, 0 0 12px 3px #ffcc457a;
+  border-radius: 5% / 4%;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #equipment-dialog:not(.character-inventory) #equipment-panel {
+    overflow-y: auto;
+    grid-template-rows: minmax(170px, 1fr) calc(var(--inventory-weapon-card-height) + 34px) auto;
+  }
+  #equipment-dialog:not(.character-inventory) .inventory-item-detail { height: auto; }
+  #equipment-dialog:not(.character-inventory) .inventory-item-detail dl {
+    max-height: none;
+    overflow: visible;
+    align-content: start;
+    font-size: 10px;
+    line-height: 1.25;
+    gap: 2px;
+  }
+  #equipment-dialog:not(.character-inventory) .inventory-item-detail dt,
+  #equipment-dialog:not(.character-inventory) .inventory-item-detail dd {
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    padding: 2px;
+    line-height: 1.25;
+  }
+  #equipment-dialog:not(.character-inventory) .inventory-weapon-actions button {
+    height: auto; min-height: 24px; max-height: none; padding: 3px; font-size: 10px;
+  }
+}
+#supply-opening-dialog { border: 0; border-radius: 0; background: #081b2b; color: #fff; }
+body:has(#shop-dialog[open]) #world, body:has(#supply-opening-dialog[open]) #world { visibility: hidden; }
+.supply-burst { filter: none; }
+.supply-opening-crate { position: absolute; inset: 0; transform-origin: 50% 65%; }
+.supply-opening-crate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.supply-crate-body { clip-path: polygon(0 34.4%, 19.5% 34.4%, 34.7% 48.1%, 91.4% 34.4%, 100% 34.4%, 100% 100%, 0 100%); }
+.supply-crate-lid { clip-path: polygon(19.5% 34.4%, 35.9% 16.9%, 75.3% 16.9%, 91.4% 34.4%, 75% 48.3%, 34.7% 48.1%); transform-origin: 36% 34%; }
+.supply-opening-reward { opacity: 0; }
+[data-phase="opening"] .supply-opening-crate { animation: supply-crate-turn .4s ease-out both; will-change: transform; }
+[data-phase="opening"] .supply-crate-lid { animation: supply-lid-open .16s .2s ease-out both; will-change: transform, opacity; }
+[data-phase="opening"] .supply-opening-reward { will-change: transform, opacity; }
+[data-phase="revealed"] .supply-crate-lid { transform: translateY(-22%) rotate(-20deg); opacity: .65; }
+[data-phase="revealed"] .supply-opening-reward { opacity: 1; }
+#supply-opening-dialog[data-paused="true"] * { animation-play-state: paused; }
+.supply-opening-hint { text-align: center; color: #bad7e7; margin: 12px 0; font-size: 13px; }
+.supply-opening-counter { border: 1px solid #577e94; border-radius: 10px; padding: 6px 12px; background: #1a3a50; }
+.equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"] {
+  animation: weapon-set-pulse 3.2s ease-in-out infinite;
+}
+.home-set-effect[data-set-color="gold"] { color: #ffe079; border-color: #ac862e; }
+.home-set-effect[data-set-color="red"] { color: #ff8290; border-color: #b95462; }
+.home-set-effect[data-set-color="silver"] { color: #d9edf9; border-color: #829bab; }
+.inventory-set-effect[data-set-color="gold"] { color: #83600c; border-color: #b58d2e; }
+.inventory-set-effect[data-set-color="red"] { color: #b52d3a; border-color: #cb5f6d; }
+.inventory-set-effect[data-set-color="silver"] { color: #476d84; border-color: #89a5b5; }
+@keyframes weapon-set-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--set-edge), 0 0 4px 1px var(--set-glow); }
+  50% { box-shadow: inset 0 0 0 2px var(--set-edge), 0 0 14px 4px var(--set-glow); }
+}
+@keyframes supply-crate-turn { 0% { transform: rotate(-7deg) scale(.96); } 50% { transform: rotate(2deg) translateY(-2%); } 100% { transform: none; } }
+@keyframes supply-lid-open { to { transform: translateY(-22%) rotate(-20deg); opacity: .65; } }
+@media (max-height: 420px) {
+  .shop-product > button { min-height: 32px; margin: 8px 12px; padding: 4px; }
+  .supply-opening-hint { margin: 3px 0; font-size: 11px; }
+  .room-row, .setting-row { padding: 5px; margin-top: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#home, #hud, dialog) button { transition: none; }
+  [data-phase="opening"] .supply-opening-crate, [data-phase="opening"] .supply-crate-lid { animation: none; }
+  .equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"] { animation: none; }
 }

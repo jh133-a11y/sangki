@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=18';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=22';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=32';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=11';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=19';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=23';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=33';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=12';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
-import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=7';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=15';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=6';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=8';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=16';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=7';
 import { WEAPONS, WEAPON_COLORS, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=8';
 
 const $ = id => document.getElementById(id);
@@ -56,6 +56,7 @@ function renderWeaponCard(slot) {
   }
   const label = $('weapon-set-effect');
   if (label) {
+    label.dataset.setColor = color || '';
     label.hidden = !color;
     label.textContent = color ? weaponSetDescription(equipped.primary.grade, color) : '';
   }
@@ -66,7 +67,7 @@ for (const slot of Object.keys(loadout)) {
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
   getWeaponItems: () => weaponItems, getWeaponItemsError: () => weaponItemsError,
-  changeWeaponItem: changeWeaponItem, sellWeaponItem,
+  changeWeaponItem: changeWeaponItem, sellWeaponItems,
   operateWeapon: operateWeapon, getGems: () => identity?.gems,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
@@ -311,6 +312,64 @@ async function sellWeaponItem(item, weapon) {
   localStorage.removeItem(key);
   return result;
 }
+async function sellWeaponItems(selections = null) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('무기 판매 요청을 저장할 계정 정보를 확인할 수 없습니다.');
+  const key = `sanggi-weapon-bulk-sale-pending-${owner}`;
+  let pending = JSON.parse(localStorage.getItem(key) || 'null');
+  if (selections) {
+    if (!selections.length || selections.length > 50 || selections.some(({ id, item }) =>
+      !WEAPONS[id] || (item && (item.weapon !== id || item.equipped)))) {
+      throw new Error('미장착 무기를 1개부터 50개까지 선택하세요.');
+    }
+    const items = selections.filter(entry => entry.item).map(entry => entry.item.id).sort();
+    const weapons = selections.filter(entry => !entry.item).map(entry => entry.id).sort();
+    if (pending && (JSON.stringify(pending.items) !== JSON.stringify(items)
+      || JSON.stringify(pending.weapons) !== JSON.stringify(weapons))) {
+      throw new Error('미확인 판매 요청이 있습니다. 새로고침해 이전 요청의 결과를 먼저 확인하세요.');
+    }
+    pending ||= { items, weapons, request: crypto.randomUUID() };
+  }
+  if (!pending || !Array.isArray(pending.items) || !Array.isArray(pending.weapons)
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pending.request)) {
+    throw new Error('저장된 일괄 판매 요청을 확인할 수 없습니다.');
+  }
+  localStorage.setItem(key, JSON.stringify(pending));
+  let result;
+  try {
+    result = await rpc('soldier_weapon_bulk_sell_api', {
+      p_token: identity.token, p_items: pending.items, p_weapons: pending.weapons, p_request: pending.request
+    });
+  } catch (error) {
+    if (error.rpcRejected) localStorage.removeItem(key);
+    throw error;
+  }
+  const count = pending.items.length + pending.weapons.length;
+  if (!result || result.sale_version !== 2 || result.request !== pending.request
+    || String(result.client_id).toLowerCase() !== owner.toLowerCase()
+    || typeof result.replayed !== 'boolean' || result.sold_count !== count
+    || JSON.stringify(result.item_ids) !== JSON.stringify(pending.items)
+    || JSON.stringify(result.weapons) !== JSON.stringify(pending.weapons)
+    || String(result.gold_awarded) !== String(count * 100) || !/^\d+$/.test(String(result.gold))
+    || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
+    throw new Error('일괄 판매 응답을 확인할 수 없습니다. 새로고침해 같은 요청으로 다시 확인하세요.');
+  }
+  const items = validateWeaponItems(result.inventory);
+  if (items.some(item => pending.items.includes(item.id)) || pending.weapons.some(weapon => result.equipment[weapon])) {
+    throw new Error('판매한 무기가 남아 있는 응답입니다. 새로고침해 다시 확인하세요.');
+  }
+  for (const slot of ['primary', 'secondary', 'melee']) {
+    if (inventoryWeapons(result.equipment, slot).length
+      + items.filter(entry => WEAPONS[entry.weapon].slot === slot).length > INVENTORY_LIMIT) {
+      throw new Error('분류별 보유 인벤토리 제한을 초과한 판매 응답입니다.');
+    }
+  }
+  weaponItems = items; weaponItemsError = null;
+  updateEquipment({ gold: result.gold, equipment: result.equipment });
+  localStorage.removeItem(key);
+  return result;
+}
 async function refreshCharacters(action = 'read', id = null, level = null) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
   if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
@@ -394,6 +453,16 @@ async function connect() {
     Object.keys(loadout).forEach(renderWeaponCard);
     try {
       await changeWeaponItem();
+      const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+      const previousSale = JSON.parse(localStorage.getItem(`sanggi-weapon-sale-pending-${owner}`) || 'null');
+      if (previousSale) {
+        await sellWeaponItem(previousSale.item ? { id: previousSale.item, weapon: previousSale.weapon, equipped: false } : null, previousSale.weapon);
+        $('inventory-status').textContent = '이전 무기 판매 요청의 결과를 확인했습니다.';
+      }
+      if (localStorage.getItem(`sanggi-weapon-bulk-sale-pending-${owner}`)) {
+        await sellWeaponItems();
+        $('inventory-status').textContent = '이전 일괄 판매 요청의 결과를 확인했습니다.';
+      }
       if (!['k2', 'shotgun', 'stick'].every(weapon => weaponItems.some(item => item.weapon === weapon && item.source === 'default'))) {
         $('equipment-status').textContent += ' 기본 무기 보유 저장에는 soldier-default-inventory.sql 실행 후 새로고침하세요.';
       }

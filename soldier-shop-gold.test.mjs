@@ -22,6 +22,7 @@ test('gold purchases are server-priced, atomic, and idempotent', () => {
   assert.match(sql, /where client_id=owner_id for update/);
   assert.match(sql, /primary key \(client_id,request_id\)/);
   assert.match(sql, /gold_exchange_version',1/);
+  assert.match(read('./soldier-character-upgrade.sql'), /gold_exchange_version',1/);
   assert.match(client, /soldier_gold_exchange_api/);
   assert.match(client, /sanggi-gold-exchange-pending-/);
 });

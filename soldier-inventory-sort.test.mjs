@@ -24,3 +24,12 @@ test('grade sorting includes legacy equipment and characters sort by name', () =
   const entries=[{id:'z'},{id:'a'}];
   assert.deepEqual(sortInventoryEntries(entries,{}).map(x=>x.id),['a','z']);
 });
+
+test('the selected weapon stays first in either ordering without confusing duplicate weapons', () => {
+  const entries=[{id:'k2',item:{id:'one',grade:'S'}},{id:'k2',item:{id:'two',grade:'D'}},{id:'p90',item:{id:'three',grade:'A'}}];
+  for (const mode of ['grade','name']) {
+    const sorted=sortInventoryEntries(entries,{},mode,'two');
+    assert.equal(sorted[0].item.id,'two');
+    assert.equal(entries[0].item.id,'one');
+  }
+});

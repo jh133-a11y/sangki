@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=18';
-import { CHARACTERS } from './soldier-characters.mjs?v=7';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=19';
+import { CHARACTERS } from './soldier-characters.mjs?v=8';
 
 export { idlePose };
 
@@ -23,8 +23,8 @@ export async function createHomeViewer(canvas, status) {
   const visible = () => !home.hidden && !document.hidden && pageActive && !contextLost;
   const turning = () => Math.abs(targetYaw - yaw) > .0001;
   const active = () => visible();
-  function labels() {
-    status.textContent = `${CHARACTERS[characterId].name.replace('\n', ' ')} · 드래그/방향키 회전 · ${rig.isStatic ? '정지 3D 모델' : '자동 호흡·몸풀기'}`;
+  function clearStatus() {
+    status.textContent = '';
   }
   function draw() {
     canvas.dataset.motion = rig.isStatic ? 'still' : visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
@@ -105,12 +105,12 @@ export async function createHomeViewer(canvas, status) {
     status.textContent = '캐릭터 표시가 중단되었습니다. 그래픽 연결 복구를 기다리는 중입니다.';
   });
   canvas.addEventListener('webglcontextrestored', () => {
-    contextLost = false; cssWidth = 0; cssHeight = 0; labels(); sync();
+    contextLost = false; cssWidth = 0; cssHeight = 0; clearStatus(); sync();
   });
   window.addEventListener('pagehide', () => { pageActive = false; cancelDrag(); });
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });
   canvas.dataset.view = '0';
-  labels(); sync(); canvas.dataset.viewReady = 'true';
+  clearStatus(); sync(); canvas.dataset.viewReady = 'true';
   return { cancelDrag, async setCharacter(id) {
     if (!CHARACTERS[id]) throw new Error('3D 캐릭터가 올바르지 않습니다.');
     if (id === characterId && !loading) return;
@@ -122,7 +122,7 @@ export async function createHomeViewer(canvas, status) {
       if (sequence !== loadSequence) { next.dispose(); return; }
       rig.dispose(); rig = next; characterId = id;
       scene.add(rig.root); rig.root.position.y = -.5;
-      loading = false; labels(); sync();
+      loading = false; clearStatus(); sync();
       canvas.setAttribute('aria-label', `${CHARACTERS[id].name} 3D 캐릭터. 드래그·좌우 방향키로 회전, Home 키로 정면.`);
     } catch (error) {
       if (sequence === loadSequence) {

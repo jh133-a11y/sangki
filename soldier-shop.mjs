@@ -1,6 +1,6 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=7';
-import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=6';
-import { createSupplyOpening } from './soldier-supply-opening.mjs?v=3';
+import { CHARACTERS } from './soldier-characters.mjs?v=8';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=7';
+import { createSupplyOpening } from './soldier-supply-opening.mjs?v=4';
 
 export { SUPPLY_PRODUCTS };
 export const GOLD_PRODUCTS = [
@@ -13,6 +13,23 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
   const dialog = $('shop-dialog'), tabs = [...dialog.querySelectorAll('[data-shop-tab]')];
   let category = 'supply', buying = false, confirming = false, keyboardOpened = false;
   const confirmation = $('shop-confirm-dialog');
+  const resultDialog = document.createElement('dialog'); resultDialog.id = 'shop-result-dialog';
+  resultDialog.setAttribute('aria-labelledby', 'shop-result-title');
+  const resultTitle = document.createElement('h2'); resultTitle.id = 'shop-result-title';
+  const resultMessage = document.createElement('p'); resultMessage.id = 'shop-result-message';
+  resultDialog.setAttribute('aria-describedby', resultMessage.id);
+  const resultForm = document.createElement('form'); resultForm.method = 'dialog';
+  const resultClose = document.createElement('button'); resultClose.type = 'submit'; resultClose.textContent = '확인';
+  resultForm.append(resultClose); resultDialog.append(resultTitle, resultMessage, resultForm);
+  document.body.append(resultDialog);
+  function showPurchaseResult(title, message, state) {
+    resultTitle.textContent = title; resultMessage.textContent = message;
+    resultDialog.dataset.state = state;
+    return new Promise(resolve => {
+      resultDialog.addEventListener('close', resolve, { once: true });
+      resultDialog.showModal(); resultClose.focus();
+    });
+  }
   const opening = createSupplyOpening(renderCard, message => { $('shop-status').textContent += ` ${message}`; });
   function confirmPurchase(product, productCategory) {
     $('shop-confirm-title').textContent = productCategory === 'supply' ? '보급함 구매 확인'
@@ -22,7 +39,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     const image = $('shop-confirm-image');
     image.hidden = productCategory === 'gold';
     if (productCategory !== 'gold') {
-      image.src = productCategory === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp?v=2`;
+      image.src = productCategory === 'supply' ? supplyArtwork(product.id) : `soldier-shop-${product.id}.webp?v=2`;
     }
     image.dataset.supply = productCategory === 'supply' ? product.id : ''; image.alt = product.name;
     confirmation.returnValue = 'cancel';
@@ -68,7 +85,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     }
     for (const product of products) {
       const article = document.createElement('article'); article.className = 'shop-product';
-      if (category === 'character') article.classList.add('shop-character-product');
+      if (category === 'character') { article.classList.add('shop-character-product'); article.dataset.character=product.id; }
       if (category === 'gold') article.classList.add('shop-gold-product');
       if (category === 'supply') { article.classList.add('shop-supply-product'); article.dataset.supply = product.id; }
       const price = document.createElement('div'); price.className = 'shop-price';
@@ -84,7 +101,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         art.append(emblem, amount, label);
       } else {
         const image = document.createElement('img');
-        image.src = category === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp?v=2`;
+        image.src = category === 'supply' ? supplyArtwork(product.id) : `soldier-shop-${product.id}.webp?v=2`;
         image.alt = product.name;
         art = image;
       }
@@ -116,7 +133,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
       if (category === 'character') button.setAttribute('aria-label', `${product.name} ${owned ? '보유 중' : `${product.price}보석 구매`}`);
       const productCategory = category;
       const supplyCapacity = productCategory === 'supply' ? getSupplyCapacity(product) : true;
-      button.disabled = buying || confirming || owned || !(productCategory === 'supply' ? isSupplyReady() && supplyCapacity
+      button.disabled = buying || confirming || owned || !(productCategory === 'supply' ? isSupplyReady()
         : productCategory === 'gold' ? isGoldReady() : isReady());
       if (productCategory === 'supply' && !supplyCapacity) {
         button.title = `인벤토리 여유 공간이 부족합니다. 보급 무기 ${product.count}개를 받을 공간을 확보하세요.`;
@@ -126,6 +143,12 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         const purchaseCategory = productCategory;
         confirming = true;
         render();
+        if (purchaseCategory === 'supply' && !getSupplyCapacity(product)) {
+          const message = '인벤토리가 가득 찼거나 공간이 부족해 구매할 수 없습니다. 무기를 판매하거나 강화재료로 사용해 공간을 확보하세요. 보석은 차감되지 않았습니다.';
+          $('shop-status').textContent = message;
+          await showPurchaseResult('인벤토리 공간 부족', message, 'error');
+          confirming = false; render(); dialog.querySelector(`[data-product="${product.id}"]`)?.focus(); return;
+        }
         const confirmed = await confirmPurchase(product, purchaseCategory);
         confirming = false;
         if (!confirmed) { render(); dialog.querySelector(`[data-product="${product.id}"]`)?.focus(); return; }
@@ -140,11 +163,14 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
             await opening.open(product.id,rewards);
           } else if (purchaseCategory === 'gold') {
             const result = await buyGold(product.id);
+            purchased = true;
             $('shop-status').textContent = `${product.gold.toLocaleString('ko-KR')} 골드 구매 완료 · 보유 골드 ${Number(result.gold).toLocaleString('ko-KR')}`;
           } else {
             await buy(product.id);
+            purchased = true;
             $('shop-status').textContent = `${product.name} 구매 완료 · 캐릭터 인벤토리에 저장되었습니다.`;
           }
+          await showPurchaseResult('구매 완료', $('shop-status').textContent, 'success');
         } catch (error) {
           $('shop-status').textContent = `${purchased ? '구매는 완료되었지만 개봉 연출 실패' : '구매 실패'}: ${error.message}`;
           console.error('상점 구매 오류', error);
@@ -152,6 +178,9 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
             $('shop-status').textContent += ` 잔액 재확인 실패: ${refreshError.message} 새로고침하세요.`;
             console.error('상점 재확인 오류', refreshError);
           }
+          const capacityFailure = !purchased && /인벤토리|공간이 부족/.test(error.message);
+          await showPurchaseResult(purchased ? '구매 완료 · 표시 오류' : capacityFailure ? '인벤토리 공간 부족' : '구매 실패',
+            $('shop-status').textContent, 'error');
         } finally {
           buying = false; render();
           if (purchaseCategory === 'character' && getState().characters[product.id]) $('shop-tab-character').focus();
@@ -166,6 +195,9 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         odds.append(summary,description);
         article.append(price,supplyArt,title,text,button,odds);
       } else article.append(price, art, title, text, button);
+      article.addEventListener('click', event => {
+        if (!event.target.closest('button, details')) button.click();
+      });
       $('shop-products').append(article);
     }
   }
@@ -182,6 +214,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     tab.addEventListener('click', () => {
       if (!buying && !confirming) {
         category = tab.dataset.shopTab; render();
+        tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         $('shop-status').textContent = category === 'gold' && !isGoldReady()
           ? '골드 교환 연결 필요: 최신 soldier-shop.sql 실행 후 새로고침하세요.'
           : category === 'supply' && !isSupplyReady()

@@ -1,4 +1,4 @@
-import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=11';
+import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=12';
 import { WEAPON_COLORS } from './soldier-core.mjs?v=7';
 
 export const SUPPLY_PRODUCTS = [
@@ -10,6 +10,11 @@ export const SUPPLY_PRODUCTS = [
   { id: 'normal', name: '일반보급함', price: 3, count: 1, color: '#cbd1d8',
     description: 'D클래스 이상의 무기 1개 획득', odds: 'D 60% · C 30% · B 6% · A 3% · S 1%' }
 ];
+
+export function supplyArtwork(product) {
+  if (!SUPPLY_PRODUCTS.some(entry => entry.id === product)) throw new RangeError('보급함 종류가 올바르지 않습니다.');
+  return `soldier-supply-${product}.webp?v=3`;
+}
 
 export function validateSupply(result, product = null, request = null) {
   if (!result || result.supply_version !== 1 || typeof result.replayed !== 'boolean'

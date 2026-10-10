@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs';
+import { SUPPLY_PRODUCTS, validateSupply, supplyArtwork } from './soldier-supply.mjs';
 
 const owner='00000000-0000-0000-0000-000000000001';
 function receipt(product,grades) {
@@ -64,17 +64,31 @@ test('opening keeps reference timing, tap-to-advance all crates and no visible b
   assert.doesNotMatch(source,/createElement\('button'\)/);
   assert.match(source,/current\+\+; play\(\)/);
   assert.match(source,/if \(!dialog\.open \|\| dialog\.dataset\.phase!=='revealed'\) return/);
-  const finish = source.slice(source.indexOf('function finish()'), source.indexOf('function play()'));
+  const finish = source.slice(source.indexOf('function finish()'), source.indexOf('function scheduleFinish('));
   assert.doesNotMatch(finish,/setTimeout|dialog\.close|current\+\+/);
   assert.match(source,/dialog\.addEventListener\('click',advance\)/);
-  assert.match(source,/counter\.hidden=!special/);
+  assert.match(source,/counter\.hidden=product!=='special'/);
   assert.match(source,/supply-accessible-status/);
-  assert.match(source,/forceContextLoss/);
+  assert.doesNotMatch(source,/WebGLRenderer|forceContextLoss|requestAnimationFrame|renderer\.render/);
+  assert.match(source,/await Promise\.all/);
+  assert.match(source,/image\.decode\(\)/);
+  assert.match(source,/body\.src=lid\.src=supplyArtwork\(product\)/);
+  assert.match(source,/visibilitychange/);
   const shop=readFileSync('soldier-shop.mjs','utf8');
   assert.doesNotMatch(shop,/shop-confirm-odds/);
   assert.match(shop,/description\.textContent = product\.odds/);
   assert.doesNotMatch(shop,/36가지 조합|1\/36/);
   assert.match(shop,/getSupplyCapacity/);
+});
+
+test('shop, confirmation and opening use identical crate illustrations', () => {
+  for (const product of SUPPLY_PRODUCTS) {
+    const artwork=supplyArtwork(product.id);
+    assert.equal(artwork,`soldier-supply-${product.id}.webp?v=3`);
+    assert.ok(readFileSync(artwork.split('?')[0]).length>1000);
+  }
+  assert.throws(()=>supplyArtwork('invalid'),RangeError);
+  assert.equal((readFileSync('soldier-shop.mjs','utf8').match(/supplyArtwork\(product\.id\)/g)||[]).length,2);
 });
 test('expired sessions get re-login guidance instead of a misleading SQL-install prompt',() => {
   const source=readFileSync('soldier.js','utf8');

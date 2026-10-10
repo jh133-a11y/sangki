@@ -47,7 +47,7 @@ export function characterCard(id, level = 1) {
   image.src = `${character.cardImage}?v=1`; image.alt = character.name.replace('\n', ' ');
   const name = document.createElement('span'); name.className = 'character-name'; name.textContent = character.name;
   const label = document.createElement('span'); label.className = level === CHARACTER_MAX_LEVEL ? 'character-level character-max' : 'character-level';
-  label.textContent = characterLevelLabel(level);
+  label.textContent = level === CHARACTER_MAX_LEVEL ? 'MAX' : String(level);
   label.setAttribute('aria-label', `레벨 ${level}`);
   card.append(background, image, name, label); return card;
 }

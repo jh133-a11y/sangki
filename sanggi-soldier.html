@@ -5,40 +5,37 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-james.glb?v=1" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=38">
+  <link rel="stylesheet" href="soldier.css?v=39">
 </head>
 <body>
-  <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
+  <audio id="soldier-lobby-music" src="soldier-holiday.mp3?v=1" preload="auto" loop></audio>
   <canvas id="world" aria-label="3D 캐릭터 및 게임 화면"></canvas>
   <main id="home">
     <div class="home-atmosphere" aria-hidden="true"></div>
     <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="JAMES 관절형 3D 캐릭터. 드래그 또는 좌우 방향키로 회전"></canvas>
-    <p id="character-status" class="character-rotate-hint" role="status">JAMES 3D 캐릭터 모델 불러오는 중</p>
+    <p id="character-status" class="character-rotate-hint" role="status"></p>
     <div class="currency-bar" aria-label="보유 재화">
       <div class="currency gold" aria-label="보유 골드"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="soldier-gold-metal" x2="0.8" y2="1"><stop stop-color="#fff2a3"/><stop offset=".45" stop-color="#d8a93d"/><stop offset="1" stop-color="#806022"/></linearGradient></defs><path d="m20 2 13 5 5 13-5 13-13 5-13-5-5-13L7 7Z" fill="url(#soldier-gold-metal)" stroke="#59451f" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="#3a3525" stroke="#ffdc79"/><path d="M25 13h-9l-3 7 3 7h9v-8h-6v4h3" fill="none" stroke="#efcf72" stroke-width="3"/></svg><strong id="gold">0</strong></div>
       <div class="currency gems" aria-label="보유 보석"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 5h20l8 12-18 21L2 17Z" fill="#6194a6" stroke="#cbeaf0" stroke-width="1.5"/><path d="m10 5 10 12L30 5M2 17h36M10 5l-2 12 12 21 12-21-2-12" fill="none" stroke="#c9f0f4"/><path d="m10 5 10 12H8ZM30 5l2 12H20Z" fill="#e0f7fa"/><path d="m8 17 12 21V17Z" fill="#97c7d3"/></svg><strong id="gems">0</strong></div>
     </div>
     <div class="home-top-actions"><a href="index.html" aria-label="홈으로">⌂</a><button id="fullscreen-open" type="button" aria-label="전체화면" aria-pressed="false">⛶</button><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
     <p id="fullscreen-status" role="status"></p>
-    <div class="soldier-music-controls">
-      <button id="soldier-music-toggle" type="button" aria-pressed="true">음악 켜짐</button>
-      <label for="soldier-music-volume">음량 <output id="soldier-music-volume-label" for="soldier-music-volume">25%</output></label>
-      <input id="soldier-music-volume" type="range" min="0" max="100" step="1" value="25" aria-label="솔져 홈 음악 음량" aria-valuetext="25%">
-      <span id="soldier-music-status" role="status"></span>
-    </div>
     <header class="profile">
       <button id="rank-open" class="rank-badge" type="button" aria-label="계급 및 승급 정보"><svg id="rank-badge" viewBox="0 0 64 64" role="img" aria-label="이등병 계급"></svg></button>
       <div class="profile-copy"><strong id="nickname">투자 닉네임 확인 중</strong><p id="rank">이등병 · 0 XP</p><div class="rank-meter" role="progressbar" id="rank-meter" aria-label="다음 계급 경험치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="rank-fill"></span></div><small id="rank-percent">0%</small></div>
     </header>
-    <div class="home-mode-label"><strong>PVP</strong><span>상기 솔져 · 기본 장비</span></div>
+    <nav class="home-social-actions" aria-label="커뮤니티">
+      <button id="clan-open" type="button" disabled aria-label="클랜 · 준비 중"><span>클랜</span><small>준비 중</small></button>
+      <button id="friends-open" type="button" disabled aria-label="친구 · 준비 중"><span>친구</span><small>준비 중</small></button>
+    </nav>
     <section class="loadout" aria-label="무기 선택">
-      <div id="primary" class="equipment-slot" aria-label="주 무기 K-200"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K-200"><span class="weapon-color-label" hidden></span><span class="weapon-name">K-200</span></div></div>
-      <div id="secondary" class="equipment-slot" aria-label="보조 무기 S-870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="S-870"><span class="weapon-color-label" hidden></span><span class="weapon-name">S-870</span></div></div>
-      <div id="melee" class="equipment-slot" aria-label="근접 무기 M-90B"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M-90B"><span class="weapon-color-label" hidden></span><span class="weapon-name">M-90B</span></div></div>
-      <div id="character" class="character-card"><img class="character-background" src="soldier-character-frame.webp?v=1" alt="" aria-hidden="true"><img class="character-portrait" src="soldier-character-james-cutout.webp?v=1" alt="JAMES"><span class="character-name">JAMES</span><span class="character-level" aria-label="레벨 1">Lv.1</span></div>
+      <div id="primary" class="equipment-slot" aria-label="주 무기 K-200"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp?v=3" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K-200"><span class="weapon-color-label" hidden></span><span class="weapon-name">K-200</span></div></div>
+      <div id="secondary" class="equipment-slot" aria-label="보조 무기 S-870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp?v=3" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="S-870"><span class="weapon-color-label" hidden></span><span class="weapon-name">S-870</span></div></div>
+      <div id="melee" class="equipment-slot" aria-label="근접 무기 M-90B"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp?v=3" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M-90B"><span class="weapon-color-label" hidden></span><span class="weapon-name">M-90B</span></div></div>
+      <div id="character" class="character-card"><img class="character-background" src="soldier-character-frame.webp?v=1" alt="" aria-hidden="true"><img class="character-portrait" src="soldier-character-james-cutout.webp?v=1" alt="JAMES"><span class="character-name">JAMES</span><span class="character-level" aria-label="레벨 1">1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
+      <p id="weapon-set-effect" class="home-set-effect" hidden></p>
     </section>
-    <p id="weapon-set-effect" class="home-set-effect" hidden></p>
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
     <button id="shop-open" type="button"><span aria-hidden="true">▤</span> 상점</button>
@@ -78,6 +75,13 @@
   </dialog>
   <dialog id="settings">
     <h2>조작 설정</h2><button class="close" data-close type="button" aria-label="닫기">×</button>
+    <section class="soldier-music-controls" aria-labelledby="soldier-music-title">
+      <h3 id="soldier-music-title">배경음악</h3>
+      <button id="soldier-music-toggle" type="button" aria-pressed="true">음악 켜짐</button>
+      <label for="soldier-music-volume">음량 <output id="soldier-music-volume-label" for="soldier-music-volume">25%</output></label>
+      <input id="soldier-music-volume" type="range" min="0" max="100" step="1" value="25" aria-label="솔져 배경음악 음량" aria-valuetext="25%">
+      <span id="soldier-music-status" role="status"></span>
+    </section>
     <label class="check"><input id="auto-fire" type="checkbox"> 상대에게 조준하면 자동 발사 (스나이퍼·칼 제외)</label>
     <label>시점 감도 <input id="sensitivity" type="range" min="0.3" max="2" step="0.1" value="1"></label>
     <p>게임 버튼의 위치는 화면 전체의 백분율입니다. 모바일은 가로 화면을 사용하세요.</p>
@@ -87,7 +91,7 @@
   <dialog id="rank-dialog"><h2>계급 정보</h2><button class="close" data-close type="button" aria-label="닫기">×</button><p id="rank-detail"></p><p id="rank-next"></p><p id="rank-wins"></p><p>온라인 처치당 20 XP, 단독 1위 승리 시 추가 100 XP. 승급에 필요한 경험치는 단계마다 약 1.5배 증가합니다. AI 연습과 공동 1위는 승리 보너스에 반영되지 않습니다.</p></dialog>
   <dialog id="result"><h2>경기 종료</h2><div id="result-scores"></div><p>온라인 처치당 20 XP · 단독 1위 승리 보너스 100 XP · AI 연습은 계급에 반영되지 않습니다.</p><button id="result-close" type="button">홈으로</button></dialog>
   <div id="rotate" role="status">휴대폰을 가로로 돌려 주세요.<br>상기 솔져는 가로 화면으로 플레이합니다.</div>
-  <script src="soldier-music.js?v=1"></script>
+  <script src="soldier-music.js?v=2" defer></script>
   <dialog id="equipment-dialog" aria-label="장비 인벤토리">
     <header class="inventory-topbar"><button id="equipment-back" type="button" aria-label="홈으로 돌아가기">↶</button><div id="inventory-wallet" aria-label="보유 재화"></div><span>SANGGI SOLDIER</span></header>
     <div class="inventory-tabs" role="tablist" aria-label="장비 분류">
@@ -132,6 +136,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=59"></script>
+  <script type="module" src="soldier.js?v=60"></script>
 </body>
 </html>

@@ -27,7 +27,7 @@ export const WEAPON_REWARDS = Object.entries(WEAPON_ARTWORK).flatMap(([weapon, i
 );
 export function weaponGradeArtwork(grade) {
   if (!EQUIPMENT_GRADES.includes(grade)) throw new Error('무기 등급이 올바르지 않습니다.');
-  return `soldier-grade-${grade === 'S+' ? 's-plus' : grade.toLowerCase()}.webp?v=2`;
+  return `soldier-grade-${grade === 'S+' ? 's-plus' : grade.toLowerCase()}.webp?v=${grade === 'D' ? 3 : 2}`;
 }
 export function weaponColorLabel(color) {
   return WEAPON_COLOR_LABELS[color] || '';
@@ -62,6 +62,18 @@ export function materialCost(grade) {
 export function upgradeMaterials(items, target) {
   return items.filter(item => item.id !== target.id
     && !item.equipped && item.source !== 'default');
+}
+export function selectBulkUpgradeMaterials(target, candidates, selected, grade) {
+  const result = [...selected];
+  const ids = new Set(result.map(item => item.id));
+  for (const item of candidates) {
+    if (weaponUpgradePreview(target, result).level === 7) break;
+    if (!ids.has(item.id) && item.grade === grade && item.level === 1 && item.upgrade_xp === 0
+      && !item.equipped && item.source !== 'default' && item.id !== target.id) {
+      result.push(item); ids.add(item.id);
+    }
+  }
+  return result;
 }
 
 export function validateWeaponItems(result) {
