@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=23';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=24';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
@@ -23,7 +23,7 @@ function save(key, value) {
 }
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
-let equipment = {}, weaponItems = [];
+let equipment = {}, weaponItems = [], weaponItemsError = null;
 let characterState = { characters: {}, equipped: 'black-water', defaultLevel: 1, upgradeReady: false }, shopReady = false, goldExchangeReady = false, characterBusy = false;
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
@@ -52,7 +52,8 @@ for (const slot of Object.keys(loadout)) {
 }
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
-  getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem, sellWeaponItem,
+  getWeaponItems: () => weaponItems, getWeaponItemsError: () => weaponItemsError,
+  changeWeaponItem: changeWeaponItem, sellWeaponItem,
   operateWeapon: operateWeapon, getGems: () => identity?.gems,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
@@ -79,7 +80,7 @@ async function changeWeaponItem(action = 'read', item = null, weapon = null, mat
       throw new Error('분류별 최대 보유 인벤토리 50개를 초과했습니다.');
     }
   }
-  weaponItems = items; identity.gold = result.gold; updateWallet(identity);
+  weaponItems = items; weaponItemsError = null; identity.gold = result.gold; updateWallet(identity);
   for (const slot of Object.keys(loadout)) {
     const equipped = items.find(entry => entry.equipped && WEAPONS[entry.weapon].slot === slot);
     if (equipped) loadout[slot] = equipped.weapon;
@@ -379,7 +380,9 @@ async function connect() {
       }
     }
     catch (error) {
-      $('equipment-status').textContent += ` 보상 장비 불러오기 실패: ${error.message} soldier-weapon-rewards.sql 실행 후 새로고침하세요.`;
+      weaponItemsError = error.message;
+      inventory.refresh();
+      $('equipment-status').textContent += ` 보상 장비 불러오기 실패: ${error.message} ${error.message === '동일 분류의 중복 장착 정보입니다.' ? 'soldier-equipped-slot-fix.sql' : 'soldier-weapon-rewards.sql'} 실행 후 새로고침하세요.`;
       console.error('보상 장비 불러오기 오류', error);
     }
     try { await refreshCharacters(); }

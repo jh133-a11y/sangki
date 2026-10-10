@@ -6,10 +6,12 @@ create or replace function public.soldier_default_weapons(p_client uuid)
 returns void language plpgsql security definer set search_path=public as $$
 declare weapon_id text; item_id uuid;
 begin
+  perform 1 from public.soldier_profiles where client_id=p_client for update;
   foreach weapon_id in array array['k2','shotgun','stick'] loop
     item_id:=public.soldier_grant_weapon(p_client,weapon_id,'D','default','default-'||weapon_id);
     if not exists (
-      select 1 from public.soldier_weapon_items where client_id=p_client and weapon=weapon_id and equipped
+      select 1 from public.soldier_weapon_items where client_id=p_client and equipped
+        and public.soldier_weapon(weapon)->>'slot'=public.soldier_weapon(weapon_id)->>'slot'
     ) then
       update public.soldier_weapon_items set equipped=true where id=item_id;
     end if;

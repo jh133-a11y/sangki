@@ -347,12 +347,14 @@ begin
     if p_weapon is null or p_weapon not in ('k2','shotgun','stick') then
       raise exception '기본 무기가 올바르지 않습니다.';
     end if;
-    update public.soldier_weapon_items set equipped=false where client_id=owner_id and weapon=p_weapon;
+    update public.soldier_weapon_items set equipped=false where client_id=owner_id and equipped
+      and public.soldier_weapon(weapon)->>'slot'=public.soldier_weapon(p_weapon)->>'slot';
   elsif p_action in ('equip','upgrade') then
     select * into item from public.soldier_weapon_items where id=p_item and client_id=owner_id for update;
     if not found then raise exception '보유하지 않은 무기입니다.'; end if;
     if p_action='equip' then
-      update public.soldier_weapon_items set equipped=false where client_id=owner_id and weapon=item.weapon and equipped;
+      update public.soldier_weapon_items set equipped=false where client_id=owner_id and equipped
+        and public.soldier_weapon(weapon)->>'slot'=public.soldier_weapon(item.weapon)->>'slot';
       update public.soldier_weapon_items set equipped=true where id=item.id;
     else
       if p_level is null or p_level not between 1 and 6 or item.level<>p_level then

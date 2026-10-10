@@ -92,7 +92,8 @@ test('combination and disassembly validate max cards, charge server gems and sto
 test('default inventory migration issues idempotent real items for existing and new profiles without replacing equipped rewards', () => {
   const sql = readFileSync('soldier-default-inventory.sql', 'utf8');
   assert.match(sql, /soldier_grant_weapon\(p_client,weapon_id,'D','default','default-'\|\|weapon_id\)/);
-  assert.match(sql, /where client_id=p_client and weapon=weapon_id and equipped/);
+  assert.match(sql, /where client_id=p_client and equipped/);
+  assert.match(sql, /public\.soldier_weapon\(weapon_id\)->>'slot'/);
   assert.match(sql, /after insert on public\.soldier_profiles/);
   assert.match(sql, /select client_id from public\.soldier_profiles/);
   assert.match(sql, /revoke all on function public\.soldier_default_weapons\(uuid\) from public,anon,authenticated/);

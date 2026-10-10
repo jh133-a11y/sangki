@@ -41,7 +41,8 @@ export function characterInventoryStats(id, level = 1) {
 }
 
 export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard,
-  getWeaponItems = () => [], changeWeaponItem, sellWeaponItem, operateWeapon, getGems = () => null, upgradeCharacter }) {
+  getWeaponItems = () => [], getWeaponItemsError = () => null,
+  changeWeaponItem, sellWeaponItem, operateWeapon, getGems = () => null, upgradeCharacter }) {
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
@@ -490,9 +491,10 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   }
   function render() {
     const equipment = getEquipment(), loadout = getLoadout();
+    const loadError = slot === 'character' ? null : getWeaponItemsError();
     const current = slot === 'character' ? getCharacters().equipped : loadout[slot];
     const currentItem = getWeaponItems().find(item => item.weapon === current && item.equipped);
-    $('inventory-sell').disabled = slot === 'character' || weaponBusy || !sellWeaponItem;
+    $('inventory-sell').disabled = slot === 'character' || weaponBusy || !sellWeaponItem || !!loadError;
     dialog.classList.toggle('character-inventory', slot === 'character');
     for (const tab of tabs) {
       const selected = tab.dataset.equipmentTab === slot;
@@ -532,11 +534,12 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const count = slot === 'character' ? characterInventoryCount(getCharacters()) : entries.length;
     if (slot !== 'character') entries = entries.filter(({ item }) => !item?.equipped);
     if (sorted) entries.sort((a, b) => (WEAPONS[a.id]?.name || CHARACTERS[a.id]?.name || a.id).localeCompare(WEAPONS[b.id]?.name || CHARACTERS[b.id]?.name || b.id, 'ko'));
-    $('inventory-count').textContent = `${count} / ${INVENTORY_LIMIT}`;
+    $('inventory-count').textContent = `${loadError ? '?' : count} / ${INVENTORY_LIMIT}`;
     $('inventory-items').replaceChildren();
     if (!entries.length) {
       const empty = document.createElement('p');
-      empty.textContent = count ? '보유 장비는 현재 장착 중입니다.' : '보유 장비가 없습니다.';
+      empty.textContent = loadError ? `장비 목록을 불러오지 못했습니다: ${loadError}`
+        : count ? '보유 장비는 현재 장착 중입니다.' : '보유 장비가 없습니다.';
       $('inventory-items').append(empty);
     }
     for (const { id, item } of entries) {

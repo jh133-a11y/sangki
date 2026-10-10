@@ -61,7 +61,8 @@ begin
   end if;
   if p_action in ('equip','restore') then
     update public.soldier_weapon_items set equipped=false
-    where client_id=owner_id and weapon=item.weapon and equipped;
+    where client_id=owner_id and equipped
+      and public.soldier_weapon(weapon)->>'slot'=public.soldier_weapon(item.weapon)->>'slot';
     update public.soldier_weapon_items set equipped=true where id=item.id;
   end if;
   return jsonb_build_object('gold',balance::text,'material_version',2,'material_rate',83,'items',coalesce((
