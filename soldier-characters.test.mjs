@@ -89,7 +89,7 @@ test('character cards layer the common frame, portrait, name, and complete level
         assert.equal(card.children[0].src, 'soldier-character-frame.webp');
         assert.equal(card.children[0].attributes['aria-hidden'], 'true');
         assert.equal(card.children[1].className, 'character-portrait');
-        assert.equal(card.children[1].src, `${character.image}?v=1`);
+        assert.equal(card.children[1].src, `${character.cardImage}?v=1`);
         assert.equal(card.children[1].alt, character.name.replace('\n', ' '));
         assert.equal(card.children[2].className, 'character-name');
         assert.equal(card.children[2].textContent, character.name);

@@ -1,4 +1,4 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=6';
+import { CHARACTERS } from './soldier-characters.mjs?v=7';
 import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=6';
 import { createSupplyOpening } from './soldier-supply-opening.mjs?v=3';
 
@@ -22,7 +22,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     const image = $('shop-confirm-image');
     image.hidden = productCategory === 'gold';
     if (productCategory !== 'gold') {
-      image.src = productCategory === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp`;
+      image.src = productCategory === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp?v=2`;
     }
     image.dataset.supply = productCategory === 'supply' ? product.id : ''; image.alt = product.name;
     confirmation.returnValue = 'cancel';
@@ -84,7 +84,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         art.append(emblem, amount, label);
       } else {
         const image = document.createElement('img');
-        image.src = category === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp`;
+        image.src = category === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp?v=2`;
         image.alt = product.name;
         art = image;
       }

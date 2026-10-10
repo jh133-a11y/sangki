@@ -165,7 +165,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-item-detail dl, .inventory-weapon-actions { min-width: 0; }
 .inventory-weapon-actions { display: flex; flex-direction: column; gap: 6px; }
 .inventory-weapon-actions .weapon-item-action { width: 100%; min-height: 36px; margin: 0; padding: 5px; font-size: 13px; }
-.inventory-item-detail dl { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; margin: 0; font-size: clamp(12px, 1.3vw, 18px); font-weight: 700; }
+.inventory-item-detail dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(46px, .8fr); gap: 4px 0; margin: 0; font-size: clamp(12px, 1.3vw, 18px); font-weight: 700; }
 .inventory-item-detail dt { padding: 3px; }
 .inventory-item-detail dd { margin: 0; padding: 3px 8px; text-align: center; background: #515563; color: #fff; border-radius: 4px; }
 #equipment-dialog .equipment-card { position: relative; width: 100%; aspect-ratio: 1091 / 1442; overflow: hidden; border-radius: 5% / 4%; }
@@ -184,7 +184,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .character-inventory .character-item-detail .character-card { grid-column: 1; grid-row: 1 / 3; }
 .character-inventory .character-item-detail dl { grid-column: 2; grid-row: 1; align-self: center; padding-top: 20px; }
 .character-inventory .character-specialty { grid-column: 2 / 4; grid-row: 2; margin: 0; font-weight: 800; font-size: clamp(13px, 1.6vw, 22px); }
-.character-inventory .character-upgrade { grid-column: 3; grid-row: 1; align-self: center; background: linear-gradient(#29acff, #0067b9); min-height: 60px; padding: 8px 20px; font-size: clamp(16px, 2vw, 28px); }
+.character-inventory .character-upgrade { grid-column: 3; grid-row: 1; align-self: center; min-height: 44px; padding: 8px 16px; font-size: clamp(13px, 1.5vw, 18px); }
 .character-inventory #inventory-level { display: flex; gap: 8px; align-items: center; }
 .character-level-bar { display: flex; gap: 3px; background: #383f43; padding: 4px; width: clamp(80px, 13vw, 180px); }
 .character-level-bar i { flex: 1; height: 18px; background: #6b7175; }
@@ -557,7 +557,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   }
   #equipment-dialog.character-inventory .character-item-detail dl {
     align-content: center;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 1px 3px;
     padding-top: 0;
     font-size: clamp(7px, 1.4vh, 9px);
@@ -695,30 +695,56 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
 }
 .character-card .character-portrait {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  top: 22%;
+  left: 13%;
+  width: 74%;
+  height: 67%;
+  object-fit: cover;
+  object-position: center top;
+  clip-path: polygon(0 0, 100% 0, 100% 92%, 93% 100%, 7% 100%, 0 92%);
   z-index: 1;
 }
 .character-card .character-name {
   position: absolute;
   z-index: 2;
-  left: 18%;
+  top: auto;
+  left: 4%;
   bottom: 5%;
-  width: 64%;
+  width: 92%;
   white-space: pre-line;
   overflow-wrap: anywhere;
   text-align: center;
-  font-size: clamp(8px, 11cqw, 13px);
+  font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif;
+  font-size: 16cqw;
   line-height: 1.05;
   font-weight: 900;
+  font-style: italic;
   color: #fff;
   text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 3px #000;
 }
 .character-card .character-level {
   z-index: 3;
-  text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 3px #000;
+  top: 4%;
+  left: 36%;
+  font-family: 'Arial Black', Arial, sans-serif;
+  font-size: 20.5cqw;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1;
+  -webkit-text-stroke: 1.5cqw #080808;
+  paint-order: stroke fill;
+  text-shadow: none;
+}
+.character-card .character-max { top: 6%; font-size: 12cqw; }
+#character-upgrade-dialog {
+  width: min(420px, 92vw);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 20px;
+  border: 2px solid #718c99;
+  border-radius: 12px;
+  background: #e5edf1;
+  color: #19394a;
 }
 #equipment-dialog { background: #e5edf1; }
 .inventory-tabs { background: linear-gradient(110deg, #142d3b, #253b48); }
@@ -729,20 +755,63 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
   color: white;
 }
 .inventory-equipped, .inventory-comparison, .inventory-list-panel {
-  border-color: #9db0b9;
-  background: linear-gradient(145deg, #f5f8f9, #e2eaee);
-  box-shadow: 0 3px 10px #24374614;
+  border: 1px solid #ccdbe3;
+  border-radius: 12px;
+  background: #f8fafc;
+  box-shadow: 0 4px 16px #19394a0d;
 }
 .inventory-equipped h2, .inventory-comparison h2,
-.inventory-list-panel > header {
+.inventory-list-panel > header,
+.character-inventory .inventory-equipped h2,
+.character-inventory .inventory-list-panel > header {
+  border-radius: 7px;
+  background: #e8eff4;
+  color: #243c4b;
+}
+.inventory-list-panel h2 { color: #243c4b; }
+.inventory-comparison > p {
+  border: 1px dashed #c5d5df;
+  border-radius: 8px;
+  background: #f0f5f8;
+  color: #607887;
+  font-weight: 600;
+}
+.inventory-item-detail dt {
+  display: flex;
+  align-items: center;
+  background: #edf3f7;
+  color: #405a6a;
+  border-radius: 5px 0 0 5px;
+}
+.inventory-item-detail dd {
+  display: grid;
+  place-items: center;
+  background: #dff1f0;
+  color: #116b70;
+  border-radius: 0 5px 5px 0;
+  font-variant-numeric: tabular-nums;
+}
+.inventory-weapon-actions .weapon-item-action,
+.character-inventory .character-upgrade,
+.inventory-list-panel button:not(.inventory-item) {
+  border: 1px solid #0d8492;
+  border-radius: 6px;
+  background: #117f8c;
+  color: #fff;
+  box-shadow: none;
+}
+.inventory-weapon-actions .weapon-item-action:disabled,
+.character-inventory .character-upgrade:disabled {
+  border-color: #c4d2db;
+  background: #e1e9ef;
+  color: #718595;
+}
+.character-level-bar {
   border-radius: 5px;
-  background: linear-gradient(100deg, #c8d9df, #b6cbd3);
-  color: #233b48;
+  background: #d8e4ec;
 }
-.inventory-weapon-actions .weapon-item-action {
-  border: 1px solid #5b8596;
-  background: linear-gradient(145deg, #31596c, #1a3b4b);
-}
+.character-level-bar i { border-radius: 2px; background: #b7cad5; }
+.character-level-bar i.filled { background: #1895a2; }
 .inventory-set-effect {
   margin: 6px 0 0;
   padding: 5px 7px;

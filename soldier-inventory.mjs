@@ -1,5 +1,5 @@
 import { WEAPONS, weaponStats, weaponLevelLabel, weaponSetColor } from './soldier-core.mjs?v=7';
-import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=6';
+import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=7';
 import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=11';
 
 export const INVENTORY_LIMIT = 50;
@@ -119,6 +119,26 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   const operationDialog = document.createElement('dialog');
   operationDialog.id = 'weapon-operation-dialog'; operationDialog.setAttribute('aria-label', '무기 조합 및 분해');
   document.body.append(operationDialog);
+  const characterConfirmation = document.createElement('dialog');
+  characterConfirmation.id = 'character-upgrade-dialog';
+  characterConfirmation.setAttribute('aria-label', '캐릭터 강화 확인');
+  const characterMessage = document.createElement('p');
+  const characterForm = document.createElement('form'); characterForm.method = 'dialog';
+  characterForm.className = 'shop-confirm-actions';
+  for (const [value, label] of [['cancel', '취소'], ['upgrade', '강화']]) {
+    const button = document.createElement('button'); button.type = 'submit';
+    button.value = value; button.textContent = label; characterForm.append(button);
+  }
+  characterConfirmation.append(characterMessage, characterForm);
+  document.body.append(characterConfirmation);
+  function confirmCharacterUpgrade(id, level) {
+    characterMessage.textContent = `${CHARACTERS[id].name.replace('\n', ' ')}을 ${CHARACTER_UPGRADE_COST.toLocaleString('ko-KR')}골드로 Lv.${level + 1}로 강화할까요?`;
+    characterConfirmation.returnValue = 'cancel';
+    return new Promise(resolve => {
+      characterConfirmation.addEventListener('close', () => resolve(characterConfirmation.returnValue === 'upgrade'), { once: true });
+      characterConfirmation.showModal(); characterForm.querySelector('button').focus();
+    });
+  }
   function updateWallet() {
     const wallet = $('inventory-wallet');
     wallet.replaceChildren(...[...document.querySelectorAll('.currency-bar .currency')].map(currency => {
@@ -509,14 +529,15 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       body.classList.add('character-item-detail');
       const upgrade = document.createElement('button'); upgrade.type = 'button'; upgrade.className = 'character-upgrade';
       const level = ownedCharacterLevel(getCharacters(), id);
-      upgrade.textContent = level === CHARACTER_MAX_LEVEL ? 'MAX' : '강화 · 10,000골드';
+      upgrade.textContent = level === CHARACTER_MAX_LEVEL ? 'MAX' : '강화';
       upgrade.disabled = characterBusy || level === CHARACTER_MAX_LEVEL || !getCharacters().upgradeReady;
       upgrade.title = getCharacters().upgradeReady ? '강화 1회당 10,000골드' : 'soldier-character-upgrade.sql 실행 후 새로고침하세요.';
       upgrade.addEventListener('click', async () => {
-        if (characterBusy || !window.confirm(`${CHARACTERS[id].name}을 ${CHARACTER_UPGRADE_COST.toLocaleString('ko-KR')}골드로 Lv.${level + 1}로 강화할까요?`)) return;
+        if (characterBusy) return;
         characterBusy = true; render();
-        $('inventory-status').textContent = '캐릭터를 강화하는 중입니다…';
         try {
+          if (!await confirmCharacterUpgrade(id, level)) return;
+          $('inventory-status').textContent = '캐릭터를 강화하는 중입니다…';
           await upgradeCharacter(id, level);
           $('inventory-status').textContent = `${CHARACTERS[id].name} ${characterLevelLabel(level + 1)} 강화 완료`;
         } catch (error) {
@@ -584,7 +605,8 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const set = equippedSet();
     $('inventory-set-effect').textContent = set
       ? `${set.grade} ${set.color.toUpperCase()} 세트 적용 · ${set.color === 'gold' ? '위력 +3' : set.color === 'red' ? '크리티컬 +5%' : '무게 -10%'}`
-      : '세트 조건: 주·보조·근접 동일 등급·색상 · GOLD 위력+3 / RED 크리티컬+5% / SILVER 무게-10%';
+      : '';
+    $('inventory-set-effect').hidden = !set;
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);
     let entries = slot === 'character'

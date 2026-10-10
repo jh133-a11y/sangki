@@ -1,9 +1,9 @@
 export const CHARACTERS = {
-  'black-water': { name: 'JAMES', image: 'soldier-character-james.webp', model: 'soldier-james.glb?v=1', price: 0, ability: '없음' },
-  'fighter': { name: 'FIGHTER', image: 'soldier-character-fighter.webp', model: 'soldier-fighter.glb?v=1', price: 150, ability: '밸런스' },
-  'thief': { name: 'THIEF', image: 'soldier-character-thief.webp', model: 'soldier-thief.glb?v=1', price: 150, ability: '높은 회피율' },
-  'korean-girl': { name: 'KOREAN\nGIRL', image: 'soldier-character-korean-girl.webp', model: 'soldier-korean-girl.glb?v=1', price: 250, ability: '위력 증가 / 크리티컬 확률 증가' },
-  'roka-swc': { name: 'RKS', image: 'soldier-character-roka-swc-portrait.webp', model: 'soldier-roka-swc.glb?v=2', price: 125, ability: '높은 체력' }
+  'black-water': { name: 'JAMES', image: 'soldier-character-james.webp', cardImage: 'soldier-character-james-cutout.webp', model: 'soldier-james.glb?v=1', price: 0, ability: '없음' },
+  'fighter': { name: 'FIGHTER', image: 'soldier-character-fighter.webp', cardImage: 'soldier-character-fighter-cutout.webp', model: 'soldier-fighter.glb?v=1', price: 150, ability: '밸런스' },
+  'thief': { name: 'THIEF', image: 'soldier-character-thief.webp', cardImage: 'soldier-character-thief-cutout.webp', model: 'soldier-thief.glb?v=1', price: 150, ability: '높은 회피율' },
+  'korean-girl': { name: 'KOREAN\nGIRL', image: 'soldier-character-korean-girl.webp', cardImage: 'soldier-character-korean-girl-cutout.webp', model: 'soldier-korean-girl.glb?v=1', price: 250, ability: '위력 증가 / 크리티컬 확률 증가' },
+  'roka-swc': { name: 'RKS', image: 'soldier-character-roka-swc-portrait.webp', cardImage: 'soldier-character-roka-swc-cutout.webp', model: 'soldier-roka-swc.glb?v=2', price: 125, ability: '높은 체력' }
 };
 export const CHARACTER_MAX_LEVEL = 10;
 export const CHARACTER_UPGRADE_COST = 10000;
@@ -44,7 +44,7 @@ export function characterCard(id, level = 1) {
   background.className = 'character-background'; background.src = 'soldier-character-frame.webp';
   background.alt = ''; background.setAttribute('aria-hidden', 'true');
   const image = document.createElement('img'); image.className = 'character-portrait';
-  image.src = `${character.image}?v=1`; image.alt = character.name.replace('\n', ' ');
+  image.src = `${character.cardImage}?v=1`; image.alt = character.name.replace('\n', ' ');
   const name = document.createElement('span'); name.className = 'character-name'; name.textContent = character.name;
   const label = document.createElement('span'); label.className = level === CHARACTER_MAX_LEVEL ? 'character-level character-max' : 'character-level';
   label.textContent = characterLevelLabel(level);
