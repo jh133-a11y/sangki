@@ -99,9 +99,9 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .inventory-details { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .inventory-equipped, .inventory-comparison { padding: 8px; border: 2px solid #b2bcc9; border-radius: 8px; background: #edf0f5; min-width: 0; }
 .inventory-equipped h2, .inventory-comparison h2 { margin: 0 0 8px; padding: 6px 10px; background: #aebfda; color: #35444f; font-size: clamp(14px, 1.8vw, 23px); }
-.inventory-equipped h2 { display: flex; align-items: center; gap: 10px; }
-.inventory-equipped h2 > span:first-child { margin-right: auto; }
-#inventory-level { white-space: nowrap; }
+.inventory-equipped h2, .inventory-comparison h2 { display: flex; align-items: center; gap: 10px; }
+.inventory-equipped h2 > span:first-child, .inventory-comparison h2 > span:first-child { margin-right: auto; }
+#inventory-level, .inventory-selected-level { white-space: nowrap; }
 #inventory-progress { flex: 0 1 30%; min-width: 70px; font-size: inherit; }
 .inventory-equipped > button { display: block; margin: 8px 0 0 auto; width: 25%; background: linear-gradient(#29acff, #0067b9); }
 .inventory-comparison { display: flex; flex-direction: column; justify-content: center; }

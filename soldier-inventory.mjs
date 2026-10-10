@@ -469,7 +469,24 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       button.append(renderCard(id, item));
       button.addEventListener('click', () => {
         const title = document.createElement('h2');
-        title.textContent = (item ? item.equipped : id === current && !currentItem) ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
+        const label = document.createElement('span');
+        label.textContent = (item ? item.equipped : id === current && !currentItem) ? '현재 장착된 장비와 동일합니다' : '선택한 장비';
+        title.append(label);
+        if (slot !== 'character') {
+          const level = item?.level || equipment[id]?.level || 1;
+          const levelLabel = document.createElement('span'); levelLabel.className = 'inventory-selected-level';
+          levelLabel.textContent = weaponLevelLabel(level);
+          const selectedMeter = meter.cloneNode(true);
+          selectedMeter.removeAttribute('id');
+          for (const element of selectedMeter.querySelectorAll('[id]')) element.removeAttribute('id');
+          selectedMeter.hidden = false;
+          const progress = selectedMeter.querySelector('progress');
+          const percent = level === 7 ? 100 : item?.upgrade_progress ?? 0;
+          progress.value = percent;
+          progress.setAttribute('aria-label', '선택한 무기 강화 진행률');
+          selectedMeter.querySelector('span').textContent = `${percent}%`;
+          title.append(levelLabel, selectedMeter);
+        }
         $('inventory-comparison').replaceChildren(title, content(id, item));
         if (item && !item.equipped && changeWeaponItem) {
           $('inventory-comparison').append(weaponAction('무기 장착', 'equip', item));

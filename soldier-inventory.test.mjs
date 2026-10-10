@@ -79,3 +79,14 @@ test('only unequipped weapons offer the fixed-price sale action', () => {
   assert.match(sql, /if item\.equipped then raise exception/);
   assert.match(sql, /gold=gold\+100/);
 });
+
+test('selected weapons show their own level and progress using the equipped meter layout', () => {
+  const source = readFileSync('soldier-inventory.mjs', 'utf8');
+  assert.match(source, /const selectedMeter = meter\.cloneNode\(true\)/);
+  assert.match(source, /level === 7 \? 100 : item\?\.upgrade_progress \?\? 0/);
+  assert.match(source, /levelLabel\.textContent = weaponLevelLabel\(level\)/);
+  assert.match(source, /progress\.setAttribute\('aria-label', '선택한 무기 강화 진행률'\)/);
+  assert.match(source, /title\.append\(levelLabel, selectedMeter\)/);
+  assert.match(source, /selectedMeter\.removeAttribute\('id'\)/);
+  assert.match(source, /selectedMeter\.querySelectorAll\('\[id\]'\)/);
+});
