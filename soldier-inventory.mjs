@@ -354,7 +354,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       : 'S급 무기를 분해하면 A급 무기 2개를 획득합니다.';
     const cost = document.createElement('strong'); cost.className = 'weapon-operation-cost';
     const price = isCombine ? ({ D: 5, C: 10, B: 20, A: 50 }[item.grade]) : 0;
-    cost.textContent = isCombine ? `◆ ${price} 보석` : 'A급 무기 2개';
+    if (isCombine) {
+      const gem = document.querySelector('.currency.gems svg').cloneNode(true);
+      const amount = document.createElement('span'); amount.textContent = `${price} 보석`;
+      cost.append(gem, amount);
+    } else cost.textContent = 'A급 무기 2개';
     const submit = document.createElement('button'); submit.type = 'button';
     submit.className = 'weapon-operation-submit'; submit.textContent = isCombine ? '조합 시작' : '분해 시작';
     const controls = document.createElement('section'); controls.className = 'weapon-operation-controls';
@@ -397,7 +401,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         const result = await operateWeapon(action, item, selected, request);
         const rewardCards = (result.results || []).map(reward => renderCard(reward.weapon, reward));
         status.textContent = isCombine ? '조합 완료' : '분해 완료';
-        submit.hidden = true; choices.hidden = true;
+        submit.hidden = true; choices.hidden = true; top.hidden = true;
         if (!isCombine) {
           const video = document.createElement('video');
           video.className = 'weapon-disassembly-video'; video.src = 'soldier-weapon-disassemble.mp4?v=1';
