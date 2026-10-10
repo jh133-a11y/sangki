@@ -123,3 +123,13 @@ test('small fullscreen shop keeps chrome fixed and the entire product area scrol
   assert.match(css,/#shop-products \{[^}]*flex: 1; min-height: 0;[^}]*overflow: auto;/s);
   assert.match(css,/grid-template-columns: minmax\(0, 1fr\); grid-template-rows/);
 });
+
+test('character and weapon enhancement both show a dedicated gold shortage dialog', () => {
+  const inventory=readFileSync('soldier-inventory.mjs','utf8');
+  assert.match(inventory,/shortageDialog\.id = 'upgrade-gold-dialog'/);
+  assert.match(inventory,/shortageTitle\.textContent = '골드 부족'/);
+  assert.match(inventory,/await showGoldShortage\(error, '무기'\)/);
+  assert.match(inventory,/await showGoldShortage\(error, '캐릭터'\)/);
+  assert.match(inventory,/shortageForm\.method = 'dialog'/);
+  assert.match(inventory,/shortageDialog\.showModal\(\); shortageClose\.focus\(\)/);
+});

@@ -184,6 +184,23 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   }
   characterConfirmation.append(characterMessage, characterForm);
   document.body.append(characterConfirmation);
+  const shortageDialog = document.createElement('dialog'); shortageDialog.id = 'upgrade-gold-dialog';
+  shortageDialog.setAttribute('aria-labelledby', 'upgrade-gold-title');
+  shortageDialog.setAttribute('aria-describedby', 'upgrade-gold-message');
+  const shortageTitle = document.createElement('h2'); shortageTitle.id = 'upgrade-gold-title'; shortageTitle.textContent = '골드 부족';
+  const shortageMessage = document.createElement('p'); shortageMessage.id = 'upgrade-gold-message';
+  const shortageForm = document.createElement('form'); shortageForm.method = 'dialog';
+  const shortageClose = document.createElement('button'); shortageClose.type = 'submit'; shortageClose.textContent = '확인';
+  shortageForm.append(shortageClose); shortageDialog.append(shortageTitle, shortageMessage, shortageForm);
+  document.body.append(shortageDialog);
+  function showGoldShortage(error, kind) {
+    if (!/골드(?:가)?\s*부족/.test(error.message)) return;
+    shortageMessage.textContent = `${kind} 강화에 필요한 골드가 부족합니다.\n${error.message}`;
+    return new Promise(resolve => {
+      shortageDialog.addEventListener('close', resolve, { once: true });
+      shortageDialog.showModal(); shortageClose.focus();
+    });
+  }
   function confirmCharacterUpgrade(id, level) {
     characterMessage.textContent = `${CHARACTERS[id].name.replace('\n', ' ')}을 ${CHARACTER_UPGRADE_COST.toLocaleString('ko-KR')}골드로 Lv.${level + 1}로 강화할까요?`;
     characterConfirmation.returnValue = 'cancel';
@@ -410,6 +427,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       } catch (error) {
         $('inventory-status').textContent = `강화 실패: ${error.message}`;
         console.error('재료 강화 오류', error);
+        await showGoldShortage(error, '무기');
         try { await changeWeaponItem('read'); }
         catch (refreshError) { $('inventory-status').textContent += ` 재확인 실패: ${refreshError.message} 새로고침하세요.`; console.error(refreshError); }
       } finally { weaponBusy = false; render(); updateWallet(); }
@@ -581,6 +599,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         } catch (error) {
           $('inventory-status').textContent = `캐릭터 강화 실패: ${error.message}`;
           console.error('캐릭터 강화 오류', error);
+          await showGoldShortage(error, '캐릭터');
           try { await upgradeCharacter(); }
           catch (refreshError) { $('inventory-status').textContent += ` 재확인 실패: ${refreshError.message} 새로고침하세요.`; console.error(refreshError); }
         } finally { characterBusy = false; render(); updateWallet(); }

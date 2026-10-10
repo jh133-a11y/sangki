@@ -1161,6 +1161,10 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 #shop-result-dialog form { display: flex; justify-content: flex-end; border: 0; }
 #shop-result-dialog[data-state="success"] h2 { background: #147d79; }
 #shop-result-dialog[data-state="error"] h2 { background: #8e3945; }
+#upgrade-gold-dialog { width: min(420px, 90vw); max-height: 90dvh; overflow-y: auto; padding: 0 18px 18px; }
+#upgrade-gold-title { margin: 0 -18px 16px; padding: 14px 18px; background: #8e3945; font-size: 20px; }
+#upgrade-gold-message { line-height: 1.65; overflow-wrap: anywhere; white-space: pre-line; }
+#upgrade-gold-dialog form { display: flex; justify-content: flex-end; border: 0; }
 #settings .soldier-music-controls {
   position: static; inset: auto; width: auto; max-width: none;
   display: grid; grid-template-columns: 1fr auto; gap: 10px;
