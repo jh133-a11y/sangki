@@ -3,51 +3,95 @@ begin;
 create or replace function public.soldier_weapon(p_name text)
 returns jsonb language sql immutable set search_path=public as $$
   select case p_name
-    when 'k2' then '{"damage":24,"delay":0.16,"range":85,"magazine":25,"reserve":100,"accuracy":85,"recoilControl":90,"weight":1800,"critical":4,"reload":2,"slot":"primary"}'::jsonb
-    when 'ak47' then '{"damage":30,"delay":0.2,"range":80,"magazine":30,"reload":2.3,"slot":"primary"}'::jsonb
-    when 'aug64' then '{"damage":22,"delay":0.13,"range":85,"magazine":30,"reload":2,"slot":"primary"}'::jsonb
-    when 'sniper' then '{"damage":100,"delay":1.3,"range":140,"magazine":5,"reload":2.8,"slot":"primary"}'::jsonb
-    when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"reload":1.5,"slot":"secondary"}'::jsonb
-    when 'shotgun' then '{"damage":75,"delay":0.9,"range":22,"magazine":6,"reserve":24,"accuracy":75,"recoilControl":60,"weight":2500,"critical":1,"reload":2.4,"slot":"secondary"}'::jsonb
+    when 'k2' then '{"damage":19,"delay":0.09230769230769231,"range":85,"magazine":30,"reserve":90,"accuracy":76,"recoilControl":86,"weight":4040,"critical":5,"reload":2,"slot":"primary"}'::jsonb
+    when 'ak47' then '{"damage":30,"delay":0.2,"range":80,"magazine":30,"accuracy":68,"recoilControl":65,"weight":4100,"reload":2.3,"slot":"primary"}'::jsonb
+    when 'aug64' then '{"damage":22,"delay":0.13,"range":85,"magazine":30,"accuracy":82,"recoilControl":82,"weight":3400,"reload":2,"slot":"primary"}'::jsonb
+    when 'sniper' then '{"damage":100,"delay":1.3,"range":140,"magazine":5,"accuracy":100,"recoilControl":75,"weight":8100,"reload":2.8,"slot":"primary"}'::jsonb
+    when 'psg1' then '{"damage":90,"delay":0.12,"range":140,"magazine":5,"reserve":15,"accuracy":100,"recoilControl":70,"weight":8100,"critical":1,"reload":2.8,"slot":"primary"}'::jsonb
+    when 'm249' then '{"damage":68,"delay":0.1,"range":85,"magazine":100,"reserve":100,"accuracy":68,"recoilControl":86,"weight":9460,"critical":1,"reload":3,"slot":"primary"}'::jsonb
+    when 'p90' then '{"damage":58,"delay":0.0967741935483871,"range":80,"magazine":50,"reserve":100,"accuracy":63,"recoilControl":72,"weight":3900,"critical":1,"reload":2,"slot":"primary"}'::jsonb
+    when 'auga3' then '{"damage":40,"delay":0.0967741935483871,"range":85,"magazine":30,"reserve":90,"accuracy":78,"recoilControl":83,"weight":3800,"critical":14,"reload":2,"slot":"primary"}'::jsonb
+    when 'g36c' then '{"damage":26,"delay":0.08571428571428572,"range":80,"magazine":30,"reserve":90,"accuracy":76,"recoilControl":86,"weight":3400,"critical":4,"reload":2,"slot":"primary"}'::jsonb
+    when 'akm' then '{"damage":53,"delay":0.1,"range":80,"magazine":30,"reserve":90,"accuracy":74,"recoilControl":54,"weight":3950,"critical":12,"reload":2.3,"slot":"primary"}'::jsonb
+    when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"accuracy":80,"recoilControl":75,"weight":900,"reload":1.5,"slot":"secondary"}'::jsonb
+    when 'shotgun' then '{"damage":45,"delay":3,"range":22,"magazine":4,"reserve":16,"accuracy":61,"recoilControl":4,"weight":3550,"critical":6,"reload":2.4,"slot":"secondary"}'::jsonb
     when 'kukri' then '{"damage":45,"delay":0.55,"range":2.8,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'axe' then '{"damage":65,"delay":0.85,"range":2.7,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'shovel' then '{"damage":50,"delay":0.7,"range":3,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
-    when 'stick' then '{"damage":70,"delay":0.3,"range":3.2,"magazine":0,"accuracy":100,"recoilControl":null,"weight":900,"critical":10,"reload":0,"slot":"melee"}'::jsonb
+    when 'stick' then '{"damage":135,"delay":0.75,"range":3.2,"magazine":0,"accuracy":null,"recoilControl":null,"weight":null,"critical":31,"reload":0,"slot":"melee"}'::jsonb
     else null end
 $$;
-create or replace function public.soldier_weapon_stats(p_weapon text,p_grade text,p_level integer)
+create or replace function public.soldier_weapon_stats(p_weapon text,p_grade text,p_level integer,p_color text)
 returns jsonb language plpgsql immutable set search_path=public as $$
-declare spec jsonb; offset_damage integer; per_level integer; offset_critical integer; per_two_levels integer;
+declare
+  spec jsonb; offset_damage integer; per_level integer; offset_critical integer; per_two_levels integer;
+  grade_steps integer; weight_factor numeric; stats jsonb;
 begin
   spec:=public.soldier_weapon(p_weapon);
   if spec is null or p_grade is null or p_grade not in ('D','C','B','A','S')
-    or p_level is null or p_level not between 1 and 7 then
+    or p_level is null or p_level not between 1 and 7
+    or p_color is null or p_color not in ('standard','gold','red','silver') then
     raise exception '무기 등급과 레벨이 올바르지 않습니다.';
   end if;
   offset_damage:=case p_grade when 'D' then 0 when 'C' then 6 when 'B' then 12 when 'A' then 18 else 30 end;
   per_level:=case p_grade when 'A' then 2 when 'S' then 3 else 1 end;
   offset_critical:=case when p_grade='S' then 3 else 0 end;
   per_two_levels:=case p_grade when 'A' then 1 when 'S' then 2 else 0 end;
-  return spec||jsonb_build_object('weapon',p_weapon,'grade',p_grade,'level',p_level,
+  grade_steps:=case p_grade when 'D' then 0 when 'C' then 1 when 'B' then 2 when 'A' then 3 else 4 end;
+  weight_factor:=case p_grade when 'D' then 1 when 'C' then 0.95 when 'B' then 0.9025
+    when 'A' then 0.857375 else 0.81450625 end;
+  stats:=spec||jsonb_build_object('weapon',p_weapon,'grade',p_grade,'level',p_level,'color',p_color,
     'damage',(spec->>'damage')::integer+offset_damage+(p_level-1)*per_level,
-    'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+((p_level-1)/2)*per_two_levels);
+    'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+((p_level-1)/2)*per_two_levels)
+    ||case when spec->>'slot'='melee' then '{}'::jsonb else jsonb_build_object(
+      'accuracy',(spec->>'accuracy')::integer+grade_steps*3,
+      'recoilControl',(spec->>'recoilControl')::integer+grade_steps*3,
+      'weight',round((spec->>'weight')::numeric*weight_factor)::integer
+    ) end;
+  if p_color='gold' then stats:=jsonb_set(stats,'{damage}',to_jsonb((stats->>'damage')::integer+5)); end if;
+  if p_color='red' then stats:=jsonb_set(stats,'{critical}',to_jsonb((stats->>'critical')::integer+5)); end if;
+  if p_color='silver' and stats->>'weight' is not null then
+    stats:=jsonb_set(stats,'{weight}',to_jsonb(round((stats->>'weight')::numeric*0.9)::integer));
+  end if;
+  return stats;
 end $$;
+create or replace function public.soldier_weapon_stats(p_weapon text,p_grade text,p_level integer)
+returns jsonb language sql immutable set search_path=public as $$
+  select public.soldier_weapon_stats(p_weapon,p_grade,p_level,'standard')
+$$;
+create or replace function public.soldier_weapon_item_managed(p_weapon text)
+returns boolean language sql immutable set search_path=public as $$
+  select p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
+$$;
 create or replace function public.soldier_loadout_stats(p_client uuid,p_loadout jsonb)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare slot_name text; weapon_id text; item_grade text; item_level integer; stats jsonb:='{}';
+declare slot_name text; weapon_id text; item_grade text; item_level integer; item_color text; stats jsonb:='{}';
 begin
   foreach slot_name in array array['primary','secondary','melee'] loop
     weapon_id:=p_loadout->>slot_name;
-    if weapon_id in ('k2','shotgun','stick') then
-      select grade,level into item_grade,item_level from public.soldier_weapon_items
+    item_color:='standard';
+    if public.soldier_weapon_item_managed(weapon_id) then
+      select grade,level,color into item_grade,item_level,item_color from public.soldier_weapon_items
       where client_id=p_client and weapon=weapon_id and equipped;
     else
       select grade,level into item_grade,item_level from public.soldier_equipment
       where client_id=p_client and weapon=weapon_id;
     end if;
     if not found then raise exception '장착 무기의 보유 정보를 확인할 수 없습니다.'; end if;
-    stats:=jsonb_set(stats,array[slot_name],public.soldier_weapon_stats(weapon_id,item_grade,item_level));
+    stats:=jsonb_set(stats,array[slot_name],public.soldier_weapon_stats(weapon_id,item_grade,item_level,item_color));
   end loop;
+  if stats->'primary'->>'color'=stats->'secondary'->>'color'
+    and stats->'primary'->>'color'=stats->'melee'->>'color' then
+    foreach slot_name in array array['primary','secondary','melee'] loop
+      if stats->slot_name->>'color'='gold' then
+        stats:=jsonb_set(stats,array[slot_name,'damage'],to_jsonb((stats->slot_name->>'damage')::integer+3));
+      elsif stats->slot_name->>'color'='red' then
+        stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb((stats->slot_name->>'critical')::integer+3));
+      elsif stats->slot_name->>'color'='silver' and stats->slot_name->>'weight' is not null then
+        stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*0.9)::integer));
+      end if;
+    end loop;
+  end if;
   return stats;
 end $$;
 create or replace function public.soldier_initial_ammo(p_stats jsonb)
@@ -280,6 +324,8 @@ begin
   return public.soldier_snapshot(rid,me.id);
 end $$;
 revoke all on function public.soldier_weapon(text),public.soldier_weapon_stats(text,text,integer),
+  public.soldier_weapon_stats(text,text,integer,text),
+  public.soldier_weapon_item_managed(text),
   public.soldier_loadout_stats(uuid,jsonb),public.soldier_initial_ammo(jsonb),
   public.soldier_reload_ammo(jsonb,text,jsonb),public.soldier_weapon_combat(),
   public.soldier_snapshot(uuid,uuid) from public,anon,authenticated;

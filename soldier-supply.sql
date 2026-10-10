@@ -29,17 +29,25 @@ begin
 end $$;
 revoke all on function public.soldier_supply_grade(text,integer,integer) from public,anon,authenticated;
 
+create or replace function public.soldier_supply_weapons()
+returns text[] language sql immutable set search_path=public as $$
+  select array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm']::text[]
+$$;
+revoke all on function public.soldier_supply_weapons() from public,anon,authenticated;
+
 create or replace function public.soldier_supply_api(
   p_token uuid,p_product text default null,p_request uuid default null
 ) returns jsonb language plpgsql security definer set search_path=public as $$
 declare
   owner_id uuid; balance bigint; cost integer; quantity integer; i integer;
-  roll integer; weapon_id text; grade_id text; item_id uuid;
+  roll integer; weapon_id text; grade_id text; color_id text; item_id uuid;
+  weapon_pool text[];
   rewards jsonb := '[]'::jsonb; replayed boolean := false; previous public.soldier_supply_purchases%rowtype;
 begin
   perform public.soldier_equipment_api(p_token);
   select client_id into owner_id from public.soldier_sessions where token=p_token;
   select gems into balance from public.soldier_profiles where client_id=owner_id for update;
+  weapon_pool:=public.soldier_supply_weapons();
   if p_product is not null then
     if p_product not in ('normal','advanced','special') or p_request is null then
       raise exception '보급함 구매 정보가 올바르지 않습니다.';
@@ -57,11 +65,12 @@ begin
       for i in 1..quantity loop
         roll:=floor(random()*10000)::integer;
         grade_id:=public.soldier_supply_grade(p_product,i,roll);
-        weapon_id:=(array['k2','shotgun','stick'])[1+floor(random()*3)::integer];
+        weapon_id:=weapon_pool[1+floor(random()*array_length(weapon_pool,1))::integer];
+        color_id:=(array['standard','gold','red','silver']::text[])[1+floor(random()*4)::integer];
         -- The existing inventory trigger rejects overflow; the entire purchase rolls back.
-        item_id:=public.soldier_grant_weapon(owner_id,weapon_id,grade_id,'supply-'||p_product,
+        item_id:=public.soldier_grant_colored_weapon(owner_id,weapon_id,grade_id,color_id,'supply-'||p_product,
           'supply-'||p_request::text||'-'||i::text);
-        rewards:=rewards||jsonb_build_array(jsonb_build_object('id',item_id,'weapon',weapon_id,'grade',grade_id,'level',1));
+        rewards:=rewards||jsonb_build_array(jsonb_build_object('id',item_id,'weapon',weapon_id,'color',color_id,'grade',grade_id,'level',1));
       end loop;
       update public.soldier_profiles set gems=gems-cost where client_id=owner_id;
       insert into public.soldier_supply_purchases(client_id,request_id,product,rewards)

@@ -30,7 +30,7 @@ test('every weapon exposes the seven reference inventory fields using actual gam
   for (const [id, weapon] of Object.entries(WEAPONS)) {
     const stats = weaponInventoryStats(id);
     assert.deepEqual(stats.map(([label]) => label), labels);
-    assert.equal(stats[0][1], weapon.magazine ? `${weapon.magazine} / ${weapon.reserve ?? '미설정'}` : '무한대');
+    assert.equal(stats[0][1], weapon.slot === 'melee' ? '-' : `${weapon.magazine} / ${weapon.reserve ?? '미설정'}`);
     assert.equal(stats[1][1], weapon.damage);
     assert.equal(stats[2][1], Math.round(60 / weapon.delay));
     assert.ok(stats.slice(3).every(([, , explanation]) => explanation.length > 0));
@@ -39,13 +39,13 @@ test('every weapon exposes the seven reference inventory fields using actual gam
 });
 
 test('requested D Lv1 K2, M870 and M9 stats are exact and comparisons use the selected grade/level', () => {
-  assert.deepEqual(weaponInventoryStats('k2').map(([,value])=>value), ['25 / 100',24,375,85,90,1800,'4%']);
-  assert.deepEqual(weaponInventoryStats('shotgun').map(([,value])=>value), ['6 / 24',75,67,75,60,2500,'1%']);
-  assert.deepEqual(weaponInventoryStats('stick').map(([,value])=>value), ['무한대',70,200,100,'없음',900,'10%']);
-  assert.equal(weaponInventoryStats('k2','A',3)[1][1],46);
-  assert.equal(weaponInventoryStats('k2','A',3)[6][1],'5%');
-  assert.equal(weaponInventoryStats('stick','S',7)[1][1],118);
-  assert.equal(weaponInventoryStats('stick','S',7)[6][1],'19%');
+  assert.deepEqual(weaponInventoryStats('k2').map(([,value])=>value), ['30 / 90',19,650,76,86,4040,'5%']);
+  assert.deepEqual(weaponInventoryStats('shotgun').map(([,value])=>value), ['4 / 16',45,20,61,4,3550,'6%']);
+  assert.deepEqual(weaponInventoryStats('stick').map(([,value])=>value), ['-',135,80,'-','-','-','31%']);
+  assert.equal(weaponInventoryStats('k2','A',3)[1][1],41);
+  assert.equal(weaponInventoryStats('k2','A',3)[6][1],'6%');
+  assert.equal(weaponInventoryStats('stick','S',7)[1][1],183);
+  assert.equal(weaponInventoryStats('stick','S',7)[6][1],'40%');
 });
 
 test('enhancement UI keeps XP internal and exposes level-adjacent progress and a plain upgrade button', () => {

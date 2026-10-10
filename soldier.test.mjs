@@ -32,7 +32,7 @@ test('weapon names use a shared separate label rather than lettering baked into 
   const client = readFileSync(new URL('./soldier-weapon-items.mjs', import.meta.url), 'utf8');
   const css = readFileSync(new URL('./soldier.css', import.meta.url), 'utf8');
   assert.match(client, /card\.querySelector\('\.weapon-name'\)\.textContent = WEAPONS\[weapon\]\.name/);
-  const style = css.match(/\.weapon-level, \.weapon-name \{([^}]+)\}/)[1];
+  const style = css.match(/\.weapon-level, \.weapon-name, \.weapon-color-label \{([^}]+)\}/)[1];
   for (const declaration of ['font-weight: 900', 'font-style: italic', 'color: white']) {
     assert.ok(style.includes(declaration));
   }
@@ -52,8 +52,8 @@ test('home offers equipment inventory and icon-only initial zero balances', () =
     assert.ok(html.includes(`data-equipment-tab="${slot}"`));
   }
 });
-test('all ten weapons match server-authoritative specifications', () => {
-  assert.equal(Object.keys(WEAPONS).length, 10);
+test('all sixteen weapons match server-authoritative specifications', () => {
+  assert.equal(Object.keys(WEAPONS).length, 16);
   for (const [id, spec] of Object.entries(WEAPONS)) {
     const match = sql.match(new RegExp(`when '${id}' then '([^']+)'`));
     assert.ok(match, id);

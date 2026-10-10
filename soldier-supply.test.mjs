@@ -5,7 +5,7 @@ import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs';
 
 const owner='00000000-0000-0000-0000-000000000001';
 function receipt(product,grades) {
-  const rewards=grades.map((grade,i) => ({id:`item-${i}`,weapon:'k2',grade,level:1}));
+  const rewards=grades.map((grade,i) => ({id:`item-${i}`,weapon:'k2',color:['standard','gold','red','silver'][i%4],grade,level:1}));
   return {supply_version:1,client_id:owner,replayed:false,gems:'100',product,request:owner,rewards,
     inventory:{gold:'0',material_version:2,items:rewards.map(item => ({...item,equipped:false,
       source:`supply-${product}`,upgrade_xp:0,upgrade_progress:0}))}};
@@ -23,6 +23,7 @@ test('supply response validates quantities, ownership and first special guarante
   assert.equal(validateSupply(special,'special',owner).length,11);
   for (const broken of [
     {...single,request:'wrong'}, {...single,gems:'-1'}, {...single,rewards:[]},
+    {...single,rewards:[{...single.rewards[0],color:'blue'}]},
     {...single,inventory:{gold:'0',items:[]}}, {...single,client_id:undefined}
   ]) assert.throws(() => validateSupply(broken,'normal',owner));
   assert.throws(() => validateSupply(receipt('advanced',['D']),'advanced',owner),/최소/);
@@ -35,9 +36,11 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/perform public\.soldier_equipment_api\(p_token\)/);
   assert.match(sql,/primary key \(client_id,request_id\)/);
   assert.match(sql,/for update/);
-  assert.match(sql,/soldier_grant_weapon/);
+  assert.match(sql,/soldier_grant_colored_weapon/);
   assert.match(sql,/enable row level security/);
   assert.match(sql,/p_product='special' and p_index=1/);
+  assert.match(sql,/array\['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'\]/);
+  assert.match(sql,/weapon_pool:=public\.soldier_supply_weapons\(\)/);
   assert.doesNotMatch(sql,/p_(price|grade|weapon)\b/);
 });
 test('opening keeps reference timing, tap-to-advance specials and no visible buttons',() => {

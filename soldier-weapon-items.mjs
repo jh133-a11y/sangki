@@ -1,17 +1,33 @@
-import { WEAPONS, EQUIPMENT_GRADES, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=4';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=6';
 
-export const WEAPON_ARTWORK = {
+const WEAPON_ART_FILES = {
   k2: 'soldier-weapon-k2.webp?v=3',
   shotgun: 'soldier-weapon-shotgun.webp?v=3',
-  stick: 'soldier-weapon-stick.webp?v=3'
+  stick: 'soldier-weapon-stick.webp?v=3',
+  psg1: 'soldier-weapon-psg1.webp?v=1',
+  m249: 'soldier-weapon-m249.webp?v=1',
+  p90: 'soldier-weapon-p90.webp?v=1',
+  auga3: 'soldier-weapon-auga3.webp?v=1',
+  g36c: 'soldier-weapon-g36c.webp?v=1',
+  akm: 'soldier-weapon-akm.webp?v=1'
 };
-export const WEAPON_REWARDS = Object.entries(WEAPON_ARTWORK).flatMap(([weapon, image]) =>
-  EQUIPMENT_GRADES.map(grade => ({
-    id: `${weapon}-${grade.toLowerCase()}`, weapon, grade,
+export const WEAPON_ARTWORK = Object.fromEntries(Object.entries(WEAPON_ART_FILES).map(([weapon, standard]) => [
+  weapon, Object.fromEntries(WEAPON_COLORS.map(color => [color,
+    color === 'standard' ? standard : `soldier-weapon-${weapon}-${color}.webp?v=1`]))
+]));
+export function weaponArtwork(weapon, color = 'standard') {
+  return WEAPON_ARTWORK[weapon]?.[color] || null;
+}
+export const WEAPON_REWARDS = Object.entries(WEAPON_ARTWORK).flatMap(([weapon, images]) =>
+  WEAPON_COLORS.flatMap(color => EQUIPMENT_GRADES.map(grade => ({
+    id: `${weapon}-${grade.toLowerCase()}-${color}`, weapon, grade, color,
     name: WEAPONS[weapon].name, slot: WEAPONS[weapon].slot,
-    image, frame: `soldier-grade-${grade.toLowerCase()}.webp`
-  }))
+    image: images[color], frame: `soldier-grade-${grade.toLowerCase()}.webp`
+  })))
 );
+export function weaponColorLabel(color) {
+  return WEAPON_COLOR_LABELS[color] || '';
+}
 
 export function weaponLevelXp(grade) {
   const xp = { D:25, C:50, B:100, A:200, S:400 };
@@ -51,7 +67,8 @@ export function validateWeaponItems(result) {
   const counts = {}, ids = new Set(), equipped = new Set();
   for (const item of result.items) {
     if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id)
-      || !WEAPON_ARTWORK[item.weapon] || typeof item.equipped !== 'boolean') {
+      || !WEAPON_ARTWORK[item.weapon] || !WEAPON_COLORS.includes(item.color ?? 'standard')
+      || typeof item.equipped !== 'boolean') {
       throw new Error('서버 보상 무기 정보를 확인할 수 없습니다.');
     }
     weaponUpgradeCost(item.grade, item.level);
@@ -69,8 +86,9 @@ export function validateWeaponItems(result) {
     if (item.equipped && equipped.has(slot)) throw new Error('동일 분류의 중복 장착 정보입니다.');
     if (item.equipped) equipped.add(slot);
   }
+  const items = result.items.map(item => ({ ...item, color: item.color ?? 'standard' }));
   return result.material_version === 2
-    ? result.items.map(item => ({ ...item, materialReady: result.material_rate === 83 })) : result.items;
+    ? items.map(item => ({ ...item, materialReady: result.material_rate === 83 })) : items;
 }
 
 export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
@@ -79,14 +97,19 @@ export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
   card.dataset.grade = item.grade;
   card.dataset.source = item.source || '';
   card.dataset.itemId = item.id || '';
+  card.dataset.color = item.color || 'standard';
   const frame = card.querySelector('.grade-frame');
   frame.src = `soldier-grade-${item.grade.toLowerCase()}.webp`;
   frame.alt = `${item.grade}급`;
   card.querySelector('.weapon-level').textContent = weaponLevelLabel(item.level);
   const image = card.querySelector('.weapon-image');
-  image.hidden = !WEAPON_ARTWORK[weapon];
-  if (WEAPON_ARTWORK[weapon]) image.src = WEAPON_ARTWORK[weapon];
+  const imageSource = weaponArtwork(weapon, item.color || 'standard');
+  image.hidden = !imageSource;
+  if (imageSource) image.src = imageSource;
   else image.removeAttribute('src');
   image.alt = WEAPONS[weapon].name;
+  const colorLabel = card.querySelector('.weapon-color-label');
+  colorLabel.textContent = weaponColorLabel(item.color);
+  colorLabel.hidden = !colorLabel.textContent;
   card.querySelector('.weapon-name').textContent = WEAPONS[weapon].name;
 }

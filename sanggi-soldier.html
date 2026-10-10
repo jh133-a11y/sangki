@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-home-model.glb?v=5" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=27">
+  <link rel="stylesheet" href="soldier.css?v=29">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
@@ -32,9 +32,9 @@
     </header>
     <div class="home-mode-label"><strong>PVP</strong><span>상기 솔져 · 기본 장비</span></div>
     <section class="loadout" aria-label="무기 선택">
-      <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-name">K2</span></div></div>
-      <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-name">M870</span></div></div>
-      <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-name">M9</span></div></div>
+      <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-color-label" hidden></span><span class="weapon-name">K2</span></div></div>
+      <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-color-label" hidden></span><span class="weapon-name">M870</span></div></div>
+      <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-color-label" hidden></span><span class="weapon-name">M9</span></div></div>
       <div id="character" class="character-card"><img src="soldier-character-black-water.webp?v=2" alt="Black Water"><span class="character-level" aria-label="레벨 1">1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
@@ -131,6 +131,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=42"></script>
+  <script type="module" src="soldier.js?v=44"></script>
 </body>
 </html>

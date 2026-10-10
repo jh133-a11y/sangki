@@ -37,12 +37,61 @@ begin
   end if;
   select * into profile from public.soldier_profiles where client_id=sess.client_id;
   return jsonb_build_object('gold',profile.gold::text,'gems',profile.gems::text,
+    'gold_exchange_version',1,
     'equipped',profile.equipped_character,'characters',coalesce((
       select jsonb_object_agg(character,jsonb_build_object('level',level)) from public.soldier_characters where client_id=sess.client_id
     ),'{}'::jsonb));
 end $$;
 revoke all on function public.soldier_shop_api(uuid,text,text) from public;
 grant execute on function public.soldier_shop_api(uuid,text,text) to anon,authenticated;
+
+create table if not exists public.soldier_gold_exchange_requests (
+  client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
+  request_id uuid not null,
+  product text not null check (product in ('gold-5000','gold-30000','gold-65000')),
+  gold_awarded bigint not null check (gold_awarded>0),
+  created_at timestamptz not null default now(),
+  primary key (client_id,request_id)
+);
+alter table public.soldier_gold_exchange_requests enable row level security;
+revoke all on public.soldier_gold_exchange_requests from public,anon,authenticated;
+
+create or replace function public.soldier_gold_exchange_api(
+  p_token uuid,p_product text,p_request uuid
+)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare
+  owner_id uuid; profile public.soldier_profiles%rowtype;
+  previous public.soldier_gold_exchange_requests%rowtype;
+  gems_cost integer; gold_amount bigint; replayed boolean:=false;
+begin
+  perform public.soldier_equipment_api(p_token);
+  select client_id into owner_id from public.soldier_sessions where token=p_token;
+  select * into profile from public.soldier_profiles where client_id=owner_id for update;
+  if p_product is null or p_product not in ('gold-5000','gold-30000','gold-65000') or p_request is null then
+    raise exception '골드 교환 상품 정보가 올바르지 않습니다.';
+  end if;
+  select * into previous from public.soldier_gold_exchange_requests
+    where client_id=owner_id and request_id=p_request;
+  if found then
+    if previous.product<>p_product then raise exception '같은 요청 번호가 다른 골드 상품에 사용되었습니다.'; end if;
+    gold_amount:=previous.gold_awarded;
+    replayed:=true;
+  else
+    gems_cost:=case p_product when 'gold-5000' then 10 when 'gold-30000' then 50 else 100 end;
+    gold_amount:=case p_product when 'gold-5000' then 5000 when 'gold-30000' then 30000 else 65000 end;
+    if profile.gems<gems_cost then raise exception '보석이 부족합니다. 필요한 보석: %',gems_cost; end if;
+    update public.soldier_profiles set gems=gems-gems_cost,gold=gold+gold_amount where client_id=owner_id;
+    insert into public.soldier_gold_exchange_requests(client_id,request_id,product,gold_awarded)
+      values(owner_id,p_request,p_product,gold_amount);
+  end if;
+  select * into profile from public.soldier_profiles where client_id=owner_id;
+  return jsonb_build_object('exchange_version',1,'client_id',owner_id,'product',p_product,
+    'request',p_request,'replayed',replayed,'gold_awarded',gold_amount::text,
+    'gold',profile.gold::text,'gems',profile.gems::text);
+end $$;
+revoke all on function public.soldier_gold_exchange_api(uuid,text,uuid) from public;
+grant execute on function public.soldier_gold_exchange_api(uuid,text,uuid) to anon,authenticated;
 
 create or replace function public.soldier_snapshot(p_room uuid,p_player uuid)
 returns jsonb language sql security definer set search_path=public as $$

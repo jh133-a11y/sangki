@@ -1,13 +1,13 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=17';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=7';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=19';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop } from './soldier-shop.mjs?v=7';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=1';
-import { WEAPONS, weaponStats, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=4';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=8';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=3';
+import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=6';
 
 const $ = id => document.getElementById(id);
 setupFullscreen($('fullscreen-open'), $('fullscreen-status'));
@@ -24,7 +24,7 @@ function save(key, value) {
 let settings = settingsFrom(read('sanggi-soldier-settings', {}));
 const loadout = { ...DEFAULT_LOADOUT };
 let equipment = {}, weaponItems = [];
-let characterState = { characters: {}, equipped: 'black-water', defaultLevel: 1, upgradeReady: false }, shopReady = false, characterBusy = false;
+let characterState = { characters: {}, equipped: 'black-water', defaultLevel: 1, upgradeReady: false }, shopReady = false, goldExchangeReady = false, characterBusy = false;
 function updateEquipment(result) {
   if (!result || !/^\d+$/.test(String(result.gold)) || !result.equipment || typeof result.equipment !== 'object' || Array.isArray(result.equipment)) {
     throw new Error('서버 장비 정보를 확인할 수 없습니다.');
@@ -53,6 +53,7 @@ for (const slot of Object.keys(loadout)) {
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
   getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem,
+  operateWeapon: operateWeapon, getGems: () => identity?.gems,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
   upgradeCharacter: (id, level) => id ? refreshCharacters('upgrade', id, level) : refreshCharacters(),
@@ -81,9 +82,77 @@ async function changeWeaponItem(action = 'read', item = null, weapon = null, mat
   weaponItems = items; identity.gold = result.gold; updateWallet(identity);
   Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
 }
+async function operateWeapon(action, item, other, request) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('무기 작업 요청을 저장할 계정 정보를 확인할 수 없습니다.');
+  const pendingKey = `sanggi-weapon-operation-pending-${owner}`;
+  const pending = { action, item, other, request };
+  const existing = JSON.parse(localStorage.getItem(pendingKey) || 'null');
+  if (existing && existing.request !== request) throw new Error('미확인 무기 작업이 있습니다. 새로고침해 결과를 확인하세요.');
+  localStorage.setItem(pendingKey, JSON.stringify(pending));
+  let result;
+  try {
+    result = await rpc('soldier_weapon_operation_api', {
+      p_token: identity.token, p_action: action, p_item: item.id, p_other: other?.id || null, p_request: request
+    });
+  } catch (error) {
+    if (error.rpcRejected) localStorage.removeItem(pendingKey);
+    throw error;
+  }
+  if (!result || result.operation_version !== 1 || result.operation !== action || result.request !== request
+    || typeof result.replayed !== 'boolean' || String(result.client_id).toLowerCase() !== owner.toLowerCase()
+    || !/^\d+$/.test(String(result.gems)) || !Array.isArray(result.results)
+    || result.results.length !== (action === 'combine' ? 1 : 2)) {
+    throw new Error('무기 조합·분해 응답을 확인할 수 없습니다. 같은 요청으로 다시 확인하세요.');
+  }
+  const items = validateWeaponItems(result.inventory);
+  for (const slot of ['primary', 'secondary', 'melee']) {
+    if (inventoryWeapons(equipment, slot).length + items.filter(entry => WEAPONS[entry.weapon].slot === slot).length > INVENTORY_LIMIT) {
+      throw new Error('분류별 보유 인벤토리 50개를 초과한 응답입니다.');
+    }
+  }
+  for (const reward of result.results) {
+    if (!reward || typeof reward.id !== 'string' || !WEAPONS[reward.weapon]
+      || !WEAPON_COLORS.includes(reward.color) || !['D', 'C', 'B', 'A', 'S'].includes(reward.grade)
+      || reward.level !== 1) throw new Error('무기 작업 결과를 확인할 수 없습니다.');
+    if (!result.replayed && !items.some(entry => entry.id === reward.id && entry.weapon === reward.weapon
+      && entry.color === reward.color && entry.grade === reward.grade && entry.source === action)) {
+      throw new Error('무기 작업 결과와 인벤토리가 일치하지 않습니다.');
+    }
+  }
+  if (action === 'combine' && (result.results[0].grade !== ({ D: 'C', C: 'B', B: 'A', A: 'S' })[item.grade]
+    || (item.weapon === other.weapon && result.results[0].weapon !== item.weapon)
+    || (item.weapon === other.weapon && item.color === other.color && result.results[0].color !== item.color))) {
+    throw new Error('조합 결과 등급 또는 무기 정보를 확인할 수 없습니다.');
+  }
+  if (action === 'disassemble' && result.results.some(reward => reward.grade !== 'A')) {
+    throw new Error('분해 결과 등급을 확인할 수 없습니다.');
+  }
+  weaponItems = items; identity.gold = result.inventory.gold; identity.gems = result.gems;
+  updateWallet(identity); Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
+  localStorage.removeItem(pendingKey);
+  return result;
+}
+async function recoverPendingWeaponOperation() {
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) return;
+  const key = `sanggi-weapon-operation-pending-${owner}`;
+  const pending = JSON.parse(localStorage.getItem(key) || 'null');
+  if (!pending) return;
+  if (!['combine', 'disassemble'].includes(pending.action) || !pending.item
+    || typeof pending.item.id !== 'string' || typeof pending.request !== 'string'
+    || (pending.action === 'combine' && !pending.other)) {
+    throw new Error('저장된 무기 작업 정보를 확인할 수 없습니다. 고객지원에 문의하세요.');
+  }
+  $('home-status').textContent = '이전 무기 작업 결과를 확인하는 중입니다…';
+  await operateWeapon(pending.action, pending.item, pending.other, pending.request);
+  $('home-status').textContent = '이전 무기 작업 결과를 인벤토리에 반영했습니다.';
+}
 const shop = createShop({
   getState: () => characterState, isReady: () => shopReady,
   buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters(),
+  buyGold, isGoldReady: () => goldExchangeReady,
   isSupplyReady: () => supplyReady, buySupply,
   renderCard(weapon,item) {
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
@@ -126,6 +195,40 @@ async function buySupply(product) {
     return result.rewards;
   } finally { supplyBusy = false; }
 }
+async function buyGold(product) {
+  if (!identity || !goldExchangeReady) throw new Error('골드 교환 상점에 연결되지 않았습니다.');
+  const spec = GOLD_PRODUCTS.find(entry => entry.id === product);
+  if (!spec) throw new Error('골드 상품이 올바르지 않습니다.');
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('골드 교환 요청을 저장할 계정 정보를 확인할 수 없습니다.');
+  const key = `sanggi-gold-exchange-pending-${owner}`;
+  let pending = JSON.parse(localStorage.getItem(key) || 'null');
+  if (pending && (pending.product !== product || typeof pending.request !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pending.request))) {
+    throw new Error('미확인 골드 교환이 있습니다. 새로고침한 뒤 같은 상품을 눌러 결과를 확인하세요.');
+  }
+  pending ||= { product, request: crypto.randomUUID() };
+  localStorage.setItem(key, JSON.stringify(pending));
+  let result;
+  try {
+    result = await rpc('soldier_gold_exchange_api', {
+      p_token: identity.token, p_product: product, p_request: pending.request
+    });
+  } catch (error) {
+    if (error.rpcRejected) localStorage.removeItem(key);
+    throw error;
+  }
+  if (!result || result.exchange_version !== 1 || result.product !== product || result.request !== pending.request
+    || String(result.client_id).toLowerCase() !== owner.toLowerCase() || typeof result.replayed !== 'boolean'
+    || String(result.gold_awarded) !== String(spec.gold)
+    || !/^\d+$/.test(String(result.gold)) || !/^\d+$/.test(String(result.gems))) {
+    throw new Error('골드 교환 응답을 확인할 수 없습니다. 새로고침 후 같은 요청으로 다시 확인하세요.');
+  }
+  identity.gold = result.gold; identity.gems = result.gems;
+  updateWallet(identity);
+  localStorage.removeItem(key);
+  return result;
+}
 async function refreshCharacters(action = 'read', id = null, level = null) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
   if (characterBusy) throw new Error('이전 상점 요청을 처리 중입니다.');
@@ -148,6 +251,7 @@ async function refreshCharacters(action = 'read', id = null, level = null) {
     characterState = { characters: result.characters, equipped: result.equipped, defaultLevel, upgradeReady: result.character_version === 2 };
     identity.gold = result.gold; identity.gems = result.gems;
     updateWallet(identity); shopReady = true;
+    if (action !== 'upgrade') goldExchangeReady = result.gold_exchange_version === 1;
     const card = characterCard(result.equipped, ownedCharacterLevel(characterState, result.equipped));
     $('character').replaceChildren(...card.childNodes);
     $('character').setAttribute('aria-label', `캐릭터 ${CHARACTERS[result.equipped].name}`);
@@ -228,6 +332,11 @@ async function connect() {
     ready = true;
     $('play-open').disabled = false;
     $('home-status').textContent = identity.home_version === 2 ? '장비를 선택하고 게임을 시작하세요.' : '계급 승리 보너스·재화 기능은 soldier-home-upgrade.sql 실행 후 새로고침하세요.';
+    try { await recoverPendingWeaponOperation(); }
+    catch (error) {
+      $('home-status').textContent = `이전 무기 작업 결과 확인 실패: ${error.message} 연결을 확인하고 새로고침하세요.`;
+      console.error('무기 작업 재확인 오류', error);
+    }
   } catch (error) {
     $('nickname').textContent = '투자 닉네임 필요';
     $('home-status').textContent = `${error.message} 메인에서 투자 닉네임을 설정하세요. 온라인 서버를 처음 설정할 때는 soldier-schema.sql 실행이 필요합니다.`;
@@ -404,11 +513,11 @@ function equip(next) {
       if (id === 'stick') cube(gun, .35, -.3, -.95, .08, .08, .4, '#796348');
       else cube(gun, .35, -.25, -.95, id === 'kukri' ? .08 : .34, id === 'kukri' ? .15 : .28, .15, '#a4b2b8');
     } else {
-      const length = id === 'pistol' ? .35 : id === 'sniper' ? 1.2 : .8;
+      const length = id === 'pistol' ? .35 : ['sniper', 'psg1'].includes(id) ? 1.2 : .8;
       cube(gun, .3, -.3, -.55, .13, .18, .38, id === 'ak47' ? '#735c46' : '#37463d');
       cube(gun, .3, -.28, -.6 - length / 2, .065, .065, length, '#283039');
       cube(gun, .3, -.44, -.56, .09, .23, .13, '#2d3337');
-      if (id === 'sniper' || id === 'aug64') cube(gun, .3, -.17, -.7, .09, .09, .3, '#283039');
+      if (['sniper', 'psg1', 'aug64', 'auga3'].includes(id)) cube(gun, .3, -.17, -.7, .09, .09, .3, '#283039');
     }
   }
   for (const button of document.querySelectorAll('[data-slot]')) button.setAttribute('aria-pressed', String(button.dataset.slot === slot));
@@ -528,10 +637,10 @@ function startMatch(isOnline) {
   homeCharacter.cancelDrag();
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
-  matchWeapons = Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
+  matchWeapons = applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
     const item = weaponItems.find(entry => entry.weapon === id && entry.equipped) || equipment[id];
-    return [key, weaponStats(id, item?.grade || 'D', item?.level || 1)];
-  }));
+    return [key, weaponStats(id, item?.grade || 'D', item?.level || 1, item?.color || 'standard')];
+  })));
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
   const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
   player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: stats.hp, maxHp: stats.hp, evasion: stats.evasion, lastDodge: null, kills: 0, deaths: 0 };
@@ -709,7 +818,7 @@ function jump() {
   velocityY = 5; jumpPending = true;
 }
 function crouch() { player.crouch = !player.crouch; $('crouch').setAttribute('aria-pressed', String(player.crouch)); }
-function pressFire() { if (mode !== 'game') return; fireHeld = true; if (loadout[slot] === 'sniper') { aiming = true; $('scope').hidden = false; } else shoot(); }
+function pressFire() { if (mode !== 'game') return; fireHeld = true; if (['sniper', 'psg1'].includes(loadout[slot])) { aiming = true; $('scope').hidden = false; } else shoot(); }
 function releaseFire(cancel = false) {
   if (aiming && !cancel) shoot();
   fireHeld = false; aiming = false; $('scope').hidden = true;
@@ -840,7 +949,7 @@ function frame(time) {
       }
       if (fireHeld && WEAPONS[loadout[slot]].automatic) shoot();
       if (shotRequested && !networkBusy && !aiming) shoot();
-      if (settings.autoFire && loadout[slot] !== 'sniper' && slot !== 'melee' && targeted()) shoot();
+      if (settings.autoFire && !['sniper', 'psg1'].includes(loadout[slot]) && slot !== 'melee' && targeted()) shoot();
     }
     if (!online) {
       if (reloadEnds && now >= reloadEnds) { ammo = reloadWeaponAmmo(ammo, reloadSlot, matchWeapons[reloadSlot]); reloadEnds = 0; updateHud(); }

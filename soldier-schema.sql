@@ -48,16 +48,22 @@ revoke all on public.soldier_profiles,public.soldier_sessions,public.soldier_roo
 create or replace function public.soldier_weapon(p_name text)
 returns jsonb language sql immutable set search_path=public as $$
   select case p_name
-    when 'k2' then '{"damage":24,"delay":0.16,"range":85,"magazine":25,"reserve":100,"accuracy":85,"recoilControl":90,"weight":1800,"critical":4,"reload":2,"slot":"primary"}'::jsonb
-    when 'ak47' then '{"damage":30,"delay":0.2,"range":80,"magazine":30,"reload":2.3,"slot":"primary"}'::jsonb
-    when 'aug64' then '{"damage":22,"delay":0.13,"range":85,"magazine":30,"reload":2,"slot":"primary"}'::jsonb
-    when 'sniper' then '{"damage":100,"delay":1.3,"range":140,"magazine":5,"reload":2.8,"slot":"primary"}'::jsonb
-    when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"reload":1.5,"slot":"secondary"}'::jsonb
-    when 'shotgun' then '{"damage":75,"delay":0.9,"range":22,"magazine":6,"reserve":24,"accuracy":75,"recoilControl":60,"weight":2500,"critical":1,"reload":2.4,"slot":"secondary"}'::jsonb
+    when 'k2' then '{"damage":19,"delay":0.09230769230769231,"range":85,"magazine":30,"reserve":90,"accuracy":76,"recoilControl":86,"weight":4040,"critical":5,"reload":2,"slot":"primary"}'::jsonb
+    when 'ak47' then '{"damage":30,"delay":0.2,"range":80,"magazine":30,"accuracy":68,"recoilControl":65,"weight":4100,"reload":2.3,"slot":"primary"}'::jsonb
+    when 'aug64' then '{"damage":22,"delay":0.13,"range":85,"magazine":30,"accuracy":82,"recoilControl":82,"weight":3400,"reload":2,"slot":"primary"}'::jsonb
+    when 'sniper' then '{"damage":100,"delay":1.3,"range":140,"magazine":5,"accuracy":100,"recoilControl":75,"weight":8100,"reload":2.8,"slot":"primary"}'::jsonb
+    when 'psg1' then '{"damage":90,"delay":0.12,"range":140,"magazine":5,"reserve":15,"accuracy":100,"recoilControl":70,"weight":8100,"critical":1,"reload":2.8,"slot":"primary"}'::jsonb
+    when 'm249' then '{"damage":68,"delay":0.1,"range":85,"magazine":100,"reserve":100,"accuracy":68,"recoilControl":86,"weight":9460,"critical":1,"reload":3,"slot":"primary"}'::jsonb
+    when 'p90' then '{"damage":58,"delay":0.0967741935483871,"range":80,"magazine":50,"reserve":100,"accuracy":63,"recoilControl":72,"weight":3900,"critical":1,"reload":2,"slot":"primary"}'::jsonb
+    when 'auga3' then '{"damage":40,"delay":0.0967741935483871,"range":85,"magazine":30,"reserve":90,"accuracy":78,"recoilControl":83,"weight":3800,"critical":14,"reload":2,"slot":"primary"}'::jsonb
+    when 'g36c' then '{"damage":26,"delay":0.08571428571428572,"range":80,"magazine":30,"reserve":90,"accuracy":76,"recoilControl":86,"weight":3400,"critical":4,"reload":2,"slot":"primary"}'::jsonb
+    when 'akm' then '{"damage":53,"delay":0.1,"range":80,"magazine":30,"reserve":90,"accuracy":74,"recoilControl":54,"weight":3950,"critical":12,"reload":2.3,"slot":"primary"}'::jsonb
+    when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"accuracy":80,"recoilControl":75,"weight":900,"reload":1.5,"slot":"secondary"}'::jsonb
+    when 'shotgun' then '{"damage":45,"delay":3,"range":22,"magazine":4,"reserve":16,"accuracy":61,"recoilControl":4,"weight":3550,"critical":6,"reload":2.4,"slot":"secondary"}'::jsonb
     when 'kukri' then '{"damage":45,"delay":0.55,"range":2.8,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'axe' then '{"damage":65,"delay":0.85,"range":2.7,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'shovel' then '{"damage":50,"delay":0.7,"range":3,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
-    when 'stick' then '{"damage":70,"delay":0.3,"range":3.2,"magazine":0,"accuracy":100,"recoilControl":null,"weight":900,"critical":10,"reload":0,"slot":"melee"}'::jsonb
+    when 'stick' then '{"damage":135,"delay":0.75,"range":3.2,"magazine":0,"accuracy":null,"recoilControl":null,"weight":null,"critical":31,"reload":0,"slot":"melee"}'::jsonb
     else null end
 $$;
 create or replace function public.soldier_cover()

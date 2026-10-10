@@ -67,7 +67,7 @@ begin
   return jsonb_build_object('gold',balance::text,'material_version',2,'material_rate',83,'items',coalesce((
     select jsonb_agg(jsonb_build_object(
       'id',id,'weapon',weapon,'grade',grade,'level',level,'equipped',equipped,
-      'source',source,'upgrade_xp',upgrade_xp,
+      'color',color,'source',source,'upgrade_xp',upgrade_xp,
       'upgrade_progress',round(upgrade_xp*100.0/public.soldier_weapon_level_xp(grade),1)
     ) order by created_at,id) from public.soldier_weapon_items where client_id=owner_id
   ),'[]'::jsonb));

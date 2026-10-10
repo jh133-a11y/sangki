@@ -4,7 +4,8 @@ begin;
 create table if not exists public.soldier_weapon_items (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
-  weapon text not null check (weapon in ('k2','shotgun','stick')),
+  weapon text not null check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')),
+  color text not null default 'standard',
   grade text not null check (grade in ('D','C','B','A','S')),
   level integer not null default 1 check (level between 1 and 7),
   equipped boolean not null default false,
@@ -13,6 +14,13 @@ create table if not exists public.soldier_weapon_items (
   created_at timestamptz not null default now(),
   unique (client_id,reward_key)
 );
+alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_weapon_check;
+alter table public.soldier_weapon_items add constraint soldier_weapon_items_weapon_check
+  check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'));
+alter table public.soldier_weapon_items add column if not exists color text not null default 'standard';
+alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_color_check;
+alter table public.soldier_weapon_items add constraint soldier_weapon_items_color_check
+  check (color in ('standard','gold','red','silver'));
 create unique index if not exists soldier_weapon_items_equipped
   on public.soldier_weapon_items(client_id,weapon) where equipped;
 alter table public.soldier_weapon_items enable row level security;
@@ -41,7 +49,7 @@ begin
   select gold into balance from public.soldier_profiles where client_id=sess.client_id for update;
   if not found then raise exception '솔져 프로필이 없습니다.'; end if;
   if p_weapon is not null then
-    if p_weapon in ('k2','shotgun','stick') then
+    if p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm') then
       raise exception '보상 무기는 아이템별 강화 요청을 사용해야 합니다. 사이트를 새로고침하세요.';
     end if;
     if public.soldier_weapon(p_weapon) is null then raise exception '무기가 올바르지 않습니다.'; end if;
@@ -110,7 +118,7 @@ create or replace function public.soldier_grant_weapon(
 returns uuid language plpgsql security definer set search_path=public as $$
 declare granted uuid; previous public.soldier_weapon_items%rowtype;
 begin
-  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick')
+  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
     or p_grade is null or p_grade not in ('D','C','B','A','S')
     or p_source is null or length(p_source) not between 1 and 120
     or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
@@ -121,7 +129,7 @@ begin
   select * into previous from public.soldier_weapon_items
   where client_id=p_client and reward_key=p_reward_key;
   if found then
-    if previous.weapon<>p_weapon or previous.grade<>p_grade or previous.source<>p_source then
+    if previous.weapon<>p_weapon or previous.grade<>p_grade or previous.color<>'standard' or previous.source<>p_source then
       raise exception '동일 보상 키에 다른 지급 정보가 있습니다.';
     end if;
     return previous.id;
@@ -131,6 +139,160 @@ begin
   return granted;
 end $$;
 revoke all on function public.soldier_grant_weapon(uuid,text,text,text,text) from public,anon,authenticated;
+
+create or replace function public.soldier_grant_colored_weapon(
+  p_client uuid,p_weapon text,p_grade text,p_color text,p_source text,p_reward_key text
+)
+returns uuid language plpgsql security definer set search_path=public as $$
+declare granted uuid; previous public.soldier_weapon_items%rowtype;
+begin
+  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
+    or p_grade is null or p_grade not in ('D','C','B','A','S')
+    or p_color is null or p_color not in ('standard','gold','red','silver')
+    or p_source is null or length(p_source) not between 1 and 120
+    or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
+    raise exception '보상 지급 정보가 올바르지 않습니다.';
+  end if;
+  perform 1 from public.soldier_profiles where client_id=p_client for update;
+  if not found then raise exception '솔져 프로필이 없습니다.'; end if;
+  select * into previous from public.soldier_weapon_items
+    where client_id=p_client and reward_key=p_reward_key;
+  if found then
+    if previous.weapon<>p_weapon or previous.grade<>p_grade or previous.color<>p_color or previous.source<>p_source then
+      raise exception '동일 보상 키에 다른 지급 정보가 있습니다.';
+    end if;
+    return previous.id;
+  end if;
+  insert into public.soldier_weapon_items(client_id,weapon,color,grade,source,reward_key)
+    values(p_client,p_weapon,p_color,p_grade,p_source,p_reward_key) returning id into granted;
+  return granted;
+end $$;
+revoke all on function public.soldier_grant_colored_weapon(uuid,text,text,text,text,text) from public,anon,authenticated;
+
+create table if not exists public.soldier_weapon_operations (
+  client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
+  request_id uuid not null,
+  action text not null check (action in ('combine','disassemble')),
+  inputs jsonb not null,
+  results jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key(client_id,request_id)
+);
+alter table public.soldier_weapon_operations enable row level security;
+revoke all on public.soldier_weapon_operations from public,anon,authenticated;
+
+create or replace function public.soldier_weapon_operation_api(
+  p_token uuid,p_action text,p_item uuid,p_other uuid default null,p_request uuid default null
+)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare
+  owner_id uuid; balance bigint; cost integer; next_grade text; grade_id text;
+  item_a public.soldier_weapon_items%rowtype; item_b public.soldier_weapon_items%rowtype;
+  previous public.soldier_weapon_operations%rowtype; input_ids uuid[]; input_data jsonb;
+  weapon_pool text[]:=array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'];
+  color_pool text[]:=array['standard','gold','red','silver'];
+  eligible_weapons text[]; weapon_id text; color_id text; reward_id uuid;
+  rewards jsonb:='[]'::jsonb; replayed boolean:=false; i integer;
+begin
+  perform public.soldier_equipment_api(p_token);
+  select client_id into owner_id from public.soldier_sessions where token=p_token;
+  select gems into balance from public.soldier_profiles where client_id=owner_id for update;
+  if p_request is null or p_item is null or p_action is null or p_action not in ('combine','disassemble')
+    or (p_action='combine' and (p_other is null or p_other=p_item))
+    or (p_action='disassemble' and p_other is not null) then
+    raise exception '무기 조합·분해 요청이 올바르지 않습니다.';
+  end if;
+  if p_action='combine' then
+    select array_agg(id order by id) into input_ids from unnest(array[p_item,p_other]) id;
+  else input_ids:=array[p_item]; end if;
+  input_data:=jsonb_build_object('items',to_jsonb(input_ids));
+  select * into previous from public.soldier_weapon_operations
+    where client_id=owner_id and request_id=p_request;
+  if found then
+    if previous.action<>p_action or previous.inputs<>input_data then
+      raise exception '같은 요청 번호가 다른 무기 작업에 사용되었습니다.';
+    end if;
+    rewards:=previous.results; replayed:=true;
+  else
+    select * into item_a from public.soldier_weapon_items
+      where id=p_item and client_id=owner_id for update;
+    if not found then raise exception '보유하지 않은 무기입니다.'; end if;
+    if (p_action='combine' and item_a.level<>7) or item_a.equipped or item_a.source='default' then
+      raise exception '장착 중이 아니고 기본 지급 무기가 아닌 MAX 무기만 조합할 수 있습니다.';
+    end if;
+    if p_action='combine' then
+      select * into item_b from public.soldier_weapon_items
+        where id=p_other and client_id=owner_id for update;
+      if not found or item_b.level<>7 or item_b.equipped or item_b.source='default'
+        or item_b.grade<>item_a.grade then
+        raise exception '같은 등급의 미장착 MAX 무기 두 개가 필요합니다.';
+      end if;
+      cost:=case item_a.grade when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50 end;
+      if cost is null then raise exception 'S급 무기는 조합할 수 없습니다.'; end if;
+      if balance<cost then raise exception '보석이 부족합니다. 필요한 보석: %',cost; end if;
+      next_grade:=case item_a.grade when 'D' then 'C' when 'C' then 'B' when 'B' then 'A' else 'S' end;
+      delete from public.soldier_weapon_items where id in (p_item,p_other);
+      if item_a.weapon=item_b.weapon and item_a.color=item_b.color then
+        weapon_id:=item_a.weapon; color_id:=item_a.color;
+      elsif item_a.weapon=item_b.weapon then
+        weapon_id:=item_a.weapon;
+        color_id:=color_pool[1+floor(random()*array_length(color_pool,1))::integer];
+      else
+        select array_agg(candidate) into eligible_weapons
+        from unnest(weapon_pool) candidate
+        where (
+          select count(*) from public.soldier_equipment e
+          where e.client_id=owner_id and public.soldier_weapon(e.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
+        ) + (
+          select count(*) from public.soldier_weapon_items wi
+          where wi.client_id=owner_id and public.soldier_weapon(wi.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
+        ) < 50;
+        if coalesce(array_length(eligible_weapons,1),0)=0 then
+          raise exception '무기 분류별 인벤토리 공간을 확보한 뒤 다시 조합하세요.';
+        end if;
+        weapon_id:=eligible_weapons[1+floor(random()*array_length(eligible_weapons,1))::integer];
+        color_id:=color_pool[1+floor(random()*array_length(color_pool,1))::integer];
+      end if;
+      update public.soldier_profiles set gems=gems-cost where client_id=owner_id;
+      insert into public.soldier_weapon_items(client_id,weapon,color,grade,level,source,reward_key)
+        values(owner_id,weapon_id,color_id,next_grade,1,'combine','operation-'||p_request::text||'-1')
+        returning id into reward_id;
+      rewards:=jsonb_build_array(jsonb_build_object(
+        'id',reward_id,'weapon',weapon_id,'color',color_id,'grade',next_grade,'level',1));
+    else
+      if item_a.grade<>'S' then raise exception 'S급 무기만 분해할 수 있습니다.'; end if;
+      delete from public.soldier_weapon_items where id=p_item;
+      for i in 1..2 loop
+        select array_agg(candidate) into eligible_weapons
+        from unnest(weapon_pool) candidate
+        where (
+          select count(*) from public.soldier_equipment e
+          where e.client_id=owner_id and public.soldier_weapon(e.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
+        ) + (
+          select count(*) from public.soldier_weapon_items wi
+          where wi.client_id=owner_id and public.soldier_weapon(wi.weapon)->>'slot'=public.soldier_weapon(candidate)->>'slot'
+        ) < 50;
+        if coalesce(array_length(eligible_weapons,1),0)=0 then
+          raise exception '무기 분류별 인벤토리 공간을 확보한 뒤 다시 분해하세요.';
+        end if;
+        weapon_id:=eligible_weapons[1+floor(random()*array_length(eligible_weapons,1))::integer];
+        color_id:=color_pool[1+floor(random()*array_length(color_pool,1))::integer];
+        insert into public.soldier_weapon_items(client_id,weapon,color,grade,level,source,reward_key)
+          values(owner_id,weapon_id,color_id,'A',1,'disassemble','operation-'||p_request::text||'-'||i::text)
+          returning id into reward_id;
+        rewards:=rewards||jsonb_build_array(jsonb_build_object(
+          'id',reward_id,'weapon',weapon_id,'color',color_id,'grade','A','level',1));
+      end loop;
+    end if;
+    insert into public.soldier_weapon_operations(client_id,request_id,action,inputs,results)
+      values(owner_id,p_request,p_action,input_data,rewards);
+  end if;
+  return jsonb_build_object('operation_version',1,'client_id',owner_id,'operation',p_action,
+    'request',p_request,'replayed',replayed,'gems',(select gems::text from public.soldier_profiles where client_id=owner_id),
+    'results',rewards,'inventory',public.soldier_weapon_items_api(p_token));
+end $$;
+revoke all on function public.soldier_weapon_operation_api(uuid,text,uuid,uuid,uuid) from public;
+grant execute on function public.soldier_weapon_operation_api(uuid,text,uuid,uuid,uuid) to anon,authenticated;
 
 create or replace function public.soldier_weapon_items_api(
   p_token uuid,p_action text default 'read',p_item uuid default null,p_level integer default null,
@@ -173,7 +335,7 @@ begin
   end if;
   return jsonb_build_object('gold',balance::text,'items',coalesce((
     select jsonb_agg(jsonb_build_object(
-      'id',id,'weapon',weapon,'grade',grade,'level',level,'equipped',equipped,'source',source
+      'id',id,'weapon',weapon,'color',color,'grade',grade,'level',level,'equipped',equipped,'source',source
     ) order by created_at,id) from public.soldier_weapon_items where client_id=owner_id
   ),'[]'::jsonb));
 end $$;

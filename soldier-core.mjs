@@ -1,26 +1,57 @@
 export const WEAPONS = {
-  k2: { name: 'K2', slot: 'primary', damage: 24, delay: .16, range: 85, magazine: 25, reserve: 100, accuracy: 85, recoilControl: 90, weight: 1800, critical: 4, reload: 2, automatic: true },
-  ak47: { name: 'AK47', slot: 'primary', damage: 30, delay: .2, range: 80, magazine: 30, reload: 2.3, automatic: true },
-  aug64: { name: 'AUG64', slot: 'primary', damage: 22, delay: .13, range: 85, magazine: 30, reload: 2, automatic: true },
-  sniper: { name: '스나이퍼', slot: 'primary', damage: 100, delay: 1.3, range: 140, magazine: 5, reload: 2.8, automatic: false },
-  pistol: { name: '권총', slot: 'secondary', damage: 28, delay: .32, range: 55, magazine: 12, reload: 1.5, automatic: false },
-  shotgun: { name: 'M870', slot: 'secondary', damage: 75, delay: .9, range: 22, magazine: 6, reserve: 24, accuracy: 75, recoilControl: 60, weight: 2500, critical: 1, reload: 2.4, automatic: false },
+  k2: { name: 'K2', slot: 'primary', damage: 19, delay: .09230769230769231, range: 85, magazine: 30, reserve: 90, accuracy: 76, recoilControl: 86, weight: 4040, critical: 5, reload: 2, automatic: true },
+  ak47: { name: 'AK47', slot: 'primary', damage: 30, delay: .2, range: 80, magazine: 30, accuracy: 68, recoilControl: 65, weight: 4100, reload: 2.3, automatic: true },
+  aug64: { name: 'AUG64', slot: 'primary', damage: 22, delay: .13, range: 85, magazine: 30, accuracy: 82, recoilControl: 82, weight: 3400, reload: 2, automatic: true },
+  sniper: { name: '스나이퍼', slot: 'primary', damage: 100, delay: 1.3, range: 140, magazine: 5, accuracy: 100, recoilControl: 75, weight: 8100, reload: 2.8, automatic: false },
+  psg1: { name: 'PSG-1', slot: 'primary', damage: 90, delay: 60 / 500, range: 140, magazine: 5, reserve: 15, accuracy: 100, recoilControl: 70, weight: 8100, critical: 1, reload: 2.8, automatic: false },
+  m249: { name: 'M249', slot: 'primary', damage: 68, delay: 60 / 600, range: 85, magazine: 100, reserve: 100, accuracy: 68, recoilControl: 86, weight: 9460, critical: 1, reload: 3, automatic: true },
+  p90: { name: 'P90', slot: 'primary', damage: 58, delay: 60 / 620, range: 80, magazine: 50, reserve: 100, accuracy: 63, recoilControl: 72, weight: 3900, critical: 1, reload: 2, automatic: true },
+  auga3: { name: 'AUGA3', slot: 'primary', damage: 40, delay: 60 / 620, range: 85, magazine: 30, reserve: 90, accuracy: 78, recoilControl: 83, weight: 3800, critical: 14, reload: 2, automatic: true },
+  g36c: { name: 'G36C', slot: 'primary', damage: 26, delay: 60 / 700, range: 80, magazine: 30, reserve: 90, accuracy: 76, recoilControl: 86, weight: 3400, critical: 4, reload: 2, automatic: true },
+  akm: { name: 'AKM', slot: 'primary', damage: 53, delay: 60 / 600, range: 80, magazine: 30, reserve: 90, accuracy: 74, recoilControl: 54, weight: 3950, critical: 12, reload: 2.3, automatic: true },
+  pistol: { name: '권총', slot: 'secondary', damage: 28, delay: .32, range: 55, magazine: 12, accuracy: 80, recoilControl: 75, weight: 900, reload: 1.5, automatic: false },
+  shotgun: { name: 'M870', slot: 'secondary', damage: 45, delay: 3, range: 22, magazine: 4, reserve: 16, accuracy: 61, recoilControl: 4, weight: 3550, critical: 6, reload: 2.4, automatic: false },
   kukri: { name: '쿠쿠리', slot: 'melee', damage: 45, delay: .55, range: 2.8, magazine: 0, reload: 0, automatic: false },
   axe: { name: '도끼', slot: 'melee', damage: 65, delay: .85, range: 2.7, magazine: 0, reload: 0, automatic: false },
   shovel: { name: '삽', slot: 'melee', damage: 50, delay: .7, range: 3, magazine: 0, reload: 0, automatic: false },
-  stick: { name: 'M9', slot: 'melee', damage: 70, delay: .3, range: 3.2, magazine: 0, accuracy: 100, recoilControl: null, weight: 900, critical: 10, reload: 0, automatic: false }
+  stick: { name: 'M9', slot: 'melee', damage: 135, delay: .75, range: 3.2, magazine: 0, accuracy: null, recoilControl: null, weight: null, critical: 31, reload: 0, automatic: false }
 };
+export const WEAPON_COLORS = ['standard', 'gold', 'red', 'silver'];
+export const WEAPON_COLOR_LABELS = { gold: 'GOLD', red: 'RED', silver: 'ALCAD' };
 
-export function weaponStats(id, grade = 'D', level = 1) {
+export function weaponStats(id, grade = 'D', level = 1, color = 'standard') {
   const weapon = Object.hasOwn(WEAPONS, id) && WEAPONS[id];
   const rules = { D: [0, 1, 0, 0], C: [6, 1, 0, 0], B: [12, 1, 0, 0],
     A: [18, 2, 0, 1], S: [30, 3, 3, 2] };
   const growth = Object.hasOwn(rules, grade) && rules[grade];
-  if (!weapon || !growth || !Number.isInteger(level) || level < 1 || level > 7) {
+  if (!weapon || !growth || !Number.isInteger(level) || level < 1 || level > 7 || !WEAPON_COLORS.includes(color)) {
     throw new RangeError('무기 등급과 레벨이 올바르지 않습니다.');
   }
-  return { ...weapon, grade, level, damage: weapon.damage + growth[0] + (level - 1) * growth[1],
+  const gradeIndex = EQUIPMENT_GRADES.indexOf(grade);
+  const firearmGrowth = weapon.slot === 'melee' ? {} : {
+    accuracy: weapon.accuracy + gradeIndex * 3,
+    recoilControl: weapon.recoilControl + gradeIndex * 3,
+    weight: Math.round(weapon.weight * [1, .95, .9025, .857375, .81450625][gradeIndex])
+  };
+  const stats = { ...weapon, ...firearmGrowth, grade, level, color,
+    damage: weapon.damage + growth[0] + (level - 1) * growth[1],
     critical: (weapon.critical || 0) + growth[2] + Math.floor((level - 1) / 2) * growth[3] };
+  if (color === 'gold') stats.damage += 5;
+  if (color === 'red') stats.critical += 5;
+  if (color === 'silver' && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * .9);
+  return stats;
+}
+export function applyWeaponSetBonuses(weapons) {
+  const entries = Object.entries(weapons);
+  const colors = entries.map(([, weapon]) => weapon.color);
+  const setColor = entries.length === 3 && colors.every(color => color === colors[0]) ? colors[0] : null;
+  return Object.fromEntries(entries.map(([slot, weapon]) => {
+    const stats = { ...weapon };
+    if (setColor === 'gold') stats.damage += 3;
+    if (setColor === 'red') stats.critical += 3;
+    if (setColor === 'silver' && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * .9);
+    return [slot, stats];
+  }));
 }
 export function initialWeaponAmmo(loadout) {
   const ammo = {};
@@ -52,10 +83,16 @@ export function validateCombatWeapons(state, loadout) {
   if (state.weapon_version !== 1 || !state.weapon_stats || !state.ammo) {
     throw new Error('서버 무기 능력치 정보를 확인할 수 없습니다.');
   }
+  const receivedStats = Object.entries(loadout).map(([slot]) => state.weapon_stats[slot]);
+  const setColor = receivedStats.length === 3 && receivedStats.every(stats => stats && stats.color === receivedStats[0].color)
+    ? receivedStats[0].color : null;
   for (const [slot, id] of Object.entries(loadout)) {
     const received = state.weapon_stats[slot];
     if (!received || received.weapon !== id) throw new Error('서버 장착 무기 정보가 일치하지 않습니다.');
-    const expected = weaponStats(id, received.grade, received.level);
+    const expected = weaponStats(id, received.grade, received.level, received.color);
+    if (setColor === 'gold') expected.damage += 3;
+    if (setColor === 'red') expected.critical += 3;
+    if (setColor === 'silver' && Number.isInteger(expected.weight)) expected.weight = Math.round(expected.weight * .9);
     for (const [key, value] of Object.entries(expected)) {
       if (key !== 'name' && key !== 'automatic' && received[key] !== value) {
         throw new Error(`서버 무기 능력치가 일치하지 않습니다: ${key}`);

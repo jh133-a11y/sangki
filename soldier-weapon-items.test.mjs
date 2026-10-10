@@ -1,29 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { WEAPON_REWARDS, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
+import { WEAPON_COLORS } from './soldier-core.mjs';
+import { WEAPON_REWARDS, weaponColorLabel, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
 
-test('all fifteen weapon-grade rewards reuse the same artwork, names and card layout', () => {
-  assert.equal(WEAPON_REWARDS.length, 15);
-  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 15);
-  for (const weapon of ['k2', 'shotgun', 'stick']) {
-    const variants = WEAPON_REWARDS.filter(item => item.weapon === weapon);
-    assert.deepEqual(variants.map(item => item.grade), ['D', 'C', 'B', 'A', 'S']);
-    assert.equal(new Set(variants.map(item => item.image)).size, 1);
-    for (const variant of variants) {
-      assert.ok(existsSync(variant.image.split('?')[0]));
-      assert.ok(existsSync(variant.frame));
-      const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
-      const card = { dataset: {}, querySelector: key => elements[key] };
-      fillWeaponCard(card, weapon, { grade: variant.grade, level: 3 });
-      assert.equal(card.dataset.grade, variant.grade);
-      assert.equal(elements['.grade-frame'].src, variant.frame);
-      assert.equal(elements['.weapon-level'].textContent, 'Lv.3');
-      assert.equal(elements['.weapon-name'].textContent, variant.name);
-      fillWeaponCard(card, weapon, { grade: variant.grade, level: 7 });
-      assert.equal(elements['.weapon-level'].textContent, 'MAX');
-      fillWeaponCard(card,weapon,{grade:variant.grade,level:2,upgrade_progress:41.5});
-      assert.equal(elements['.weapon-level'].textContent,'Lv.2');
+test('all weapon colors and grades reuse the same card layout and colored assets', () => {
+  assert.equal(WEAPON_REWARDS.length, 180);
+  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 180);
+  for (const weapon of ['k2', 'shotgun', 'stick', 'psg1', 'm249', 'p90', 'auga3', 'g36c', 'akm']) {
+    for (const color of WEAPON_COLORS) {
+      const variants = WEAPON_REWARDS.filter(item => item.weapon === weapon && item.color === color);
+      assert.deepEqual(variants.map(item => item.grade), ['D', 'C', 'B', 'A', 'S']);
+      assert.equal(new Set(variants.map(item => item.image)).size, 1);
+      for (const variant of variants) {
+        assert.ok(existsSync(variant.image.split('?')[0]));
+        assert.ok(existsSync(variant.frame));
+        const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-color-label', '.weapon-name'].map(key => [key, {}]));
+        const card = { dataset: {}, querySelector: key => elements[key] };
+        fillWeaponCard(card, weapon, { grade: variant.grade, color, level: 3 });
+        assert.equal(card.dataset.grade, variant.grade);
+        assert.equal(card.dataset.color, color);
+        assert.equal(elements['.grade-frame'].src, variant.frame);
+        assert.equal(elements['.weapon-level'].textContent, 'Lv.3');
+        assert.equal(elements['.weapon-color-label'].textContent, weaponColorLabel(color));
+        assert.equal(elements['.weapon-color-label'].hidden, color === 'standard');
+        assert.equal(elements['.weapon-name'].textContent, variant.name);
+        fillWeaponCard(card, weapon, { grade: variant.grade, color, level: 7 });
+        assert.equal(elements['.weapon-level'].textContent, 'MAX');
+        fillWeaponCard(card,weapon,{grade:variant.grade,color,level:2,upgrade_progress:41.5});
+        assert.equal(elements['.weapon-level'].textContent,'Lv.2');
+      }
     }
   }
 });
@@ -37,6 +43,7 @@ test('duplicate rewards are separate items and capacity is per category', () => 
   assert.throws(() => validateWeaponItems({ gold: '0', items: [...items, { ...items[0], id: 'extra' }] }), /50/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [items[0], items[0]] }), /서버/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], grade: 'X' }] }), /등급/);
+  assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], color: 'blue' }] }), /무기/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], equipped: true }, { ...items[1], equipped: true }] }), /중복/);
   assert.throws(() => validateWeaponItems({ gold: '-1', items: [] }), /서버/);
 });
@@ -45,8 +52,8 @@ test('default weapons remain ordinary owned items and card reuse clears previous
   const items = ['k2', 'shotgun', 'stick'].map(weapon => ({
     id: `default-${weapon}`, weapon, grade: 'D', level: 2, equipped: true, source: 'default'
   }));
-  assert.deepEqual(validateWeaponItems({ gold: '0', items }), items);
-  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-name'].map(key => [key, {}]));
+  assert.deepEqual(validateWeaponItems({ gold: '0', items }), items.map(item => ({ ...item, color: 'standard' })));
+  const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-color-label', '.weapon-name'].map(key => [key, {}]));
   const card = { dataset: {}, querySelector: key => elements[key] };
   fillWeaponCard(card, 'k2', items[0]);
   assert.equal(card.dataset.source, 'default');
@@ -59,11 +66,27 @@ test('default weapons remain ordinary owned items and card reuse clears previous
 
 test('rewards are administrator-only, durable and idempotent', () => {
   const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
+  assert.match(sql,/psg1','m249','p90','auga3','g36c','akm/);
+  assert.match(sql,/color in \('standard','gold','red','silver'\)/);
   assert.match(sql, /unique \(client_id,reward_key\)/);
   assert.match(sql, /revoke all on function public\.soldier_grant_weapon\(uuid,text,text,text,text\) from public,anon,authenticated/);
+  assert.match(sql, /soldier_grant_colored_weapon/);
   assert.match(sql, /enable row level security/);
   assert.match(sql, /item\.level<>p_level/);
   assert.match(sql, /total>=50/);
+});
+
+test('combination and disassembly validate max cards, charge server gems and store idempotent results', () => {
+  const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
+  assert.match(sql,/create table if not exists public\.soldier_weapon_operations/);
+  assert.match(sql,/primary key\(client_id,request_id\)/);
+  assert.match(sql,/item_a\.level<>7/);
+  assert.match(sql,/item_b\.grade<>item_a\.grade/);
+  assert.match(sql,/when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50/);
+  assert.match(sql,/item_a\.grade<>'S'/);
+  assert.match(sql,/values\(owner_id,weapon_id,color_id,'A',1,'disassemble'/);
+  assert.match(sql,/previous\.inputs<>input_data/);
+  assert.match(sql,/revoke all on function public\.soldier_weapon_operation_api/);
 });
 
 test('default inventory migration issues idempotent real items for existing and new profiles without replacing equipped rewards', () => {

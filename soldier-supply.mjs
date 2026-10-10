@@ -1,4 +1,5 @@
-import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=7';
+import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=9';
+import { WEAPON_COLORS } from './soldier-core.mjs?v=6';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'special', name: '스페셜보급함(11개)', price: 300, count: 11, color: '#f1a00b',
@@ -23,10 +24,10 @@ export function validateSupply(result, product = null, request = null) {
   const ids = new Set();
   for (const reward of result.rewards) {
     if (!reward || ids.has(reward.id) || !Object.hasOwn(WEAPON_ARTWORK, reward.weapon)
-      || !['D','C','B','A','S'].includes(reward.grade) || reward.level !== 1
+      || !WEAPON_COLORS.includes(reward.color) || !['D','C','B','A','S'].includes(reward.grade) || reward.level !== 1
       || typeof reward.id !== 'string' || !reward.id
       || (!result.replayed && !items.some(item => item.id === reward.id && item.weapon === reward.weapon && item.grade === reward.grade
-        && item.source === `supply-${product}`))) throw new Error('보급함 보상 정보를 확인할 수 없습니다.');
+        && item.color === reward.color && item.source === `supply-${product}`))) throw new Error('보급함 보상 정보를 확인할 수 없습니다.');
     ids.add(reward.id);
     if (product !== 'normal' && reward.grade === 'D') throw new Error('보급함 최소 등급이 올바르지 않습니다.');
   }
