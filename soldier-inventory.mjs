@@ -351,7 +351,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const warning = document.createElement('p'); warning.className = 'weapon-operation-warning';
     warning.textContent = isCombine
       ? '같은 등급의 MAX 무기 2개가 필요하며 재료 무기는 사라집니다. 같은 분류끼리 조합하면 결과도 같은 분류입니다.'
-      : 'S급 무기를 분해하면 A급 무기 2개를 획득합니다.';
+      : 'S급 무기를 분해하면 같은 분류의 A급 무기 2개를 획득합니다.';
     const cost = document.createElement('strong'); cost.className = 'weapon-operation-cost';
     const price = isCombine ? ({ D: 5, C: 10, B: 20, A: 50 }[item.grade]) : 0;
     if (isCombine) {
@@ -451,7 +451,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       if (item.grade === 'S') {
         const disassemble = document.createElement('button'); disassemble.type = 'button'; disassemble.className = 'weapon-item-action';
         disassemble.textContent = '분해'; disassemble.disabled = weaponBusy || item.equipped || item.source === 'default';
-        disassemble.title = 'S급 무기를 A급 무기 2개로 분해합니다.';
+        disassemble.title = 'S급 무기를 같은 분류의 A급 무기 2개로 분해합니다.';
         disassemble.addEventListener('click', () => openWeaponOperation('disassemble', item)); actions.append(disassemble);
       }
       body.append(actions);
