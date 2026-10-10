@@ -5,7 +5,7 @@ import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './s
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=10';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=11';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=3';
 import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=6';
 
@@ -160,13 +160,14 @@ const shop = createShop({
     return available >= product.count;
   },
   getSupplyError: () => supplyError,
+  getSupplyErrorCode: () => supplyErrorCode,
   isSupplyReady: () => supplyReady, buySupply,
   renderCard(weapon,item) {
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
     fillWeaponCard(card,weapon,item); return card;
   }
 });
-let supplyReady = false, supplyBusy = false, supplyOwner = null, supplyError = null;
+let supplyReady = false, supplyBusy = false, supplyOwner = null, supplyError = null, supplyErrorCode = null;
 async function buySupply(product) {
   if (!identity || !supplyReady) throw new Error('보급함 상점에 연결되지 않았습니다.');
   if (supplyBusy) throw new Error('이전 보급함 구매를 처리 중입니다.');
@@ -336,7 +337,7 @@ async function rpc(name, data) {
     });
     const result = await response.json();
     if (!response.ok) throw Object.assign(new Error(result.message || '서버 요청에 실패했습니다.'),
-      { rpcRejected: response.status >= 400 && response.status < 500 && response.status !== 408 });
+      { rpcCode: result.code, rpcRejected: response.status >= 400 && response.status < 500 && response.status !== 408 });
     return result;
   } finally { clearTimeout(timeout); }
 }
@@ -380,10 +381,11 @@ async function connect() {
     }
     try {
       const result = await rpc('soldier_supply_api',{ p_token: identity.token });
-      validateSupply(result); supplyOwner = result.client_id; supplyReady = true; supplyError = null;
+      validateSupply(result); supplyOwner = result.client_id; supplyReady = true; supplyError = null; supplyErrorCode = null;
     } catch (error) {
       supplyError = error.message;
-      $('shop-status').textContent = `보급함 연결 실패: ${error.message} soldier-supply.sql 실행 후 새로고침하세요.`;
+      supplyErrorCode = error.rpcCode || null;
+      $('shop-status').textContent = `보급함 연결 실패: ${error.message}`;
       console.error('보급함 불러오기 오류',error);
     }
     ready = true;

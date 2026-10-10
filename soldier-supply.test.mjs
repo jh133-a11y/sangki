@@ -62,3 +62,10 @@ test('opening keeps reference timing, tap-to-advance specials and no visible but
   assert.doesNotMatch(shop,/36가지 조합|1\/36/);
   assert.match(shop,/getSupplyCapacity/);
 });
+test('expired sessions get re-login guidance instead of a misleading SQL-install prompt',() => {
+  const source=readFileSync('soldier.js','utf8');
+  const shop=readFileSync('soldier-shop.mjs','utf8');
+  assert.match(source,/rpcCode: result\.code/);
+  assert.match(shop,/getSupplyErrorCode\(\) === 'P0001'/);
+  assert.match(shop,/메인에서 다시 접속한 뒤 새로고침하세요/);
+});

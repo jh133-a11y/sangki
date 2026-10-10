@@ -8,7 +8,7 @@ export const GOLD_PRODUCTS = [
   { id: 'gold-30000', name: '30,000 골드', price: 50, gold: 30000, description: '골드 25,000 + 보너스 5,000' },
   { id: 'gold-65000', name: '65,000 골드', price: 100, gold: 65000, description: '골드 50,000 + 보너스 15,000' }
 ];
-export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, getSupplyCapacity, getSupplyError, buyGold, isGoldReady, renderCard }) {
+export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, getSupplyCapacity, getSupplyError, getSupplyErrorCode, buyGold, isGoldReady, renderCard }) {
   const $ = id => document.getElementById(id);
   const dialog = $('shop-dialog'), tabs = [...dialog.querySelectorAll('[data-shop-tab]')];
   let category = 'supply', buying = false, confirming = false, keyboardOpened = false;
@@ -43,6 +43,12 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
   function wallet() {
     $('shop-gold').textContent = $('gold').textContent;
     $('shop-gems').textContent = $('gems').textContent;
+  }
+  function supplyErrorNotice() {
+    const message = getSupplyError() || '연결 상태를 확인할 수 없습니다.';
+    return getSupplyErrorCode() === 'P0001' && message.includes('세션이 만료되었습니다')
+      ? `보급함 서버 연결 실패: ${message} 사이트 메인에서 다시 접속한 뒤 새로고침하세요.`
+      : `보급함 서버 연결 실패: ${message} 최신 soldier-supply.sql 실행 여부를 확인한 뒤 새로고침하세요.`;
   }
   function render() {
     wallet();
@@ -167,7 +173,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     keyboardOpened = event?.detail === 0;
     category = 'supply'; render(); dialog.showModal(); $('home').hidden = true;
     $('shop-status').textContent = !isSupplyReady()
-      ? `보급함 서버 연결 실패: ${getSupplyError() || '연결 상태를 확인할 수 없습니다.'} 최신 soldier-supply.sql 실행 여부를 확인한 뒤 새로고침하세요.`
+      ? supplyErrorNotice()
       : !getSupplyCapacity(SUPPLY_PRODUCTS.find(product => product.id === 'normal'))
         ? '인벤토리 공간이 부족해 보급함을 구매할 수 없습니다. 무기를 판매하거나 재료로 사용해 공간을 확보하세요.'
         : '보급함은 구매 즉시 개봉됩니다. 지급된 무기는 인벤토리에서 장착·강화할 수 있습니다.';
@@ -179,7 +185,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         $('shop-status').textContent = category === 'gold' && !isGoldReady()
           ? '골드 교환 연결 필요: 최신 soldier-shop.sql 실행 후 새로고침하세요.'
           : category === 'supply' && !isSupplyReady()
-            ? `보급함 서버 연결 실패: ${getSupplyError() || '연결 상태를 확인할 수 없습니다.'} 최신 soldier-supply.sql 실행 여부를 확인한 뒤 새로고침하세요.`
+            ? supplyErrorNotice()
             : category === 'supply' && !getSupplyCapacity(SUPPLY_PRODUCTS.find(product => product.id === 'normal'))
               ? '인벤토리 공간이 부족해 보급함을 구매할 수 없습니다. 무기를 판매하거나 재료로 사용해 공간을 확보하세요.' : '';
       }
