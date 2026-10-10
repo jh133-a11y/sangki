@@ -101,7 +101,10 @@ test('default inventory migration issues idempotent real items for existing and 
 });
 
 test('material upgrades use requested per-card gold costs and protect equipped/default/target cards', () => {
-  assert.deepEqual(['D','C','B','A','S'].map(materialCost), [0,2000,4000,8000,16000]);
+  assert.deepEqual(['D','C','B','A','S'].map(materialCost), [1000,2000,4000,8000,16000]);
+  assert.equal(weaponUpgradePreview({ grade:'D',level:1,upgrade_xp:0 },
+    [{ grade:'D',level:1,upgrade_xp:0 },{ grade:'D',level:1,upgrade_xp:0 }]).cost,2000);
+  assert.match(readFileSync('soldier-weapon-material-upgrade.sql','utf8'), /case item\.grade when 'D' then 1000/);
   assert.throws(() => materialCost('X'));
   const target = { id:'target', weapon:'k2', grade:'C', level:1, equipped:true };
   const spare = { ...target, id:'spare', equipped:false, source:'event', upgrade_progress:20 };

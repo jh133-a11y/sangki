@@ -123,7 +123,7 @@ begin
   if valid<>amount then
     raise exception '본인 소유의 미장착 무기만 재료로 사용할 수 있습니다. 기본 무기는 보호됩니다.';
   end if;
-  cost:=amount*(case item.grade when 'D' then 0 when 'C' then 2000
+  cost:=amount*(case item.grade when 'D' then 1000 when 'C' then 2000
     when 'B' then 4000 when 'A' then 8000 when 'S' then 16000 end);
   if balance<cost then raise exception '골드가 부족합니다. 필요한 골드: %',cost; end if;
   required_xp:=public.soldier_weapon_level_xp(item.grade);

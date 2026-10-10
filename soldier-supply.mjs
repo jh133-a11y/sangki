@@ -1,4 +1,4 @@
-import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=9';
+import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=10';
 import { WEAPON_COLORS } from './soldier-core.mjs?v=6';
 
 export const SUPPLY_PRODUCTS = [

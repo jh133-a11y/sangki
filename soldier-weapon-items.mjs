@@ -51,7 +51,7 @@ export function weaponUpgradePreview(item, materials) {
     cost: materialCost(item.grade) * materials.length };
 }
 export function materialCost(grade) {
-  const costs = { D: 0, C: 2000, B: 4000, A: 8000, S: 16000 };
+  const costs = { D: 1000, C: 2000, B: 4000, A: 8000, S: 16000 };
   if (!Object.hasOwn(costs, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
   return costs[grade];
 }

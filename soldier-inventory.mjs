@@ -1,8 +1,15 @@
 import { WEAPONS, weaponStats, weaponLevelLabel } from './soldier-core.mjs?v=6';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
-import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=9';
+import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=10';
 
 export const INVENTORY_LIMIT = 50;
+export function sortInventoryEntries(entries, equipment, mode = 'grade') {
+  const ranks = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+  const name = entry => WEAPONS[entry.id]?.name || CHARACTERS[entry.id]?.name || entry.id;
+  const grade = entry => ranks[(entry.item || equipment[entry.id])?.grade] || 0;
+  return [...entries].sort((a, b) =>
+    (mode === 'grade' ? grade(b) - grade(a) : 0) || name(a).localeCompare(name(b), 'ko'));
+}
 export function inventoryCharacters(state) {
   return [...new Set(['black-water', ...Object.keys(state.characters)])]
     .filter(id => id !== state.equipped);
@@ -46,7 +53,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
-  let slot = 'primary', sorted = false, keyboardOpened = false, weaponBusy = false, characterBusy = false;
+  let slot = 'primary', sortMode = 'grade', keyboardOpened = false, weaponBusy = false, characterBusy = false;
   const saleDialog = document.createElement('dialog');
   saleDialog.setAttribute('aria-label', '무기 판매 확인');
   const saleMessage = document.createElement('p');
@@ -533,7 +540,9 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       ];
     const count = slot === 'character' ? characterInventoryCount(getCharacters()) : entries.length;
     if (slot !== 'character') entries = entries.filter(({ item }) => !item?.equipped);
-    if (sorted) entries.sort((a, b) => (WEAPONS[a.id]?.name || CHARACTERS[a.id]?.name || a.id).localeCompare(WEAPONS[b.id]?.name || CHARACTERS[b.id]?.name || b.id, 'ko'));
+    entries = sortInventoryEntries(entries, equipment, sortMode);
+    $('inventory-sort').textContent = sortMode === 'grade' ? '등급순 정렬' : '이름순 정렬';
+    $('inventory-sort').setAttribute('aria-label', `${sortMode === 'grade' ? '등급순 정렬 중, 이름순' : '이름순 정렬 중, 등급순'} 정렬로 변경`);
     $('inventory-count').textContent = `${loadError ? '?' : count} / ${INVENTORY_LIMIT}`;
     $('inventory-items').replaceChildren();
     if (!entries.length) {
@@ -605,7 +614,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     });
   }
   $('inventory-sort').addEventListener('click', () => {
-    sorted = !sorted; $('inventory-sort').textContent = sorted ? '기본순 정렬' : '이름순 정렬'; render();
+    sortMode = sortMode === 'grade' ? 'name' : 'grade'; render();
   });
   $('inventory-sell').addEventListener('click', openSalePicker);
   $('equipment-back').addEventListener('click', () => dialog.close());
