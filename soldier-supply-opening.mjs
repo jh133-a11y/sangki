@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=3';
+import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=5';
 
 export const OPENING_TIMING = { turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300 };
 
@@ -80,13 +80,8 @@ export function createSupplyOpening(renderCard, reportError) {
   function finish() {
     clear(); dialog.dataset.phase='revealed';
     reward.replaceChildren(renderCard(rewards[current].weapon,rewards[current]));
-    status.textContent=`${current+1}/${rewards.length} · ${rewards[current].grade}급 무기 획득 · 인벤토리에 저장됨`;
+    status.textContent=`${current+1}/${rewards.length} · ${rewards[current].grade}급 무기 획득 · 인벤토리에 저장됨 · 터치하여 계속`;
     counter.textContent=`× ${rewards.length-current-1}`;
-    if (special) return;
-    timers.push(setTimeout(() => {
-      if (!dialog.open) return;
-      if (current+1<rewards.length) { current++; play(); } else dialog.close();
-    },700));
   }
   function play() {
     clear();
@@ -131,7 +126,7 @@ export function createSupplyOpening(renderCard, reportError) {
     renderer?.dispose(); renderer?.forceContextLoss(); renderer=null; scene=null; crate=null; graphicsAvailable=false;
   }
   function advance() {
-    if (!special || dialog.dataset.phase!=='revealed') return;
+    if (!dialog.open || dialog.dataset.phase!=='revealed') return;
     if (current+1<rewards.length) { current++; play(); } else dialog.close();
   }
   dialog.addEventListener('click',advance);

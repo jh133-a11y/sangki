@@ -1,6 +1,6 @@
 import { CHARACTERS } from './soldier-characters.mjs?v=5';
-import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=4';
-import { createSupplyOpening } from './soldier-supply-opening.mjs?v=2';
+import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=5';
+import { createSupplyOpening } from './soldier-supply-opening.mjs?v=3';
 
 export { SUPPLY_PRODUCTS };
 export const GOLD_PRODUCTS = [

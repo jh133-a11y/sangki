@@ -57,13 +57,15 @@ test('legacy uncolored receipts are accepted without accepting mismatched colore
   mismatch.rewards[0].color = 'red';
   assert.throws(() => validateSupply(mismatch,'normal',owner), /보급함 보상/);
 });
-test('opening keeps reference timing, tap-to-advance specials and no visible buttons',() => {
+test('opening keeps reference timing, tap-to-advance all crates and no visible buttons',() => {
   const source=readFileSync('soldier-supply-opening.mjs','utf8');
   assert.match(source,/turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300/);
   assert.match(source,/prefers-reduced-motion/);
   assert.doesNotMatch(source,/createElement\('button'\)/);
   assert.match(source,/current\+\+; play\(\)/);
-  assert.match(source,/if \(special\) return/);
+  assert.match(source,/if \(!dialog\.open \|\| dialog\.dataset\.phase!=='revealed'\) return/);
+  const finish = source.slice(source.indexOf('function finish()'), source.indexOf('function play()'));
+  assert.doesNotMatch(finish,/setTimeout|dialog\.close|current\+\+/);
   assert.match(source,/dialog\.addEventListener\('click',advance\)/);
   assert.match(source,/counter\.hidden=!special/);
   assert.match(source,/supply-accessible-status/);
