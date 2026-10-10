@@ -1294,7 +1294,10 @@ begin
   select coalesce(quantity, 0), coalesce(invested_amount, 0)
   into current_quantity, current_invested
   from public.investment_holdings
-  where client_id = p_client_id and symbol = p_symbol;
+  where client_id = p_client_id and symbol = p_symbol
+  for update;
+  current_quantity := coalesce(current_quantity, 0);
+  current_invested := coalesce(current_invested, 0);
 
   if p_side = 'buy' then
     if user_row.cash < total_price then raise exception '보유 현금이 부족합니다.'; end if;
@@ -1315,14 +1318,15 @@ begin
     if (user_row.cash::numeric + total_price::numeric) > 9223372036854775807 then
       raise exception '거래 후 현금이 너무 큽니다.';
     end if;
-    update public.investment_users set cash = cash + total_price where client_id = p_client_id;
     update public.investment_holdings
     set quantity = quantity - p_quantity,
         invested_amount = case
           when p_quantity = current_quantity then 0
           else invested_amount - round(invested_amount * p_quantity::numeric / current_quantity)
         end
-    where client_id = p_client_id and symbol = p_symbol;
+    where client_id = p_client_id and symbol = p_symbol and quantity >= p_quantity;
+    if not found then raise exception '보유 주식보다 많이 팔 수 없습니다.'; end if;
+    update public.investment_users set cash = cash + total_price where client_id = p_client_id;
   else
     raise exception '잘못된 거래 유형입니다.';
   end if;

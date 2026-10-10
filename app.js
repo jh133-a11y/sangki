@@ -1465,7 +1465,8 @@ const renderInvestmentState = (state) => {
     const sell = document.createElement('button');
     sell.type = 'button';
     sell.textContent = '매도';
-    sell.disabled = !asset.listed;
+    const ownedHolding = state.holdings.find((item) => item.symbol === asset.symbol);
+    sell.disabled = !asset.listed || !ownedHolding || BigInt(String(ownedHolding.quantity)) < 1n;
     sell.addEventListener('click', () => tradeInvestment(asset.symbol, 'sell', quantity));
     const maxBuy = document.createElement('button');
     maxBuy.type = 'button';
@@ -1479,7 +1480,7 @@ const renderInvestmentState = (state) => {
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
     maxSell.textContent = '최대 매도';
-    maxSell.disabled = !asset.listed;
+    maxSell.disabled = sell.disabled;
     maxSell.addEventListener('click', () => {
       const holding = state.holdings.find((item) => item.symbol === asset.symbol);
       quantity.value = String(holding ? holding.quantity : 0);
@@ -1971,12 +1972,19 @@ investmentRefresh.addEventListener('click', async () => {
 });
 
 const tradeInvestment = async (symbol, side, quantityInput) => {
+  if (quantityInput.disabled) return;
   const quantityText = quantityInput.value.trim();
   if (!/^[0-9]+$/.test(quantityText) || BigInt(quantityText) < 1n) {
     window.alert('수량은 1주 이상 정수로 입력하세요.');
     return;
   }
   try {
+    if (side === 'sell') {
+      const holding = investmentState?.holdings.find((item) => item.symbol === symbol);
+      if (!holding || BigInt(String(holding.quantity)) < BigInt(quantityText)) {
+        throw new Error('보유 주식보다 많이 팔 수 없습니다.');
+      }
+    }
     quantityInput.disabled = true;
     const state = await callInvestmentRpc('investment_trade', {
       p_client_id: getInvestmentClientId(),
