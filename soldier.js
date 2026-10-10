@@ -1,11 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
 import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
 import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=19';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=20';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=9';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=9';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=10';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=3';
 import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=6';
 
@@ -52,7 +52,7 @@ for (const slot of Object.keys(loadout)) {
 }
 const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
-  getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem,
+  getWeaponItems: () => weaponItems, changeWeaponItem: changeWeaponItem, sellWeaponItem,
   operateWeapon: operateWeapon, getGems: () => identity?.gems,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
@@ -153,13 +153,20 @@ const shop = createShop({
   getState: () => characterState, isReady: () => shopReady,
   buy: id => refreshCharacters('buy', id), refresh: () => refreshCharacters(),
   buyGold, isGoldReady: () => goldExchangeReady,
+  getSupplyCapacity: product => {
+    const available = ['primary', 'secondary', 'melee'].reduce((total, slot) =>
+      total + INVENTORY_LIMIT - inventoryWeapons(equipment, slot).length
+        - weaponItems.filter(item => WEAPONS[item.weapon].slot === slot).length, 0);
+    return available >= product.count;
+  },
+  getSupplyError: () => supplyError,
   isSupplyReady: () => supplyReady, buySupply,
   renderCard(weapon,item) {
     const card = $('primary').querySelector('.equipment-card').cloneNode(true);
     fillWeaponCard(card,weapon,item); return card;
   }
 });
-let supplyReady = false, supplyBusy = false, supplyOwner = null;
+let supplyReady = false, supplyBusy = false, supplyOwner = null, supplyError = null;
 async function buySupply(product) {
   if (!identity || !supplyReady) throw new Error('보급함 상점에 연결되지 않았습니다.');
   if (supplyBusy) throw new Error('이전 보급함 구매를 처리 중입니다.');
@@ -226,6 +233,55 @@ async function buyGold(product) {
   }
   identity.gold = result.gold; identity.gems = result.gems;
   updateWallet(identity);
+  localStorage.removeItem(key);
+  return result;
+}
+async function sellWeaponItem(item, weapon) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  if (!WEAPONS[weapon] || (item && (item.weapon !== weapon || item.equipped))) {
+    throw new Error('판매할 무기 정보를 확인할 수 없습니다. 장착 중인 무기는 판매할 수 없습니다.');
+  }
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('무기 판매 요청을 저장할 계정 정보를 확인할 수 없습니다.');
+  const key = `sanggi-weapon-sale-pending-${owner}`;
+  let pending = JSON.parse(localStorage.getItem(key) || 'null');
+  const itemId = item?.id || null;
+  if (pending && (pending.item !== itemId || pending.weapon !== weapon
+    || typeof pending.request !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pending.request))) {
+    throw new Error('미확인 판매 요청이 있습니다. 새로고침 후 같은 무기를 다시 판매해 결과를 확인하세요.');
+  }
+  pending ||= { item: itemId, weapon, request: crypto.randomUUID() };
+  localStorage.setItem(key, JSON.stringify(pending));
+  let result;
+  try {
+    result = await rpc('soldier_weapon_sell_api', {
+      p_token: identity.token, p_item: itemId, p_weapon: itemId ? null : weapon, p_request: pending.request
+    });
+  } catch (error) {
+    if (error.rpcRejected) localStorage.removeItem(key);
+    throw error;
+  }
+  if (!result || result.sale_version !== 1 || result.request !== pending.request
+    || result.weapon !== weapon || (result.item_id || null) !== itemId
+    || String(result.client_id).toLowerCase() !== owner.toLowerCase()
+    || typeof result.replayed !== 'boolean' || String(result.gold_awarded) !== '100'
+    || !/^\d+$/.test(String(result.gold))) {
+    throw new Error('무기 판매 응답을 확인할 수 없습니다. 새로고침 후 같은 요청으로 다시 확인하세요.');
+  }
+  const items = validateWeaponItems(result.inventory);
+  for (const slot of ['primary', 'secondary', 'melee']) {
+    if (inventoryWeapons(result.equipment, slot).length
+      + items.filter(entry => WEAPONS[entry.weapon].slot === slot).length > INVENTORY_LIMIT) {
+      throw new Error('분류별 보유 인벤토리 제한을 초과한 판매 응답입니다.');
+    }
+  }
+  const equipmentResult = { gold: result.gold, equipment: result.equipment };
+  if (!equipmentResult.equipment || typeof equipmentResult.equipment !== 'object' || Array.isArray(equipmentResult.equipment)) {
+    throw new Error('판매 후 장비 정보를 확인할 수 없습니다.');
+  }
+  weaponItems = items;
+  updateEquipment(equipmentResult);
   localStorage.removeItem(key);
   return result;
 }
@@ -324,8 +380,9 @@ async function connect() {
     }
     try {
       const result = await rpc('soldier_supply_api',{ p_token: identity.token });
-      validateSupply(result); supplyOwner = result.client_id; supplyReady = true;
+      validateSupply(result); supplyOwner = result.client_id; supplyReady = true; supplyError = null;
     } catch (error) {
+      supplyError = error.message;
       $('shop-status').textContent = `보급함 연결 실패: ${error.message} soldier-supply.sql 실행 후 새로고침하세요.`;
       console.error('보급함 불러오기 오류',error);
     }

@@ -41,7 +41,7 @@ export function characterInventoryStats(id, level = 1) {
 }
 
 export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard,
-  getWeaponItems = () => [], changeWeaponItem, operateWeapon, getGems = () => null, upgradeCharacter }) {
+  getWeaponItems = () => [], changeWeaponItem, sellWeaponItem, operateWeapon, getGems = () => null, upgradeCharacter }) {
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
@@ -103,6 +103,26 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
           $('inventory-status').textContent += ` 장비 재확인 실패: ${refreshError.message} 새로고침하세요.`;
           console.error('무기 재확인 오류', refreshError);
         }
+      } finally { weaponBusy = false; render(); updateWallet(); }
+    });
+    return button;
+  }
+  function sellWeaponAction(id, item) {
+    const button = document.createElement('button'); button.type = 'button';
+    button.className = 'weapon-item-action'; button.textContent = '판매 · 100 골드';
+    button.disabled = weaponBusy || !sellWeaponItem;
+    button.title = '장착하지 않은 무기를 100골드에 판매합니다.';
+    button.addEventListener('click', async () => {
+      if (weaponBusy || !sellWeaponItem
+        || !window.confirm(`${WEAPONS[id].name}을 100골드에 판매하시겠습니까?`)) return;
+      weaponBusy = true; render();
+      $('inventory-status').textContent = '무기를 판매하는 중입니다…';
+      try {
+        await sellWeaponItem(item || null, id);
+        $('inventory-status').textContent = `${WEAPONS[id].name} 판매 완료 · 100골드를 획득했습니다.`;
+      } catch (error) {
+        $('inventory-status').textContent = `무기 판매 실패: ${error.message}`;
+        console.error('무기 판매 오류', error);
       } finally { weaponBusy = false; render(); updateWallet(); }
     });
     return button;
@@ -453,6 +473,9 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         $('inventory-comparison').replaceChildren(title, content(id, item));
         if (item && !item.equipped && changeWeaponItem) {
           $('inventory-comparison').append(weaponAction('무기 장착', 'equip', item));
+        }
+        if (slot !== 'character' && id !== current && !item?.equipped) {
+          $('inventory-comparison').append(sellWeaponAction(id, item));
         }
         if (slot === 'character' && id !== current) {
           const equip = document.createElement('button'); equip.type = 'button'; equip.textContent = '캐릭터 장착';

@@ -8,7 +8,7 @@ export const GOLD_PRODUCTS = [
   { id: 'gold-30000', name: '30,000 골드', price: 50, gold: 30000, description: '골드 25,000 + 보너스 5,000' },
   { id: 'gold-65000', name: '65,000 골드', price: 100, gold: 65000, description: '골드 50,000 + 보너스 15,000' }
 ];
-export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, buyGold, isGoldReady, renderCard }) {
+export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, getSupplyCapacity, getSupplyError, buyGold, isGoldReady, renderCard }) {
   const $ = id => document.getElementById(id);
   const dialog = $('shop-dialog'), tabs = [...dialog.querySelectorAll('[data-shop-tab]')];
   let category = 'supply', buying = false, confirming = false, keyboardOpened = false;
@@ -109,8 +109,12 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
       button.setAttribute('aria-label', `${product.name} ${product.price}보석 구매`);
       if (category === 'character') button.setAttribute('aria-label', `${product.name} ${owned ? '보유 중' : '125보석 구매'}`);
       const productCategory = category;
-      button.disabled = buying || confirming || owned || !(productCategory === 'supply' ? isSupplyReady()
+      const supplyCapacity = productCategory === 'supply' ? getSupplyCapacity(product) : true;
+      button.disabled = buying || confirming || owned || !(productCategory === 'supply' ? isSupplyReady() && supplyCapacity
         : productCategory === 'gold' ? isGoldReady() : isReady());
+      if (productCategory === 'supply' && !supplyCapacity) {
+        button.title = `인벤토리 여유 공간이 부족합니다. 보급 무기 ${product.count}개를 받을 공간을 확보하세요.`;
+      }
       button.addEventListener('click', async () => {
         if (buying || confirming) return;
         const purchaseCategory = productCategory;
@@ -152,8 +156,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         const supplyArt = document.createElement('div'); supplyArt.className = 'shop-supply-art'; supplyArt.append(art);
         const odds = document.createElement('details'); odds.className = 'shop-supply-odds';
         const summary = document.createElement('summary'); summary.textContent = '획득 확률';
-        const description = document.createElement('p');
-        description.textContent = `${product.odds} · 무기 9종 × 색상 4종 = 36가지 조합, 각각 1/36`;
+        const description = document.createElement('p'); description.textContent = product.odds;
         odds.append(summary,description);
         article.append(price,supplyArt,title,text,button,odds);
       } else article.append(price, art, title, text, button);
@@ -163,9 +166,11 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
   const open = (event) => {
     keyboardOpened = event?.detail === 0;
     category = 'supply'; render(); dialog.showModal(); $('home').hidden = true;
-    $('shop-status').textContent = isSupplyReady()
-      ? '보급함은 구매 즉시 개봉됩니다. 지급된 무기는 인벤토리에서 장착·강화할 수 있습니다.'
-      : '보급함 구매 연결 필요: soldier-supply.sql 실행 후 새로고침하세요.';
+    $('shop-status').textContent = !isSupplyReady()
+      ? `보급함 서버 연결 실패: ${getSupplyError() || '연결 상태를 확인할 수 없습니다.'} 최신 soldier-supply.sql 실행 여부를 확인한 뒤 새로고침하세요.`
+      : !getSupplyCapacity(SUPPLY_PRODUCTS.find(product => product.id === 'normal'))
+        ? '인벤토리 공간이 부족해 보급함을 구매할 수 없습니다. 무기를 판매하거나 재료로 사용해 공간을 확보하세요.'
+        : '보급함은 구매 즉시 개봉됩니다. 지급된 무기는 인벤토리에서 장착·강화할 수 있습니다.';
   };
   for (const tab of tabs) {
     tab.addEventListener('click', () => {
@@ -174,7 +179,9 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         $('shop-status').textContent = category === 'gold' && !isGoldReady()
           ? '골드 교환 연결 필요: 최신 soldier-shop.sql 실행 후 새로고침하세요.'
           : category === 'supply' && !isSupplyReady()
-            ? '보급함 구매 연결 필요: soldier-supply.sql 실행 후 새로고침하세요.' : '';
+            ? `보급함 서버 연결 실패: ${getSupplyError() || '연결 상태를 확인할 수 없습니다.'} 최신 soldier-supply.sql 실행 여부를 확인한 뒤 새로고침하세요.`
+            : category === 'supply' && !getSupplyCapacity(SUPPLY_PRODUCTS.find(product => product.id === 'normal'))
+              ? '인벤토리 공간이 부족해 보급함을 구매할 수 없습니다. 무기를 판매하거나 재료로 사용해 공간을 확보하세요.' : '';
       }
     });
     tab.addEventListener('keydown', event => {

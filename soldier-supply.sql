@@ -41,7 +41,9 @@ create or replace function public.soldier_supply_api(
 declare
   owner_id uuid; balance bigint; cost integer; quantity integer; i integer;
   roll integer; weapon_id text; grade_id text; color_id text; item_id uuid;
-  weapon_pool text[];
+  weapon_pool text[]; selected_weapons text[]:='{}'; selected_grades text[]:='{}'; selected_colors text[]:='{}';
+  needed_primary integer:=0; needed_secondary integer:=0; needed_melee integer:=0;
+  used_primary integer; used_secondary integer; used_melee integer;
   rewards jsonb := '[]'::jsonb; replayed boolean := false; previous public.soldier_supply_purchases%rowtype;
 begin
   perform public.soldier_equipment_api(p_token);
@@ -67,6 +69,29 @@ begin
         grade_id:=public.soldier_supply_grade(p_product,i,roll);
         weapon_id:=weapon_pool[1+floor(random()*array_length(weapon_pool,1))::integer];
         color_id:=(array['standard','gold','red','silver']::text[])[1+floor(random()*4)::integer];
+        selected_weapons:=array_append(selected_weapons,weapon_id);
+        selected_grades:=array_append(selected_grades,grade_id);
+        selected_colors:=array_append(selected_colors,color_id);
+        if public.soldier_weapon(weapon_id)->>'slot'='primary' then needed_primary:=needed_primary+1;
+        elsif public.soldier_weapon(weapon_id)->>'slot'='secondary' then needed_secondary:=needed_secondary+1;
+        else needed_melee:=needed_melee+1; end if;
+      end loop;
+      select count(*) filter (where public.soldier_weapon(weapon)->>'slot'='primary'),
+        count(*) filter (where public.soldier_weapon(weapon)->>'slot'='secondary'),
+        count(*) filter (where public.soldier_weapon(weapon)->>'slot'='melee')
+      into used_primary,used_secondary,used_melee
+      from (
+        select weapon from public.soldier_equipment where client_id=owner_id
+        union all
+        select weapon from public.soldier_weapon_items where client_id=owner_id
+      ) owned;
+      if used_primary+needed_primary>50 or used_secondary+needed_secondary>50 or used_melee+needed_melee>50 then
+        raise exception '보급함 보상을 받을 인벤토리 공간이 부족합니다. 무기를 판매하거나 재료로 사용한 뒤 다시 시도하세요.';
+      end if;
+      for i in 1..quantity loop
+        weapon_id:=selected_weapons[i];
+        grade_id:=selected_grades[i];
+        color_id:=selected_colors[i];
         -- The existing inventory trigger rejects overflow; the entire purchase rolls back.
         item_id:=public.soldier_grant_colored_weapon(owner_id,weapon_id,grade_id,color_id,'supply-'||p_product,
           'supply-'||p_request::text||'-'||i::text);

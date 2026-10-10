@@ -41,6 +41,8 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/p_product='special' and p_index=1/);
   assert.match(sql,/array\['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'\]/);
   assert.match(sql,/weapon_pool:=public\.soldier_supply_weapons\(\)/);
+  assert.match(sql,/보급함 보상을 받을 인벤토리 공간이 부족합니다/);
+  assert.match(sql,/selected_weapons/);
   assert.doesNotMatch(sql,/p_(price|grade|weapon)\b/);
 });
 test('opening keeps reference timing, tap-to-advance specials and no visible buttons',() => {
@@ -56,5 +58,7 @@ test('opening keeps reference timing, tap-to-advance specials and no visible but
   assert.match(source,/forceContextLoss/);
   const shop=readFileSync('soldier-shop.mjs','utf8');
   assert.doesNotMatch(shop,/shop-confirm-odds/);
-  assert.match(shop,/무기 9종 × 색상 4종 = 36가지 조합, 각각 1\/36/);
+  assert.match(shop,/description\.textContent = product\.odds/);
+  assert.doesNotMatch(shop,/36가지 조합|1\/36/);
+  assert.match(shop,/getSupplyCapacity/);
 });
