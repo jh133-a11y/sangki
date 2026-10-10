@@ -1,13 +1,13 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=16';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=20';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=28';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=10';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=17';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=21';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=29';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=11';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
-import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=5';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=13';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=5';
-import { WEAPONS, WEAPON_COLORS, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=6';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=6';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=14';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=6';
+import { WEAPONS, WEAPON_COLORS, weaponStats, weaponSetColor, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=7';
 
 const $ = id => document.getElementById(id);
 setupFullscreen($('fullscreen-open'), $('fullscreen-status'));
@@ -41,11 +41,24 @@ function updateEquipment(result) {
   inventory.refresh();
 }
 function fillWeaponCard(card, id, item) {
+  card.dataset.setColor = '';
   fillCard(card, id, item || weaponItems.find(entry => entry.weapon === id && entry.equipped)
     || equipment[id] || { grade: 'D', level: 1 });
 }
 function renderWeaponCard(slot) {
-  fillWeaponCard($(slot).querySelector('.equipment-card'), loadout[slot]);
+  const card = $(slot).querySelector('.equipment-card');
+  fillWeaponCard(card, loadout[slot]);
+  const equipped = Object.fromEntries(Object.entries(loadout).map(([key, id]) =>
+    [key, weaponItems.find(item => item.equipped && item.weapon === id) || equipment[id] || { grade: 'D', color: 'standard' }]));
+  const color = weaponSetColor(equipped);
+  for (const key of Object.keys(loadout)) {
+    $(key).querySelector('.equipment-card').dataset.setColor = color || '';
+  }
+  const label = $('weapon-set-effect');
+  if (label) {
+    label.hidden = !color;
+    label.textContent = color ? { gold: 'GOLD 세트 · 장착 무기 위력 +3', red: 'RED 세트 · 장착 무기 크리티컬 +5', silver: 'SILVER 세트 · 장착 무기 무게 -10%' }[color] : '';
+  }
 }
 for (const slot of Object.keys(loadout)) {
   renderWeaponCard(slot);
@@ -119,19 +132,22 @@ async function operateWeapon(action, item, other, request) {
   }
   for (const reward of result.results) {
     if (!reward || typeof reward.id !== 'string' || !WEAPONS[reward.weapon]
-      || !WEAPON_COLORS.includes(reward.color) || !['D', 'C', 'B', 'A', 'S'].includes(reward.grade)
+      || !WEAPON_COLORS.includes(reward.color) || !['D', 'C', 'B', 'A', 'S', 'S+'].includes(reward.grade)
       || reward.level !== 1) throw new Error('무기 작업 결과를 확인할 수 없습니다.');
     if (!result.replayed && !items.some(entry => entry.id === reward.id && entry.weapon === reward.weapon
       && entry.color === reward.color && entry.grade === reward.grade && entry.source === action)) {
       throw new Error('무기 작업 결과와 인벤토리가 일치하지 않습니다.');
     }
   }
-  if (action === 'combine' && (result.results[0].grade !== ({ D: 'C', C: 'B', B: 'A', A: 'S' })[item.grade]
+  if (action === 'combine' && (result.results[0].grade !== ({ D: 'C', C: 'B', B: 'A', A: 'S', S: 'S+' })[item.grade]
     || (item.weapon === other.weapon && result.results[0].weapon !== item.weapon)
+    || (WEAPONS[item.weapon].slot === WEAPONS[other.weapon].slot
+      && WEAPONS[result.results[0].weapon].slot !== WEAPONS[item.weapon].slot)
     || (item.weapon === other.weapon && item.color === other.color && result.results[0].color !== item.color))) {
     throw new Error('조합 결과 등급 또는 무기 정보를 확인할 수 없습니다.');
   }
-  if (action === 'disassemble' && result.results.some(reward => reward.grade !== 'A')) {
+  if (action === 'disassemble' && result.results.some(reward => reward.grade !== (item.grade === 'S+' ? 'S' : 'A')
+    || WEAPONS[reward.weapon].slot !== WEAPONS[item.weapon].slot)) {
     throw new Error('분해 결과 등급을 확인할 수 없습니다.');
   }
   weaponItems = items; identity.gold = result.inventory.gold; identity.gems = result.gems;
@@ -304,6 +320,9 @@ async function refreshCharacters(action = 'read', id = null, level = null) {
     const result = action === 'upgrade'
       ? await rpc('soldier_character_upgrade_api', { p_token: identity.token, p_character: id, p_level: level })
       : await rpc('soldier_shop_api', { p_token: identity.token, p_action: action, p_character: id });
+    if (result?.equipped === 'fsb-agent' || Object.hasOwn(result?.characters || {}, 'fsb-agent')) {
+      throw new Error('FSB-AGENT 삭제와 새 캐릭터 능력을 적용하려면 최신 soldier-shop.sql, soldier-character-upgrade.sql, soldier-weapon-combat.sql을 순서대로 실행하세요.');
+    }
     if (!result || !CHARACTERS[result.equipped] || !result.characters || Array.isArray(result.characters) || typeof result.characters !== 'object'
       || !/^\d+$/.test(String(result.gold)) || !/^\d+$/.test(String(result.gems))
       || Object.keys(result.characters).length + 1 > INVENTORY_LIMIT) throw new Error('상점 정보를 확인할 수 없습니다.');
@@ -707,12 +726,12 @@ function startMatch(isOnline) {
   homeCharacter.cancelDrag();
   $('home').hidden = true; $('hud').hidden = false;
   fireHeld = false; aiming = false; keys.clear(); joystick = { x: 0, y: 0 };
-  matchWeapons = applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
+  const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
+  matchWeapons = applyCharacterBonuses(applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
     const item = weaponItems.find(entry => entry.weapon === id && entry.equipped) || equipment[id];
     return [key, weaponStats(id, item?.grade || 'D', item?.level || 1, item?.color || 'standard')];
-  })));
+  }))), stats);
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
-  const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
   player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: stats.hp, maxHp: stats.hp, evasion: stats.evasion, lastDodge: null, kills: 0, deaths: 0 };
   velocityY = 0; matchEnds = performance.now() / 1000 + 180; nextShot = 0;
   clearEntities();
@@ -758,7 +777,7 @@ function applySnapshot(state) {
   if (respawned) $('game-status').textContent = '';
   if (startingMatch && state.character_version !== 2) $('game-status').textContent = '캐릭터 능력 적용에는 soldier-character-upgrade.sql 실행이 필요합니다.';
   ammo = state.ammo;
-  if (state.weapon_version === 1) matchWeapons = validateCombatWeapons(state, loadout);
+  if (state.weapon_version === 1) matchWeapons = validateCombatWeapons(state, loadout, characterStats(own.character, own.character_level));
   else if (startingMatch) {
     matchWeapons = Object.fromEntries(Object.entries(loadout).map(([key, id]) => [key, weaponStats(id)]));
     $('game-status').textContent += ' 무기 성장·보유탄환 적용에는 soldier-weapon-combat.sql 실행이 필요합니다.';

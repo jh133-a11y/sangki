@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { WEAPONS, DEFAULT_LOADOUT, weaponLevelLabel, weaponUpgradeCost, RANKS, RANK_STEPS, rankName, rankProgress, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs';
 const sql = readFileSync(new URL('./soldier-schema.sql', import.meta.url), 'utf8');
 test('default equipment and upgrade prices match D through S progression', () => {
-  assert.deepEqual(Object.values(DEFAULT_LOADOUT).map(id => WEAPONS[id].name), ['K2', 'M870', 'M9']);
+  assert.deepEqual(Object.values(DEFAULT_LOADOUT).map(id => WEAPONS[id].name), ['K-200', 'S-870', 'M-90B']);
   for (const [grade, costs] of Object.entries({
     D: [1000,2000,3000,4000,5000,6000], C: [3000,4000,5000,6000,7000,8000],
     B: [5000,7000,9000,11000,13000,15000], A: [10000,15000,20000,25000,30000,35000],

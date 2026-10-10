@@ -1,14 +1,14 @@
 begin;
 create table if not exists public.soldier_characters (
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
-  character text not null check (character in ('fsb-agent','roka-swc')),
+  character text not null check (character in ('fighter','thief','korean-girl','roka-swc')),
   level integer not null default 1 check (level between 1 and 7),
   primary key (client_id,character)
 );
 alter table public.soldier_characters enable row level security;
 revoke all on public.soldier_characters from anon,authenticated;
 alter table public.soldier_profiles add column if not exists equipped_character text not null default 'black-water'
-  check (equipped_character in ('black-water','fsb-agent','roka-swc'));
+  check (equipped_character in ('black-water','fighter','thief','korean-girl','roka-swc'));
 
 create or replace function public.soldier_shop_api(p_token uuid,p_action text default 'read',p_character text default null)
 returns jsonb language plpgsql security definer set search_path=public as $$
@@ -22,14 +22,18 @@ begin
   select * into profile from public.soldier_profiles where client_id=sess.client_id for update;
   if p_action is null or p_action not in ('read','buy','equip') then raise exception '상점 요청이 올바르지 않습니다.'; end if;
   if p_action in ('buy','equip') then
-    if p_character is null or p_character not in ('black-water','fsb-agent','roka-swc') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
+    if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
     if p_action='buy' then
       if p_character='black-water' then raise exception '기본 캐릭터는 구매할 필요가 없습니다.'; end if;
       if exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '이미 보유한 캐릭터입니다.'; end if;
       if (select count(*) from public.soldier_characters where client_id=sess.client_id)>=50 then raise exception '캐릭터 인벤토리는 최대 50개입니다.'; end if;
-      if profile.gems<125 then raise exception '보석이 부족합니다. 필요한 보석: 125'; end if;
+      if profile.gems < (case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end) then
+        raise exception '보석이 부족합니다. 필요한 보석: %',(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end);
+      end if;
       insert into public.soldier_characters(client_id,character) values(sess.client_id,p_character);
-      update public.soldier_profiles set gems=gems-125 where client_id=sess.client_id;
+      update public.soldier_profiles
+      set gems=gems-(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end)
+      where client_id=sess.client_id;
     else
       if p_character<>'black-water' and not exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '보유하지 않은 캐릭터입니다.'; end if;
       update public.soldier_profiles set equipped_character=p_character where client_id=sess.client_id;

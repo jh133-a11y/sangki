@@ -5,16 +5,16 @@ import { WEAPON_COLORS } from './soldier-core.mjs';
 import { WEAPON_REWARDS, weaponColorLabel, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
 
 test('all weapon colors and grades reuse the same card layout and colored assets', () => {
-  assert.equal(WEAPON_REWARDS.length, 180);
-  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 180);
+  assert.equal(WEAPON_REWARDS.length, 216);
+  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 216);
   for (const weapon of ['k2', 'shotgun', 'stick', 'psg1', 'm249', 'p90', 'auga3', 'g36c', 'akm']) {
     for (const color of WEAPON_COLORS) {
       const variants = WEAPON_REWARDS.filter(item => item.weapon === weapon && item.color === color);
-      assert.deepEqual(variants.map(item => item.grade), ['D', 'C', 'B', 'A', 'S']);
+      assert.deepEqual(variants.map(item => item.grade), ['D', 'C', 'B', 'A', 'S', 'S+']);
       assert.equal(new Set(variants.map(item => item.image)).size, 1);
       for (const variant of variants) {
         assert.ok(existsSync(variant.image.split('?')[0]));
-        assert.ok(existsSync(variant.frame));
+        assert.ok(existsSync(variant.frame.split('?')[0]));
         const elements = Object.fromEntries(['.grade-frame', '.weapon-level', '.weapon-image', '.weapon-color-label', '.weapon-name'].map(key => [key, {}]));
         const card = { dataset: {}, querySelector: key => elements[key] };
         fillWeaponCard(card, weapon, { grade: variant.grade, color, level: 3 });
@@ -83,8 +83,8 @@ test('combination and disassembly validate max cards, charge server gems and sto
   assert.match(sql,/item_a\.level<>7/);
   assert.match(sql,/item_b\.grade<>item_a\.grade/);
   assert.match(sql,/when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50/);
-  assert.match(sql,/item_a\.grade<>'S'/);
-  assert.match(sql,/values\(owner_id,weapon_id,color_id,'A',1,'disassemble'/);
+  assert.match(sql,/item_a\.grade not in \('S','S\+'\)/);
+  assert.match(sql,/values\(owner_id,weapon_id,color_id,grade_id,1,'disassemble'/);
   assert.match(sql,/previous\.inputs<>input_data/);
   assert.match(sql,/revoke all on function public\.soldier_weapon_operation_api/);
 });

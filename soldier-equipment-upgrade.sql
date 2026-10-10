@@ -2,10 +2,13 @@ begin;
 create table if not exists public.soldier_equipment (
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
   weapon text not null,
-  grade text not null default 'D' check (grade in ('D','C','B','A','S')),
+  grade text not null default 'D' check (grade in ('D','C','B','A','S','S+')),
   level integer not null default 1 check (level between 1 and 7),
   primary key (client_id,weapon)
 );
+alter table public.soldier_equipment drop constraint if exists soldier_equipment_grade_check;
+alter table public.soldier_equipment add constraint soldier_equipment_grade_check
+  check (grade in ('D','C','B','A','S','S+'));
 alter table public.soldier_equipment enable row level security;
 revoke all on public.soldier_equipment from anon,authenticated;
 
@@ -29,8 +32,8 @@ begin
     insert into public.soldier_equipment(client_id,weapon) values(sess.client_id,p_weapon) on conflict do nothing;
     select * into item from public.soldier_equipment where client_id=sess.client_id and weapon=p_weapon for update;
     if item.level<>p_level then raise exception '무기 레벨이 변경되었습니다. 장비를 새로 불러오세요.'; end if;
-    base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 end;
-    increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 end;
+    base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 when 'S+' then 40000 end;
+    increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 when 'S+' then 20000 end;
     cost:=base+(item.level-1)*increment;
     if balance<cost then raise exception '솔져 골드가 부족합니다. 필요한 골드: %',cost; end if;
     update public.soldier_profiles set gold=gold-cost where client_id=sess.client_id;

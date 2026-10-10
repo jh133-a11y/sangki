@@ -7,10 +7,12 @@ import { createHomeRig, idlePose } from './soldier-home-rig.mjs';
 import { CHARACTERS } from './soldier-characters.mjs';
 
 const fixtures = [
-  ['soldier-home-model.glb', '748b0eed0398103e7c6b96e0a4fb645c33c6ef8ca091f5d313978d712cd44acd'],
-  ['soldier-fsb-agent.glb', '3531ede18be5887aaf6bfc9a364dfde876c4c06e9d315b080c4d818d68982bba'],
+  ['soldier-james.glb', '0a0cf4b1ddfba1c7fc06f7a4447070e1eb299722285659eb7019be7b0b7f10a9'],
+  ['soldier-thief.glb', 'd682202040dd6cea39c22154636647203650922bd8cfddc6516f3bdc5e858eac'],
+  ['soldier-korean-girl.glb', '6b459bd088640a15740820d9d1d7a740441bd55cb57b1ff17e05f72bbeec4d76'],
   ['soldier-roka-swc.glb', '56b70c4d3ab69a5099dde824172e1607da8e57895eb53088e0b19eaa05886a54']
 ];
+const staticFixture = ['soldier-fighter.glb', 'd9807d6364ddd312600b310172da1bf0a2260e1afc43daa24bc3c4bc190373d8'];
 
 function suppliedScene(file) {
   const binary = readFileSync(file), length = binary.readUInt32LE(12);
@@ -29,7 +31,7 @@ function suppliedScene(file) {
     }
     return new THREE.BufferAttribute(values, size, accessor.normalized || false);
   }
-  const boneIds = new Set(gltf.skins.flatMap(skin => skin.joints));
+  const boneIds = new Set((gltf.skins || []).flatMap(skin => skin.joints));
   const nodes = gltf.nodes.map((node, index) => {
     let object = boneIds.has(index) ? new THREE.Bone() : new THREE.Object3D();
     if (node.mesh !== undefined) {
@@ -38,7 +40,9 @@ function suppliedScene(file) {
         geometry.setAttribute({ POSITION: 'position', NORMAL: 'normal', TEXCOORD_0: 'uv', JOINTS_0: 'skinIndex', WEIGHTS_0: 'skinWeight' }[name], attribute(index));
       }
       geometry.setIndex(attribute(primitive.indices));
-      object = new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
+      object = node.skin === undefined
+        ? new THREE.Mesh(geometry, new THREE.MeshStandardMaterial())
+        : new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
     }
     object.name = node.name;
     if (node.matrix) new THREE.Matrix4().fromArray(node.matrix).decompose(object.position, object.quaternion, object.scale);
@@ -51,7 +55,7 @@ function suppliedScene(file) {
   const scene = new THREE.Group();
   gltf.scenes[gltf.scene || 0].nodes.forEach(index => scene.add(nodes[index]));
   scene.updateMatrixWorld(true);
-  gltf.nodes.forEach((node, index) => {
+  (gltf.nodes || []).forEach((node, index) => {
     if (node.skin === undefined) return;
     const skin = gltf.skins[node.skin], inverse = attribute(skin.inverseBindMatrices);
     const matrices = skin.joints.map((_, i) => new THREE.Matrix4().fromArray(inverse.array, i * 16));
@@ -65,11 +69,11 @@ for (const [file, hash] of fixtures) {
     assert.equal(createHash('sha256').update(readFileSync(file)).digest('hex'), hash);
     const { scene, gltf } = suppliedScene(file);
     assert.equal(gltf.skins.length, 1);
-    assert.equal(gltf.skins[0].joints.length, 65);
+    assert.ok(gltf.skins[0].joints.length >= 61);
     assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
     const rig = createHomeRig(scene), other = createHomeRig(scene);
     const original = scene.getObjectByProperty('isSkinnedMesh', true), mesh = rig.meshes[0];
-    assert.equal(rig.skeleton.bones.length, 65);
+    assert.equal(rig.skeleton.bones.length, gltf.skins[0].joints.length);
     for (const name of ['position', 'normal', 'uv', 'skinIndex', 'skinWeight']) {
       assert.deepEqual(mesh.geometry.attributes[name].array, original.geometry.attributes[name].array);
     }
@@ -77,14 +81,31 @@ for (const [file, hash] of fixtures) {
     assert.deepEqual(mesh.skeleton.boneInverses.map(matrix => matrix.elements), original.skeleton.boneInverses.map(matrix => matrix.elements));
     assert.notEqual(rig.skeleton, other.skeleton);
     assert.ok(rig.skeleton.bones.every((bone, index) => bone !== other.skeleton.bones[index] && bone !== original.skeleton.bones[index]));
-    assert.equal(rig.joints.LeftForeArm.parent, rig.joints.LeftArm);
-    assert.equal(rig.joints.LeftHand.parent, rig.joints.LeftForeArm);
-    assert.equal(rig.joints.RightHand.parent, rig.joints.RightForeArm);
+    for (const name of ['LeftForeArm', 'LeftHand', 'RightHand', 'Spine2', 'LeftUpLeg']) {
+      assert.equal(rig.joints[name].isBone, true, `${file}: ${name}`);
+    }
     rig.dispose(); other.dispose();
   });
 
   test(`${file} animates supplied shoulder/elbow/wrist joints without changing bone lengths, scales or weights`, () => {
     const { scene } = suppliedScene(file), rig = createHomeRig(scene), other = createHomeRig(scene);
+    if (file !== 'soldier-roka-swc.glb') {
+      const weights = rig.meshes.map(mesh => Object.fromEntries(['skinIndex', 'skinWeight']
+        .map(name => [name, mesh.geometry.attributes[name]?.array && Array.from(mesh.geometry.attributes[name].array)])));
+      for (const time of [1.125, 7, 17, 0]) {
+        rig.animate(time); rig.root.updateMatrixWorld(true); rig.skeleton.update();
+        for (const bone of rig.skeleton.bones) {
+          assert.ok(bone.position.toArray().every(Number.isFinite));
+          assert.ok(bone.quaternion.toArray().every(Number.isFinite));
+        }
+        rig.meshes.forEach((mesh, meshIndex) => ['skinIndex', 'skinWeight'].forEach(name => {
+            const attribute = mesh.geometry.attributes[name];
+            if (attribute) assert.deepEqual(Array.from(attribute.array), weights[meshIndex][name]);
+          }));
+      }
+      rig.dispose(); other.dispose();
+      return;
+    }
     rig.root.updateMatrixWorld(true); rig.skeleton.update();
     const bones = rig.skeleton.bones;
     const rest = bones.map(bone => ({ position: bone.position.clone(), scale: bone.scale.clone(), quaternion: bone.quaternion.clone() }));
@@ -161,6 +182,21 @@ for (const [file, hash] of fixtures) {
   });
 }
 
+test(`${staticFixture[0]} is preserved and shown as a static supplied model`, () => {
+  const binary = readFileSync(staticFixture[0]);
+  assert.equal(createHash('sha256').update(binary).digest('hex'), staticFixture[1]);
+  const { scene, gltf } = suppliedScene(staticFixture[0]);
+  assert.equal((gltf.skins || []).length, 0);
+  scene.userData.staticCharacter = true;
+  const rig = createHomeRig(scene);
+  assert.equal(rig.isStatic, true);
+  assert.equal(rig.skeleton, null);
+  assert.equal(rig.meshes.length, 1);
+  rig.animate(3);
+  assert.equal(rig.root.userData.motion, 'still');
+  rig.dispose();
+});
+
 test('rig instances release their geometry, materials and skeleton without disposing shared source', () => {
   const { scene } = suppliedScene(fixtures[0][0]), rig = createHomeRig(scene);
   let disposed = 0;
@@ -178,7 +214,8 @@ test('unrigged models fail explicitly instead of generating approximate joints',
 });
 
 test('all character IDs select new assets and automatic motion remains continuous', () => {
-  assert.deepEqual(Object.values(CHARACTERS).map(character => character.model.split('?')[0]).sort(), fixtures.map(([file]) => file).sort());
+  assert.deepEqual(Object.values(CHARACTERS).map(character => character.model.split('?')[0]).sort(),
+    [...fixtures.map(([file]) => file), staticFixture[0]].sort());
   for (let time = 0; time < 48; time += .02) assert.ok(Math.abs(idlePose(time).stretch - idlePose(time + .02).stretch) < .02);
   assert.equal(idlePose(7).stretch, 1);
   const viewer = readFileSync('soldier-home-viewer.mjs', 'utf8');

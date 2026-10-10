@@ -1,5 +1,5 @@
-import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=10';
-import { WEAPON_COLORS } from './soldier-core.mjs?v=6';
+import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=11';
+import { WEAPON_COLORS } from './soldier-core.mjs?v=7';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'special', name: '스페셜보급함(11개)', price: 300, count: 11, color: '#f1a00b',

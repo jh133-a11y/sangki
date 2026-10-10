@@ -1,5 +1,5 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=5';
-import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=5';
+import { CHARACTERS } from './soldier-characters.mjs?v=6';
+import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=6';
 import { createSupplyOpening } from './soldier-supply-opening.mjs?v=3';
 
 export { SUPPLY_PRODUCTS };
@@ -22,7 +22,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     const image = $('shop-confirm-image');
     image.hidden = productCategory === 'gold';
     if (productCategory !== 'gold') {
-      image.src = productCategory === 'supply' ? `soldier-supply-${product.id}.webp?v=1` : `soldier-shop-${product.id}.webp`;
+      image.src = productCategory === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp`;
     }
     image.dataset.supply = productCategory === 'supply' ? product.id : ''; image.alt = product.name;
     confirmation.returnValue = 'cancel';
@@ -84,7 +84,7 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         art.append(emblem, amount, label);
       } else {
         const image = document.createElement('img');
-        image.src = category === 'supply' ? `soldier-supply-${product.id}.webp?v=1` : `soldier-shop-${product.id}.webp`;
+        image.src = category === 'supply' ? `soldier-supply-${product.id}.svg?v=2` : `soldier-shop-${product.id}.webp`;
         image.alt = product.name;
         art = image;
       }
@@ -98,22 +98,22 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
         }
       }
       else {
-        text.textContent = product.id === 'fsb-agent' ? '러시아 연방국 요원' : '대한민국 육군의 특수부대';
-        const specialty = document.createElement('strong'); specialty.className = 'shop-specialty';
-        specialty.textContent = product.id === 'fsb-agent' ? '[특기] 높은 회피율' : '[특기] 강한 체력';
-        text.append(specialty);
+        const ability = document.createElement('span'); ability.className = 'shop-character-ability';
+        const label = document.createElement('small'); label.textContent = '능력';
+        const value = document.createElement('strong'); value.textContent = product.ability || '기본';
+        ability.append(label, value); text.append(ability);
       }
       const button = document.createElement('button'); button.type = 'button'; button.dataset.product = product.id;
       const owned = category === 'character' && !!getState().characters[product.id];
       if (category === 'character' && owned) {
         price.hidden = true;
         const ribbon = document.createElement('span'); ribbon.className = 'shop-owned-ribbon';
-        const label = document.createElement('span'); label.textContent = '보유함'; ribbon.append(label);
+        const label = document.createElement('span'); label.textContent = '보유 중'; ribbon.append(label);
         article.append(ribbon);
       }
       button.textContent = owned ? '보유 중' : '구매';
       button.setAttribute('aria-label', `${product.name} ${product.price}보석 구매`);
-      if (category === 'character') button.setAttribute('aria-label', `${product.name} ${owned ? '보유 중' : '125보석 구매'}`);
+      if (category === 'character') button.setAttribute('aria-label', `${product.name} ${owned ? '보유 중' : `${product.price}보석 구매`}`);
       const productCategory = category;
       const supplyCapacity = productCategory === 'supply' ? getSupplyCapacity(product) : true;
       button.disabled = buying || confirming || owned || !(productCategory === 'supply' ? isSupplyReady() && supplyCapacity

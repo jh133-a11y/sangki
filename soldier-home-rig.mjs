@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=5';
+import { CHARACTERS } from './soldier-characters.mjs?v=6';
 
-export const HOME_MODEL = 'soldier-home-model.glb';
+export const HOME_MODEL = 'soldier-james.glb';
 
 export function idlePose(seconds) {
   const cycle = seconds % 10;
@@ -24,6 +24,7 @@ export async function loadCharacterSource(id = 'black-water') {
           }
         }
       });
+      if (id === 'fighter') gltf.scene.userData.staticCharacter = true;
       return gltf.scene;
     }).catch(error => {
       sources.delete(id);
@@ -44,6 +45,15 @@ const REQUIRED_JOINTS = ['Hips', 'Spine2', 'Neck', 'Head',
   'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'LeftHandMiddle1', 'LeftHandIndex1', 'LeftHandPinky1',
   'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'RightHandMiddle1', 'RightHandIndex1', 'RightHandPinky1',
   'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot'];
+const JOINT_ALIASES = {
+  pelvis: 'Hips', spine_03: 'Spine2', neck_01: 'Neck', head: 'Head',
+  clavicle_l: 'LeftShoulder', upperarm_l: 'LeftArm', lowerarm_l: 'LeftForeArm',
+  hand_l: 'LeftHand', middle_01_l: 'LeftHandMiddle1', index_01_l: 'LeftHandIndex1',
+  pinky_01_l: 'LeftHandPinky1', thigh_l: 'LeftUpLeg', calf_l: 'LeftLeg', foot_l: 'LeftFoot',
+  clavicle_r: 'RightShoulder', upperarm_r: 'RightArm', lowerarm_r: 'RightForeArm',
+  hand_r: 'RightHand', middle_01_r: 'RightHandMiddle1', index_01_r: 'RightHandIndex1',
+  pinky_01_r: 'RightHandPinky1', thigh_r: 'RightUpLeg', calf_r: 'RightLeg', foot_r: 'RightFoot'
+};
 
 export function createHomeRig(source) {
   if (!source?.isObject3D) throw new Error('3D 캐릭터 장면이 필요합니다.');
@@ -80,8 +90,29 @@ export function createHomeRig(source) {
   }
   const joints = {};
   model.traverse(part => {
-    if (part.isBone) joints[part.name.replace(/^mixamorig[:_]?/, '')] = part;
+    if (part.isBone) {
+      const name = part.name.replace(/^mixamorig[:_]?/i, '');
+      joints[JOINT_ALIASES[name.toLowerCase()] || name] = part;
+    }
   });
+  if (!skeletons.size && source.userData.staticCharacter) {
+    model.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(model), height = bounds.max.y - bounds.min.y;
+    if (!Number.isFinite(height) || height <= 0) {
+      release();
+      throw new Error('3D 캐릭터 크기가 올바르지 않습니다.');
+    }
+    const center = bounds.getCenter(new THREE.Vector3());
+    const root = new THREE.Group(); root.name = 'supplied-static-character';
+    const normalized = new THREE.Group();
+    normalized.scale.setScalar(1 / height);
+    normalized.position.set(-center.x / height, -bounds.min.y / height, -center.z / height);
+    normalized.add(model); root.add(normalized); root.updateMatrixWorld(true);
+    return { root, joints, meshes, skeleton: null, materials, isStatic: true,
+      animate() { root.userData.motion = 'still'; },
+      dispose() { root.removeFromParent(); release(); },
+      setYaw(yaw) { root.rotation.y = yaw; } };
+  }
   if (!skeletons.size || REQUIRED_JOINTS.some(name => !joints[name])) {
     release();
     throw new Error('제공된 캐릭터의 스킨과 필수 관절이 없습니다. 리깅된 GLB가 필요합니다.');

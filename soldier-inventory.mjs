@@ -1,10 +1,10 @@
-import { WEAPONS, weaponStats, weaponLevelLabel } from './soldier-core.mjs?v=6';
-import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=5';
-import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=10';
+import { WEAPONS, weaponStats, weaponLevelLabel, weaponSetColor } from './soldier-core.mjs?v=7';
+import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=6';
+import { upgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=11';
 
 export const INVENTORY_LIMIT = 50;
 export function sortInventoryEntries(entries, equipment, mode = 'grade') {
-  const ranks = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+  const ranks = { 'S+': 6, S: 5, A: 4, B: 3, C: 2, D: 1 };
   const name = entry => WEAPONS[entry.id]?.name || CHARACTERS[entry.id]?.name || entry.id;
   const grade = entry => ranks[(entry.item || equipment[entry.id])?.grade] || 0;
   return [...entries].sort((a, b) =>
@@ -23,9 +23,11 @@ export function inventoryWeapons(equipment, slot) {
 export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standard', setColor = null) {
   const weapon = WEAPONS[id] && weaponStats(id, grade, level, color);
   if (!weapon) throw new Error('무기 정보를 확인할 수 없습니다.');
-  if (setColor === color && setColor === 'gold') weapon.damage += 3;
-  if (setColor === color && setColor === 'red') weapon.critical += 3;
-  if (setColor === color && setColor === 'silver' && Number.isInteger(weapon.weight)) {
+  const matchingSet = typeof setColor === 'object' && setColor !== null
+    ? setColor.grade === grade && setColor.color === color : setColor === color;
+  if (matchingSet && color === 'gold') weapon.damage += 3;
+  if (matchingSet && color === 'red') weapon.critical += 5;
+  if (matchingSet && color === 'silver' && Number.isInteger(weapon.weight)) {
     weapon.weight = Math.round(weapon.weight * .9);
   }
   return [
@@ -43,7 +45,9 @@ export function characterInventoryStats(id, level = 1) {
   const values = characterStats(id, level);
   return [
     ['체력', values.hp, '캐릭터와 레벨에 따른 최대 체력입니다.'],
-    ['회피율', `${Number((values.evasion * 100).toFixed(1))}%`, '명중한 공격의 피해를 무효화할 확률입니다.']
+    ['회피율', `${Number((values.evasion * 100).toFixed(1))}%`, '명중한 공격의 피해를 무효화할 확률입니다.'],
+    ['위력 증가', `+${values.damageBonus ?? 0}`, '캐릭터 능력으로 추가되는 공격 위력입니다.'],
+    ['크리티컬 확률 증가', `+${values.criticalBonus ?? 0}%`, '캐릭터 능력으로 추가되는 크리티컬 확률입니다.']
   ];
 }
 
@@ -88,11 +92,11 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     for (const { id, item } of candidates) {
       const option = document.createElement('button'); option.type = 'button'; option.className = 'weapon-operation-choice';
       option.setAttribute('aria-label', `${WEAPONS[id].name} 판매 선택`);
-      option.append(renderCard(id, item));
+      option.append(inventoryCard(id, item));
       option.addEventListener('click', () => {
         choices.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', 'false'));
         option.setAttribute('aria-pressed', 'true');
-        target.replaceChildren(renderCard(id, item));
+        target.replaceChildren(inventoryCard(id, item));
         controls.replaceChildren(price, sellWeaponAction(id, item));
       });
       choices.append(option);
@@ -128,17 +132,35 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       return copy;
     }));
   }
-  function equippedSetColor() {
-    const colors = Object.values(getLoadout()).map(id =>
-      getWeaponItems().find(item => item.weapon === id && item.equipped)?.color || 'standard');
-    return colors.length === 3 && colors.every(color => color === colors[0]) ? colors[0] : null;
+  function equippedSet() {
+    const bySlot = Object.fromEntries(getWeaponItems()
+      .filter(item => item.equipped && WEAPONS[item.weapon])
+      .map(item => [WEAPONS[item.weapon].slot, item]));
+    const color = weaponSetColor(bySlot);
+    return color ? { color, grade: bySlot.primary.grade } : null;
+  }
+  function equippedCharacterStats() {
+    const characters = getCharacters();
+    return characterStats(characters.equipped, ownedCharacterLevel(characters, characters.equipped));
+  }
+  function inventoryCard(id, item) {
+    const card = renderCard(id, item);
+    const set = item?.equipped ? equippedSet() : null;
+    if (set && set.grade === item.grade && set.color === (item.color || 'standard')) {
+      card.dataset.setColor = set.color;
+    } else {
+      delete card.dataset.setColor;
+    }
+    return card;
   }
   function stats(id, item) {
     const list = document.createElement('dl');
+    const set = item?.equipped ? equippedSet() : null;
     const values = CHARACTERS[id]
       ? characterInventoryStats(id, ownedCharacterLevel(getCharacters(), id))
       : weaponInventoryStats(id, item?.grade || getEquipment()[id]?.grade || 'D',
-        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard', item?.equipped ? equippedSetColor() : null);
+        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard', set);
+    if (!CHARACTERS[id]) addCharacterStats(values);
     for (const [name, value, explanation] of values) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
       dt.textContent = name; dd.textContent = value;
@@ -146,6 +168,21 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       list.append(dt, dd);
     }
     return list;
+  }
+  function addCharacterStats(values) {
+      const character = equippedCharacterStats();
+      if (!Number.isFinite(character.damageBonus) || !Number.isFinite(character.criticalBonus)) {
+        throw new Error('캐릭터 무기 보너스 정보를 확인할 수 없습니다.');
+      }
+      const damage = values.find(([label]) => label === '위력');
+      if (damage && Number.isFinite(damage[1])) damage[1] += character.damageBonus;
+      const critical = values.find(([label]) => label === '크리티컬 확률');
+      if (critical && typeof critical[1] === 'string') {
+        const base = Number.parseFloat(critical[1]);
+        if (!Number.isFinite(base)) throw new Error('무기 크리티컬 정보를 확인할 수 없습니다.');
+        critical[1] = `${base + character.criticalBonus}%`;
+      }
+    return values;
   }
   function weaponAction(label, action, item, weapon) {
     const button = document.createElement('button'); button.type = 'button';
@@ -228,7 +265,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const table = document.createElement('table'); table.className = 'weapon-material-stats';
     table.setAttribute('aria-label', '현재 능력치와 강화 후 능력치 비교');
     const setColor = item.equipped ? equippedSetColor() : null;
-    const before = weaponInventoryStats(item.weapon, item.grade, item.level, item.color, setColor);
+    const before = addCharacterStats(weaponInventoryStats(item.weapon, item.grade, item.level, item.color, setColor));
     const rows = before.map(([name, value, explanation]) => {
       const row = document.createElement('tr');
       const label = document.createElement('th'); label.scope = 'row'; label.textContent = name; label.title = explanation;
@@ -238,7 +275,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       row.append(label, current, arrow, after); table.append(row);
       return { arrow, after };
     });
-    detail.append(renderCard(item.weapon, item), table); target.append(targetHeading, detail);
+    detail.append(inventoryCard(item.weapon, item), table); target.append(targetHeading, detail);
     const top = document.createElement('div'); top.className = 'weapon-material-top'; top.append(target, footer);
     const toolbar = document.createElement('div'); toolbar.className = 'weapon-material-toolbar';
     const count = document.createElement('strong'); count.className = 'weapon-material-count'; toolbar.append(count);
@@ -275,7 +312,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       name.textContent = `${WEAPONS[material.weapon].name} ${material.grade}급 ${weaponLevelLabel(material.level)} · ${material.upgrade_progress}%`;
       label.title = name.textContent;
       const check = document.createElement('span'); check.className = 'weapon-material-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true');
-      label.append(input, renderCard(material.weapon, material), check, name); list.append(label); choices.push(input);
+      label.append(input, inventoryCard(material.weapon, material), check, name); list.append(label); choices.push(input);
     }
     if (!choices.length) { list.textContent = '사용 가능한 미장착 무기가 없습니다.'; sortButton.disabled = true; }
     const selected = () => choices.filter(input => input.checked);
@@ -291,7 +328,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       nextLevel.textContent = `LV${preview.level}`;
       progress.value = preview.level === 7 ? 100 : preview.percent;
       percent.textContent = `${progress.value}%`;
-      const after = weaponInventoryStats(item.weapon, item.grade, preview.level, item.color, setColor);
+      const after = addCharacterStats(weaponInventoryStats(item.weapon, item.grade, preview.level, item.color, setColor));
       rows.forEach((row, index) => {
         const changed = before[index][1] !== after[index][1];
         row.arrow.textContent = changed ? '»' : '';
@@ -339,7 +376,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     const slots = document.createElement('div'); slots.className = 'weapon-operation-slots';
     const first = document.createElement('section'); first.className = 'weapon-operation-slot';
     const firstLabel = document.createElement('strong'); firstLabel.textContent = isCombine ? '베이스' : '분해할 무기';
-    first.append(firstLabel, renderCard(item.weapon, item));
+    first.append(firstLabel, inventoryCard(item.weapon, item));
     slots.append(first);
     if (isCombine) {
       const plus = document.createElement('span'); plus.className = 'weapon-operation-plus'; plus.textContent = '+';
@@ -350,15 +387,17 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     }
     const warning = document.createElement('p'); warning.className = 'weapon-operation-warning';
     warning.textContent = isCombine
-      ? '같은 등급의 MAX 무기 2개가 필요하며 재료 무기는 사라집니다. 같은 분류끼리 조합하면 결과도 같은 분류입니다.'
-      : 'S급 무기를 분해하면 같은 분류의 A급 무기 2개를 획득합니다.';
+      ? `같은 등급의 MAX 무기 2개가 필요하며 재료 무기는 사라집니다. ${item.grade}급 2개를 조합하면 다음 등급 무기 1개를 획득합니다.`
+      : item.grade === 'S+'
+        ? 'S+급 무기를 분해하면 같은 분류의 S급 Lv.1 무기 2개를 획득합니다.'
+        : 'S급 무기를 분해하면 같은 분류의 A급 무기 2개를 획득합니다.';
     const cost = document.createElement('strong'); cost.className = 'weapon-operation-cost';
-    const price = isCombine ? ({ D: 5, C: 10, B: 20, A: 50 }[item.grade]) : 0;
+    const price = isCombine ? ({ D: 5, C: 10, B: 20, A: 50, S: 100 }[item.grade]) : 0;
     if (isCombine) {
       const gem = document.querySelector('.currency.gems svg').cloneNode(true);
       const amount = document.createElement('span'); amount.textContent = `${price} 보석`;
       cost.append(gem, amount);
-    } else cost.textContent = 'A급 무기 2개';
+    } else cost.textContent = item.grade === 'S+' ? 'S급 Lv.1 무기 2개' : 'A급 무기 2개';
     const submit = document.createElement('button'); submit.type = 'button';
     submit.className = 'weapon-operation-submit'; submit.textContent = isCombine ? '조합 시작' : '분해 시작';
     const controls = document.createElement('section'); controls.className = 'weapon-operation-controls';
@@ -376,7 +415,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       if (isCombine) {
         const secondSlot = slots.querySelector('.weapon-operation-slot:last-child');
         secondSlot.replaceChildren(secondSlot.querySelector('strong'));
-        if (selected) secondSlot.append(renderCard(selected.weapon, selected));
+        if (selected) secondSlot.append(inventoryCard(selected.weapon, selected));
         else {
           const empty = document.createElement('div'); empty.className = 'weapon-operation-empty';
           empty.textContent = 'MAX 무기를 선택하세요'; secondSlot.append(empty);
@@ -387,7 +426,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       for (const candidate of eligible) {
         const option = document.createElement('button'); option.type = 'button'; option.className = 'weapon-operation-choice';
         option.setAttribute('aria-label', `${WEAPONS[candidate.weapon].name} ${candidate.grade}급 MAX 무기 선택`);
-        option.append(renderCard(candidate.weapon, candidate));
+        option.append(inventoryCard(candidate.weapon, candidate));
         option.addEventListener('click', () => { selected = candidate; choices.querySelectorAll('.weapon-operation-choice').forEach(button => button.removeAttribute('aria-pressed')); option.setAttribute('aria-pressed', 'true'); update(); });
         choices.append(option);
       }
@@ -403,17 +442,25 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         status.textContent = isCombine ? '조합 완료' : '분해 완료';
         submit.hidden = true; choices.hidden = true; top.hidden = true;
         if (!isCombine) {
-          const video = document.createElement('video');
-          video.className = 'weapon-disassembly-video'; video.src = 'soldier-weapon-disassemble.mp4?v=1';
-          video.preload = 'auto'; video.autoplay = true; video.muted = true; video.playsInline = true; video.controls = false;
-          video.setAttribute('aria-label', '무기 분해 애니메이션');
-          const reveal = () => { video.remove(); results.replaceChildren(...rewardCards); };
-          video.addEventListener('ended', reveal, { once: true });
-          video.addEventListener('error', reveal, { once: true });
-          if (matchMedia('(prefers-reduced-motion: reduce)').matches) results.replaceChildren(...rewardCards);
-          else {
-            results.replaceChildren(video);
-            video.play().catch(error => { console.warn('분해 애니메이션을 재생할 수 없습니다.', error); reveal(); });
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            results.replaceChildren(...rewardCards);
+          } else {
+            const stage = document.createElement('div'); stage.className = 'weapon-disassembly-stage';
+            const source = inventoryCard(item.weapon, item);
+            const shards = ['left', 'right'].map(side => {
+              const shard = document.createElement('div'); shard.className = `weapon-disassembly-shard weapon-disassembly-shard-${side}`;
+              shard.append(source.cloneNode(true)); return shard;
+            });
+            const resultRow = document.createElement('div'); resultRow.className = 'weapon-disassembly-results';
+            resultRow.append(...rewardCards);
+            stage.append(...shards, resultRow); results.replaceChildren(stage);
+            requestAnimationFrame(() => {
+              stage.dataset.phase = 'splitting';
+              setTimeout(() => {
+                shards.forEach(shard => shard.remove());
+                stage.dataset.phase = 'revealed';
+              }, 720);
+            });
           }
         } else results.replaceChildren(...rewardCards);
       } catch (error) {
@@ -426,7 +473,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
   }
   function content(id, item) {
     const body = document.createElement('div'); body.className = 'inventory-item-detail';
-    body.append(renderCard(id, item), stats(id, item));
+    body.append(inventoryCard(id, item), stats(id, item));
     if (item && changeWeaponItem) {
       if (item.level < 7) {
         const button = document.createElement('button'); button.type = 'button';
@@ -445,21 +492,21 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     if (item && operateWeapon) {
       const actions = document.createElement('div'); actions.className = 'weapon-operation-item-actions';
       const combine = document.createElement('button'); combine.type = 'button'; combine.className = 'weapon-item-action';
-      combine.textContent = '조합'; combine.disabled = weaponBusy || item.level !== 7 || item.grade === 'S';
-      combine.title = item.level !== 7 ? 'MAX 레벨 무기만 조합할 수 있습니다.' : '같은 등급의 MAX 무기 2개를 조합합니다.';
+      combine.textContent = '조합'; combine.disabled = weaponBusy || item.level !== 7 || item.grade === 'S+';
+      combine.title = item.grade === 'S+' ? 'S+급은 조합할 수 없습니다.'
+        : item.level !== 7 ? 'MAX 레벨 무기만 조합할 수 있습니다.' : '같은 등급의 MAX 무기 2개를 조합합니다.';
       combine.addEventListener('click', () => openWeaponOperation('combine', item)); actions.append(combine);
-      if (item.grade === 'S') {
+      if (item.grade === 'S' || item.grade === 'S+') {
         const disassemble = document.createElement('button'); disassemble.type = 'button'; disassemble.className = 'weapon-item-action';
         disassemble.textContent = '분해'; disassemble.disabled = weaponBusy || item.equipped || item.source === 'default';
-        disassemble.title = 'S급 무기를 같은 분류의 A급 무기 2개로 분해합니다.';
+        disassemble.title = item.grade === 'S+' ? 'S+ 무기를 같은 분류의 S급 Lv.1 무기 2개로 분해합니다.'
+          : 'S급 무기를 같은 분류의 A급 무기 2개로 분해합니다.';
         disassemble.addEventListener('click', () => openWeaponOperation('disassemble', item)); actions.append(disassemble);
       }
       body.append(actions);
     }
     if (CHARACTERS[id]) {
       body.classList.add('character-item-detail');
-      const specialty = document.createElement('p'); specialty.className = 'character-specialty';
-      specialty.textContent = id === 'roka-swc' ? '특기: 강한 체력' : id === 'fsb-agent' ? '특기: 높은 회피율' : '특기: 없음';
       const upgrade = document.createElement('button'); upgrade.type = 'button'; upgrade.className = 'character-upgrade';
       const level = ownedCharacterLevel(getCharacters(), id);
       upgrade.textContent = level === CHARACTER_MAX_LEVEL ? 'MAX' : '강화 · 10,000골드';
@@ -479,7 +526,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
           catch (refreshError) { $('inventory-status').textContent += ` 재확인 실패: ${refreshError.message} 새로고침하세요.`; console.error(refreshError); }
         } finally { characterBusy = false; render(); updateWallet(); }
       });
-      body.append(specialty, upgrade);
+      body.append(upgrade);
     }
     if (!CHARACTERS[id]) {
       const actions = document.createElement('div'); actions.className = 'inventory-weapon-actions';
@@ -534,6 +581,10 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       $('inventory-progress-percent').textContent = `${percent}%`;
     }
     $('inventory-current').replaceChildren(content(current, currentItem));
+    const set = equippedSet();
+    $('inventory-set-effect').textContent = set
+      ? `${set.grade} ${set.color.toUpperCase()} 세트 적용 · ${set.color === 'gold' ? '위력 +3' : set.color === 'red' ? '크리티컬 +5%' : '무게 -10%'}`
+      : '세트 조건: 주·보조·근접 동일 등급·색상 · GOLD 위력+3 / RED 크리티컬+5% / SILVER 무게-10%';
     const prompt = document.createElement('p'); prompt.textContent = '비교할 장비를 선택해 주세요';
     $('inventory-comparison').replaceChildren(prompt);
     let entries = slot === 'character'
@@ -559,7 +610,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       const button = document.createElement('button'); button.type = 'button';
       button.className = 'inventory-item'; button.setAttribute('aria-label', `${WEAPONS[id]?.name || CHARACTERS[id]?.name}${item ? ` ${item.grade}급 ${item.color || 'standard'} ${weaponLevelLabel(item.level)}` : ''} 비교`);
       button.disabled = weaponBusy || characterBusy;
-      button.append(renderCard(id, item));
+      button.append(inventoryCard(id, item));
       button.addEventListener('click', () => {
         const title = document.createElement('h2');
         const label = document.createElement('span');
@@ -598,6 +649,28 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       $('inventory-items').append(button);
     }
   }
+  const itemScroller = $('inventory-items');
+  let drag = null, suppressClickUntil = 0;
+  itemScroller.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    drag = { x: event.clientX, y: event.clientY, scrollLeft: itemScroller.scrollLeft, moved: false };
+  });
+  itemScroller.addEventListener('pointermove', event => {
+    if (!drag) return;
+    if (Math.abs(event.clientX - drag.x) > 8
+      && Math.abs(event.clientX - drag.x) > Math.abs(event.clientY - drag.y)) drag.moved = true;
+  });
+  itemScroller.addEventListener('pointerup', () => {
+    if (drag && (drag.moved || Math.abs(itemScroller.scrollLeft - drag.scrollLeft) > 6)) {
+      suppressClickUntil = Date.now() + 350;
+    }
+    drag = null;
+  });
+  itemScroller.addEventListener('pointercancel', () => { drag = null; });
+  itemScroller.addEventListener('click', event => {
+    if (Date.now() > suppressClickUntil || !event.target.closest('.inventory-item')) return;
+    event.preventDefault(); event.stopImmediatePropagation(); suppressClickUntil = 0;
+  }, true);
   function open(next, keyboard = false) {
     keyboardOpened = keyboard;
     slot = next; render(); updateWallet();

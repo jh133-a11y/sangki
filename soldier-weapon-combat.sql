@@ -28,21 +28,22 @@ declare
   grade_steps integer; weight_factor numeric; stats jsonb;
 begin
   spec:=public.soldier_weapon(p_weapon);
-  if spec is null or p_grade is null or p_grade not in ('D','C','B','A','S')
+  if spec is null or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
     or p_level is null or p_level not between 1 and 7
     or p_color is null or p_color not in ('standard','gold','red','silver') then
     raise exception '무기 등급과 레벨이 올바르지 않습니다.';
   end if;
-  offset_damage:=case p_grade when 'D' then 0 when 'C' then 6 when 'B' then 12 when 'A' then 18 else 30 end;
-  per_level:=case p_grade when 'A' then 2 when 'S' then 3 else 1 end;
-  offset_critical:=case when p_grade='S' then 3 else 0 end;
+  offset_damage:=case p_grade when 'D' then 0 when 'C' then 6 when 'B' then 12 when 'A' then 18 when 'S+' then 48 else 30 end;
+  per_level:=case p_grade when 'A' then 2 when 'S' then 3 when 'S+' then 3 else 1 end;
+  offset_critical:=case when p_grade='S' then 3 when p_grade='S+' then 9 else 0 end;
   per_two_levels:=case p_grade when 'A' then 1 when 'S' then 2 else 0 end;
   grade_steps:=case p_grade when 'D' then 0 when 'C' then 1 when 'B' then 2 when 'A' then 3 else 4 end;
   weight_factor:=case p_grade when 'D' then 1 when 'C' then 0.95 when 'B' then 0.9025
     when 'A' then 0.857375 else 0.81450625 end;
   stats:=spec||jsonb_build_object('weapon',p_weapon,'grade',p_grade,'level',p_level,'color',p_color,
     'damage',(spec->>'damage')::integer+offset_damage+(p_level-1)*per_level,
-    'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+((p_level-1)/2)*per_two_levels)
+    'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+
+      case when p_grade='S+' then p_level-1 else ((p_level-1)/2)*per_two_levels end)
     ||case when spec->>'slot'='melee' then '{}'::jsonb else jsonb_build_object(
       'accuracy',(spec->>'accuracy')::integer+grade_steps*3,
       'recoilControl',(spec->>'recoilControl')::integer+grade_steps*3,
@@ -65,7 +66,8 @@ returns boolean language sql immutable set search_path=public as $$
 $$;
 create or replace function public.soldier_loadout_stats(p_client uuid,p_loadout jsonb)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare slot_name text; weapon_id text; item_grade text; item_level integer; item_color text; stats jsonb:='{}';
+declare slot_name text; weapon_id text; item_grade text; item_level integer; item_color text;
+  stats jsonb:='{}'; character_stats jsonb;
 begin
   foreach slot_name in array array['primary','secondary','melee'] loop
     weapon_id:=p_loadout->>slot_name;
@@ -81,17 +83,29 @@ begin
     stats:=jsonb_set(stats,array[slot_name],public.soldier_weapon_stats(weapon_id,item_grade,item_level,item_color));
   end loop;
   if stats->'primary'->>'color'=stats->'secondary'->>'color'
-    and stats->'primary'->>'color'=stats->'melee'->>'color' then
+    and stats->'primary'->>'color'=stats->'melee'->>'color'
+    and stats->'primary'->>'grade'=stats->'secondary'->>'grade'
+    and stats->'primary'->>'grade'=stats->'melee'->>'grade' then
     foreach slot_name in array array['primary','secondary','melee'] loop
       if stats->slot_name->>'color'='gold' then
         stats:=jsonb_set(stats,array[slot_name,'damage'],to_jsonb((stats->slot_name->>'damage')::integer+3));
       elsif stats->slot_name->>'color'='red' then
-        stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb((stats->slot_name->>'critical')::integer+3));
+        stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb((stats->slot_name->>'critical')::integer+5));
       elsif stats->slot_name->>'color'='silver' and stats->slot_name->>'weight' is not null then
         stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*0.9)::integer));
       end if;
     end loop;
   end if;
+  character_stats:=public.soldier_owned_character_stats(p_client);
+  if character_stats->>'damageBonus' is null or character_stats->>'criticalBonus' is null then
+    raise exception '캐릭터 무기 능력치 정보를 확인할 수 없습니다.';
+  end if;
+  foreach slot_name in array array['primary','secondary','melee'] loop
+    stats:=jsonb_set(stats,array[slot_name,'damage'],to_jsonb(
+      (stats->slot_name->>'damage')::integer+(character_stats->>'damageBonus')::integer));
+    stats:=jsonb_set(stats,array[slot_name,'critical'],to_jsonb(
+      (stats->slot_name->>'critical')::integer+(character_stats->>'criticalBonus')::integer));
+  end loop;
   return stats;
 end $$;
 create or replace function public.soldier_initial_ammo(p_stats jsonb)
@@ -129,8 +143,7 @@ end $$;
 drop trigger if exists soldier_weapon_combat on public.soldier_players;
 create trigger soldier_weapon_combat before insert on public.soldier_players
 for each row execute function public.soldier_weapon_combat();
-update public.soldier_players set weapon_stats=public.soldier_loadout_stats(client_id,loadout)
-where weapon_stats='{}'::jsonb;
+update public.soldier_players set weapon_stats=public.soldier_loadout_stats(client_id,loadout);
 update public.soldier_players p set ammo=ammo||coalesce((
   select jsonb_object_agg(key,value)
   from jsonb_each(public.soldier_initial_ammo(p.weapon_stats)-'primary'-'secondary'-'melee')

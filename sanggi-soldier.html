@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
-  <link rel="preload" as="fetch" href="soldier-home-model.glb?v=5" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=32">
+  <link rel="preload" as="fetch" href="soldier-james.glb?v=1" crossorigin>
+  <link rel="stylesheet" href="soldier.css?v=33">
 </head>
 <body>
   <audio id="soldier-lobby-music" src="soldier-lobby.mp3?v=1" preload="auto" loop></audio>
   <canvas id="world" aria-label="3D 캐릭터 및 게임 화면"></canvas>
   <main id="home">
     <div class="home-atmosphere" aria-hidden="true"></div>
-    <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="Black Water 관절형 3D 캐릭터. 드래그 또는 좌우 방향키로 회전"></canvas>
-    <p id="character-status" class="character-rotate-hint" role="status">3D 캐릭터 모델 불러오는 중</p>
+    <canvas id="home-character" class="home-character" tabindex="0" role="img" aria-label="JAMES 관절형 3D 캐릭터. 드래그 또는 좌우 방향키로 회전"></canvas>
+    <p id="character-status" class="character-rotate-hint" role="status">JAMES 3D 캐릭터 모델 불러오는 중</p>
     <div class="currency-bar" aria-label="보유 재화">
       <div class="currency gold" aria-label="보유 골드"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="soldier-gold-metal" x2="0.8" y2="1"><stop stop-color="#fff2a3"/><stop offset=".45" stop-color="#d8a93d"/><stop offset="1" stop-color="#806022"/></linearGradient></defs><path d="m20 2 13 5 5 13-5 13-13 5-13-5-5-13L7 7Z" fill="url(#soldier-gold-metal)" stroke="#59451f" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="#3a3525" stroke="#ffdc79"/><path d="M25 13h-9l-3 7 3 7h9v-8h-6v4h3" fill="none" stroke="#efcf72" stroke-width="3"/></svg><strong id="gold">0</strong></div>
       <div class="currency gems" aria-label="보유 보석"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 5h20l8 12-18 21L2 17Z" fill="#6194a6" stroke="#cbeaf0" stroke-width="1.5"/><path d="m10 5 10 12L30 5M2 17h36M10 5l-2 12 12 21 12-21-2-12" fill="none" stroke="#c9f0f4"/><path d="m10 5 10 12H8ZM30 5l2 12H20Z" fill="#e0f7fa"/><path d="m8 17 12 21V17Z" fill="#97c7d3"/></svg><strong id="gems">0</strong></div>
@@ -32,12 +32,13 @@
     </header>
     <div class="home-mode-label"><strong>PVP</strong><span>상기 솔져 · 기본 장비</span></div>
     <section class="loadout" aria-label="무기 선택">
-      <div id="primary" class="equipment-slot" aria-label="주 무기 K2"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K2"><span class="weapon-color-label" hidden></span><span class="weapon-name">K2</span></div></div>
-      <div id="secondary" class="equipment-slot" aria-label="보조 무기 M870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="M870"><span class="weapon-color-label" hidden></span><span class="weapon-name">M870</span></div></div>
-      <div id="melee" class="equipment-slot" aria-label="근접 무기 M9"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M9"><span class="weapon-color-label" hidden></span><span class="weapon-name">M9</span></div></div>
-      <div id="character" class="character-card"><img src="soldier-character-black-water.webp?v=2" alt="Black Water"><span class="character-level" aria-label="레벨 1">1</span></div>
+      <div id="primary" class="equipment-slot" aria-label="주 무기 K-200"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-k2.webp" alt="K-200"><span class="weapon-color-label" hidden></span><span class="weapon-name">K-200</span></div></div>
+      <div id="secondary" class="equipment-slot" aria-label="보조 무기 S-870"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-shotgun.webp" alt="S-870"><span class="weapon-color-label" hidden></span><span class="weapon-name">S-870</span></div></div>
+      <div id="melee" class="equipment-slot" aria-label="근접 무기 M-90B"><div class="equipment-card" data-grade="D"><img class="grade-frame" src="soldier-grade-d.webp" alt="D급"><span class="weapon-level">Lv.1</span><img class="weapon-image" src="soldier-weapon-stick.webp" alt="M-90B"><span class="weapon-color-label" hidden></span><span class="weapon-name">M-90B</span></div></div>
+      <div id="character" class="character-card"><img class="character-background" src="soldier-character-frame.webp?v=1" alt="" aria-hidden="true"><img class="character-portrait" src="soldier-character-james.webp?v=1" alt="JAMES"><span class="character-name">JAMES</span><span class="character-level" aria-label="레벨 1">Lv.1</span></div>
       <p id="equipment-status" role="status">장비 정보 불러오는 중</p>
     </section>
+    <p id="weapon-set-effect" class="home-set-effect">3종 무기를 같은 등급·색상으로 맞추면 GOLD 위력 +3 · RED 크리티컬 +5 · SILVER 무게 -10% 효과가 적용됩니다.</p>
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
     <button id="shop-open" type="button"><span aria-hidden="true">▤</span> 상점</button>
@@ -98,7 +99,7 @@
     </div>
     <section id="equipment-panel" role="tabpanel" tabindex="0">
       <div class="inventory-details">
-        <section class="inventory-equipped"><h2><span>현재 장착된 장비</span><span id="inventory-level"></span><span id="inventory-progress" class="weapon-material-meter"><progress id="inventory-progress-value" max="100" value="0" aria-label="현재 장착된 무기 강화 진행률"></progress><span id="inventory-progress-percent">0%</span></span></h2><div id="inventory-current"></div></section>
+        <section class="inventory-equipped"><h2><span>현재 장착된 장비</span><span id="inventory-level"></span><span id="inventory-progress" class="weapon-material-meter"><progress id="inventory-progress-value" max="100" value="0" aria-label="현재 장착된 무기 강화 진행률"></progress><span id="inventory-progress-percent">0%</span></span></h2><div id="inventory-current"></div><p id="inventory-set-effect" class="inventory-set-effect"></p></section>
         <section id="inventory-comparison" class="inventory-comparison" aria-label="장비 비교"><p>비교할 장비를 선택해 주세요</p></section>
       </div>
       <section class="inventory-list-panel" aria-label="보유 장비">

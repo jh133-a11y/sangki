@@ -64,6 +64,42 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   .loadout select { padding: 5px; } .loadout label { margin: 2px 0; font-size: 12px; }
   .home-status { bottom: 75px; font-size: 12px; padding: 8px; max-width: 32vw; }
 }
+.shop-character-ability {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  margin: 0 auto;
+  padding: 7px 15px 9px;
+  border: 1px solid #92c5d0;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #193c4a, #102834);
+  color: #e4fbff;
+  box-shadow: inset 0 1px #ffffff18, 0 3px 12px #030b12aa;
+}
+.shop-character-ability small {
+  color: #a6dce1;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+.shop-character-ability strong {
+  color: #fff1bc;
+  font-size: clamp(13px, 1.5vw, 19px);
+  line-height: 1.15;
+}
+.shop-owned-ribbon {
+  width: 52%;
+  background: linear-gradient(145deg, #52e3cb, #078e8f 78%);
+  filter: drop-shadow(1px 3px 3px #0008);
+}
+.shop-owned-ribbon > span {
+  top: 25%;
+  left: -19%;
+  font-size: clamp(11px, 1.25vw, 17px);
+  letter-spacing: .03em;
+}
 
 /* Preserve the supplied character artwork without cropping the equipment card. */
 #home { background: #121a21 url('soldier-home-background.svg') center / cover no-repeat; font-family: 'Arial Narrow', 'Malgun Gothic', sans-serif; }
@@ -76,6 +112,22 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 @media (max-height: 420px) {
   .home-character { height: 76%; bottom: 15%; }
   .character-rotate-hint { font-size: 8px; padding: 0; }
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  #equipment-dialog.character-inventory .character-item-detail {
+    grid-template-columns: var(--inventory-weapon-card-width) minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px;
+  }
+  #equipment-dialog.character-inventory .character-item-detail dl {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    padding-top: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(50px, .75fr);
+    gap: 4px 6px;
+    font-size: clamp(10px, 2.5vw, 13px);
+  }
 }
 .currency-bar { position: absolute; top: 10px; left: 7%; display: flex; gap: 10px; width: 38%; max-width: 460px; }
 .currency { display: flex; gap: 5px; align-items: center; min-width: 0; flex: 1; height: 32px; background: linear-gradient(#3e495acc, #151e29e0); border-radius: 18px; border: 1px solid #75869855; box-shadow: 0 2px 4px #0008; padding: 3px 10px 3px 3px; }
@@ -155,7 +207,7 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   #equipment-panel { padding: 8px; }
   .inventory-details { gap: 8px; }
   .inventory-item-detail { grid-template-columns: minmax(60px, 28%) 1fr; gap: 8px; }
-  .inventory-item-detail dl { gap: 2px; font-size: 11px; }
+  .inventory-item-detail dl { min-width: 0; gap: 2px; font-size: 11px; }
   .inventory-item-detail dt, .inventory-item-detail dd { padding: 2px; }
   .inventory-list-panel > header { flex-wrap: wrap; }
 }
@@ -304,7 +356,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 @media (prefers-reduced-motion: reduce) {
   [data-phase="opening"] .supply-burst, [data-phase="opening"] .supply-particles i { animation: none; opacity: 0; }
   [data-phase="opening"] .supply-opening-reward { animation: none; }
-  .weapon-disassembly-video { display: none; }
 }
 .shop-notice { margin: 0; padding: 0 20px; font-size: 12px; }
 @media (max-height: 420px) {
@@ -383,7 +434,6 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 .weapon-operation-status { margin: 0; min-height: 1.4em; font-weight: 800; }
 .weapon-operation-results { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px; }
 #weapon-operation-dialog .weapon-operation-results .equipment-card { flex: 0 0 auto; width: clamp(64px, 12vw, 120px); height: auto; }
-.weapon-disassembly-video { display: block; width: min(650px, 100%); max-height: min(52dvh, calc(95dvh - 110px)); object-fit: contain; background: #111; }
 .weapon-operation-item-actions { display: flex; gap: 8px; }
 .weapon-operation-item-actions .weapon-item-action { flex: 1; }
 @media (max-width: 600px) {
@@ -462,10 +512,56 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   #inventory-current, #equipment-dialog .inventory-comparison > .inventory-item-detail { flex: 1; min-height: 0; }
   #equipment-dialog .inventory-item-detail { height: 100%; min-height: 0; gap: 4px; }
   #equipment-dialog .inventory-item-detail:not(.character-item-detail) { grid-template-columns: var(--inventory-weapon-card-width) minmax(0, 1fr) 54px; }
-  #equipment-dialog .inventory-item-detail dl { font-size: 9px; line-height: 1; gap: 2px; }
-  #equipment-dialog .inventory-item-detail dt, #equipment-dialog .inventory-item-detail dd { padding: 1px 2px; }
+  #equipment-dialog.character-inventory .character-item-detail {
+    grid-template-columns: var(--inventory-weapon-card-width) minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px;
+  }
+  #equipment-dialog.character-inventory .character-upgrade {
+    grid-column: 3;
+    grid-row: 1;
+    width: auto;
+    min-width: 42px;
+    max-width: 60px;
+    min-height: 24px;
+    padding: 2px 4px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  #equipment-dialog .inventory-item-detail dl {
+    max-height: 100%;
+    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) minmax(38px, .78fr);
+    align-content: center;
+    font-size: clamp(7px, 1.45vh, 9px);
+    line-height: 1;
+    gap: 1px 2px;
+  }
+  #equipment-dialog .inventory-item-detail dt,
+  #equipment-dialog .inventory-item-detail dd {
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 2px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+  }
   #equipment-dialog .inventory-weapon-actions { gap: 3px; }
-  #equipment-dialog .inventory-weapon-actions button { min-height: 21px; padding: 2px; font-size: 10px; }
+  #equipment-dialog .inventory-weapon-actions button {
+    min-height: 14px;
+    height: 14px;
+    max-height: 14px;
+    padding: 0 1px;
+    font-size: 8px;
+    line-height: 1;
+    overflow: hidden;
+  }
+  #equipment-dialog.character-inventory .character-item-detail dl {
+    align-content: center;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    gap: 1px 3px;
+    padding-top: 0;
+    font-size: clamp(7px, 1.4vh, 9px);
+  }
   #equipment-dialog .inventory-list-panel { margin: 0; min-height: 0; padding: 3px; display: flex; flex-direction: column; }
   #equipment-dialog .inventory-list-panel > header { flex: 0 0 auto; flex-wrap: nowrap; padding: 2px 4px; gap: 4px; font-size: 10px; }
   #equipment-dialog .inventory-list-panel h2 { font-size: 11px; }
@@ -512,7 +608,15 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
 }
 @media (orientation: landscape) and (max-height: 340px) {
   #equipment-dialog .inventory-weapon-actions { gap: 2px; }
-  #equipment-dialog .inventory-weapon-actions button { min-height: 17px; line-height: 1; padding: 2px; font-size: 9px; }
+  #equipment-dialog .inventory-weapon-actions { gap: 1px; }
+  #equipment-dialog .inventory-weapon-actions button {
+    min-height: 10px;
+    height: 10px;
+    max-height: 10px;
+    line-height: 1;
+    padding: 0 1px;
+    font-size: 7px;
+  }
 }
 @media (max-height: 420px) {
   .currency-bar { top: 5px; } .currency { height: 26px; } .currency svg { width: 22px; height: 22px; }
@@ -522,4 +626,291 @@ dialog button { margin: 4px; } dialog form { border-block: 1px solid var(--ui-bo
   #home .play-button > span { font-size: 20px; }
   #home .play-button small { font-size: 9px; line-height: 1.2; }
   .home-bottom-mark { display: none; }
+}
+
+:root {
+  --ui-surface: #e9eff4;
+  --ui-panel: #f2f6f8;
+  --ui-ink: #243644;
+  --ui-border: #9baeb8;
+  --ui-metal: linear-gradient(145deg, #203541, #101e29);
+  --ui-action: linear-gradient(145deg, #39c4d1, #087eaa);
+}
+button {
+  border-color: #849aa7;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #284558, #183343);
+  box-shadow: inset 0 1px #ffffff30, 0 3px 8px #07152035;
+}
+button:hover:not(:disabled) { filter: brightness(1.12); }
+#home .loadout {
+  top: auto;
+  bottom: 10%;
+  width: min(36vw, 440px);
+  max-width: 440px;
+  gap: clamp(3px, .7vw, 8px);
+}
+#home .equipment-card, #home .character-card {
+  width: 100%;
+  aspect-ratio: 1091 / 1442;
+}
+#equipment-status { color: #ffdc81; text-shadow: 0 1px 3px #000; }
+.home-set-effect {
+  position: absolute;
+  left: 2.3%;
+  bottom: calc(10% + clamp(40px, 12vw, 110px) + 5px);
+  width: min(36vw, 440px);
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid #d1ad5b88;
+  border-radius: 6px;
+  background: #101d28c9;
+  color: #ffe5a2;
+  font-size: clamp(8px, .9vw, 11px);
+  line-height: 1.25;
+  text-shadow: 0 1px 2px #000;
+}
+.grade-frame { z-index: 0; }
+.equipment-card .weapon-image { z-index: 1; }
+.equipment-card .weapon-level,
+.equipment-card .weapon-name,
+.equipment-card .weapon-color-label { z-index: 3; }
+.equipment-card[data-set-color="gold"] {
+  box-shadow: inset 0 0 0 2px #ffe078, 0 0 12px 3px #f0b921b0;
+}
+.equipment-card[data-set-color="red"] {
+  box-shadow: inset 0 0 0 2px #ff817d, 0 0 12px 3px #ee4b42b0;
+}
+.equipment-card[data-set-color="silver"] {
+  box-shadow: inset 0 0 0 2px #e5f2ff, 0 0 12px 3px #b9d6efb0;
+}
+#home .character-card { border-radius: 5% / 4%; }
+.character-card .character-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  z-index: 0;
+}
+.character-card .character-portrait {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+}
+.character-card .character-name {
+  position: absolute;
+  z-index: 2;
+  left: 18%;
+  bottom: 5%;
+  width: 64%;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: clamp(8px, 11cqw, 13px);
+  line-height: 1.05;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 3px #000;
+}
+.character-card .character-level {
+  z-index: 3;
+  text-shadow: -1px -1px #000, 1px 1px #000, 0 2px 3px #000;
+}
+#equipment-dialog { background: #e5edf1; }
+.inventory-tabs { background: linear-gradient(110deg, #142d3b, #253b48); }
+.inventory-tabs button { background: #879ba2; color: #20323d; }
+.inventory-tabs button[aria-selected="true"] { background: #e5edf1; color: #19394a; }
+.inventory-tabs button:last-child {
+  background: linear-gradient(145deg, #39c4d1, #087eaa);
+  color: white;
+}
+.inventory-equipped, .inventory-comparison, .inventory-list-panel {
+  border-color: #9db0b9;
+  background: linear-gradient(145deg, #f5f8f9, #e2eaee);
+  box-shadow: 0 3px 10px #24374614;
+}
+.inventory-equipped h2, .inventory-comparison h2,
+.inventory-list-panel > header {
+  border-radius: 5px;
+  background: linear-gradient(100deg, #c8d9df, #b6cbd3);
+  color: #233b48;
+}
+.inventory-weapon-actions .weapon-item-action {
+  border: 1px solid #5b8596;
+  background: linear-gradient(145deg, #31596c, #1a3b4b);
+}
+.inventory-set-effect {
+  margin: 6px 0 0;
+  padding: 5px 7px;
+  border-left: 3px solid #d6aa43;
+  border-radius: 3px;
+  background: #e3ebed;
+  color: #344b55;
+  font-size: clamp(9px, 1vw, 12px);
+  line-height: 1.3;
+}
+#inventory-items {
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #7594a1 #d7e0e3;
+}
+#inventory-items .inventory-item {
+  touch-action: pan-x;
+  scroll-snap-align: start;
+}
+#weapon-operation-dialog, #weapon-sale-dialog, #weapon-material-dialog {
+  border-color: #718c99;
+  box-shadow: 0 18px 55px #07172275;
+}
+.weapon-operation-header, .weapon-material-header {
+  background: linear-gradient(115deg, #176e88, #0c3c55);
+  border-color: #0a536c;
+}
+.weapon-operation-slots, .weapon-operation-controls, .weapon-operation-choices {
+  border-color: #aec1c8;
+  border-radius: 8px;
+}
+.weapon-operation-submit, .weapon-material-actions > button:last-child {
+  background: linear-gradient(145deg, #39c4d1, #087eaa);
+}
+.shop-product {
+  border: 2px solid #728b97;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #132632, #07141d);
+  box-shadow: 0 10px 24px #06111a66, inset 0 0 0 1px #ffffff16;
+}
+.shop-supply-art {
+  background: radial-gradient(ellipse at 50% 62%, #30505a, #142934 58%, #0b1821);
+}
+.shop-supply-art img {
+  aspect-ratio: 1.08;
+  object-fit: contain;
+  padding: 18px 10px 0;
+  filter: drop-shadow(0 12px 10px #0009);
+}
+.shop-supply-product h2 {
+  background: linear-gradient(100deg, #315261, #1a303c);
+}
+.shop-supply-product > p {
+  background: linear-gradient(145deg, #101e27, #1a2b34);
+}
+.shop-supply-odds {
+  border-top: 1px solid #627e8c;
+  background: #10212c;
+}
+#shop-confirm-image[data-supply]:not([data-supply=""]) {
+  border-radius: 8px;
+  background: radial-gradient(ellipse, #30505a, #142934 60%, #0b1821);
+  filter: drop-shadow(0 8px 8px #0007);
+}
+.weapon-disassembly-stage {
+  position: relative;
+  display: grid;
+  min-width: min(280px, 80vw);
+  min-height: clamp(112px, 19vw, 190px);
+  place-items: center;
+  overflow: hidden;
+}
+.weapon-disassembly-shard {
+  position: absolute;
+  top: 50%;
+  width: clamp(64px, 12vw, 120px);
+  height: auto;
+}
+.weapon-disassembly-shard-left {
+  left: calc(50% - clamp(64px, 12vw, 120px) / 2);
+  clip-path: inset(0 50% 0 0);
+}
+.weapon-disassembly-shard-right {
+  right: calc(50% - clamp(64px, 12vw, 120px) / 2);
+  clip-path: inset(0 0 0 50%);
+}
+.weapon-disassembly-shard .equipment-card {
+  width: clamp(128px, 24vw, 240px);
+  max-width: none;
+  transform: translateY(-50%);
+  transform-origin: center;
+}
+.weapon-disassembly-results {
+  display: flex;
+  justify-content: center;
+  gap: clamp(10px, 4vw, 30px);
+  opacity: 0;
+  transform: translateY(10px) scale(.88);
+}
+.weapon-disassembly-results .equipment-card {
+  flex: 0 0 auto;
+  width: clamp(64px, 12vw, 120px);
+  height: auto;
+}
+.weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-left {
+  animation: disassembly-left .68s ease-in both;
+}
+.weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-right {
+  animation: disassembly-right .68s ease-in both;
+}
+.weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-results,
+.weapon-disassembly-stage[data-phase="revealed"] .weapon-disassembly-results {
+  opacity: 1;
+  transform: none;
+}
+.weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-results {
+  transition: opacity .36s .25s ease-out, transform .36s .25s ease-out;
+}
+@keyframes disassembly-left {
+  to { opacity: 0; transform: translate(-34px, -54%) rotate(-13deg) scale(.8); }
+}
+@keyframes disassembly-right {
+  to { opacity: 0; transform: translate(34px, -46%) rotate(13deg) scale(.8); }
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  #equipment-dialog { overflow-y: auto; overscroll-behavior: contain; }
+  #equipment-dialog #equipment-panel { display: block; }
+  #equipment-dialog .inventory-details { grid-template-columns: minmax(0, 1fr); }
+  #equipment-dialog .inventory-equipped, #equipment-dialog .inventory-comparison { overflow: visible; }
+  #equipment-dialog .inventory-item-detail:not(.character-item-detail) {
+    grid-template-columns: clamp(72px, 20vw, 110px) minmax(0, 1fr) 64px;
+  }
+  #equipment-dialog .inventory-item-detail dl {
+    grid-template-columns: minmax(0, 1fr) minmax(52px, .85fr);
+    font-size: clamp(10px, 2.6vw, 13px);
+    line-height: 1.25;
+  }
+  #equipment-dialog .inventory-item-detail:not(.character-item-detail) > dl {
+    align-content: start;
+    overflow: visible;
+  }
+  #equipment-dialog .inventory-set-effect { margin-top: 5px; }
+  #inventory-items { min-height: clamp(96px, 28vw, 145px); }
+  #equipment-dialog #inventory-items .inventory-item {
+    flex: 0 0 clamp(72px, 20vw, 110px);
+  }
+}
+@media (orientation: portrait) and (max-width: 360px) {
+  #equipment-dialog { --inventory-weapon-card-width: 68px; }
+  #equipment-dialog #inventory-items .inventory-item { flex: 0 0 68px; }
+  #equipment-dialog .inventory-topbar { gap: 6px; padding-inline: 6px; }
+  #equipment-dialog #inventory-wallet { width: min(72%, 270px); gap: 5px; }
+  #equipment-dialog #inventory-wallet .currency { padding-inline: 4px; }
+  #equipment-dialog .inventory-tabs { gap: 3px; padding-inline: 4px; }
+  #equipment-dialog .inventory-tabs button { min-height: 38px; padding: 3px 2px; font-size: 11px; }
+  #equipment-dialog .inventory-item-detail:not(.character-item-detail) {
+    grid-template-columns: 68px minmax(0, 1fr) 58px;
+    gap: 4px;
+  }
+  #equipment-dialog .inventory-weapon-actions button { min-height: 30px; padding: 3px; font-size: 11px; }
+  #equipment-dialog .inventory-item-detail dl { font-size: 10px; }
+}
+@media (max-width: 600px) {
+  .home-set-effect { width: min(36vw, 440px); font-size: 8px; padding: 3px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-left,
+  .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-shard-right { animation: none; }
+  .weapon-disassembly-stage[data-phase="splitting"] .weapon-disassembly-results { transition: none; }
 }

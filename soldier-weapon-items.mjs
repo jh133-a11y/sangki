@@ -1,4 +1,4 @@
-import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=6';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=7';
 
 const WEAPON_ART_FILES = {
   k2: 'soldier-weapon-k2.webp?v=3',
@@ -22,15 +22,19 @@ export const WEAPON_REWARDS = Object.entries(WEAPON_ARTWORK).flatMap(([weapon, i
   WEAPON_COLORS.flatMap(color => EQUIPMENT_GRADES.map(grade => ({
     id: `${weapon}-${grade.toLowerCase()}-${color}`, weapon, grade, color,
     name: WEAPONS[weapon].name, slot: WEAPONS[weapon].slot,
-    image: images[color], frame: `soldier-grade-${grade.toLowerCase()}.webp`
+    image: images[color], frame: weaponGradeArtwork(grade)
   })))
 );
+export function weaponGradeArtwork(grade) {
+  if (!EQUIPMENT_GRADES.includes(grade)) throw new Error('무기 등급이 올바르지 않습니다.');
+  return `soldier-grade-${grade === 'S+' ? 's-plus' : grade.toLowerCase()}.webp?v=2`;
+}
 export function weaponColorLabel(color) {
   return WEAPON_COLOR_LABELS[color] || '';
 }
 
 export function weaponLevelXp(grade) {
-  const xp = { D:25, C:50, B:100, A:200, S:400 };
+  const xp = { D:25, C:50, B:100, A:200, S:400, 'S+':800 };
   if (!Object.hasOwn(xp, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
   return xp[grade];
 }
@@ -51,7 +55,7 @@ export function weaponUpgradePreview(item, materials) {
     cost: materialCost(item.grade) * materials.length };
 }
 export function materialCost(grade) {
-  const costs = { D: 1000, C: 2000, B: 4000, A: 8000, S: 16000 };
+  const costs = { D: 1000, C: 2000, B: 4000, A: 8000, S: 16000, 'S+':32000 };
   if (!Object.hasOwn(costs, grade)) throw new Error('강화 등급이 올바르지 않습니다.');
   return costs[grade];
 }
@@ -99,7 +103,7 @@ export function fillWeaponCard(card, weapon, item = { grade: 'D', level: 1 }) {
   card.dataset.itemId = item.id || '';
   card.dataset.color = item.color || 'standard';
   const frame = card.querySelector('.grade-frame');
-  frame.src = `soldier-grade-${item.grade.toLowerCase()}.webp`;
+  frame.src = weaponGradeArtwork(item.grade);
   frame.alt = `${item.grade}급`;
   card.querySelector('.weapon-level').textContent = weaponLevelLabel(item.level);
   const image = card.querySelector('.weapon-image');

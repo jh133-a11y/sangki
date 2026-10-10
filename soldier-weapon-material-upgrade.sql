@@ -6,7 +6,7 @@ alter table public.soldier_weapon_items
 create or replace function public.soldier_weapon_level_xp(p_grade text)
 returns integer language sql immutable set search_path=public as $$
   select case p_grade when 'D' then 25 when 'C' then 50 when 'B' then 100
-    when 'A' then 200 when 'S' then 400 end
+    when 'A' then 200 when 'S' then 400 when 'S+' then 800 end
 $$;
 revoke all on function public.soldier_weapon_level_xp(text) from public,anon,authenticated;
 alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_upgrade_xp_check;
@@ -124,7 +124,7 @@ begin
     raise exception '본인 소유의 미장착 무기만 재료로 사용할 수 있습니다. 기본 무기는 보호됩니다.';
   end if;
   cost:=amount*(case item.grade when 'D' then 1000 when 'C' then 2000
-    when 'B' then 4000 when 'A' then 8000 when 'S' then 16000 end);
+    when 'B' then 4000 when 'A' then 8000 when 'S' then 16000 when 'S+' then 32000 end);
   if balance<cost then raise exception '골드가 부족합니다. 필요한 골드: %',cost; end if;
   required_xp:=public.soldier_weapon_level_xp(item.grade);
   total_xp:=item.upgrade_xp+added_xp;

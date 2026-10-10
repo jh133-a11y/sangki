@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=16';
-import { CHARACTERS } from './soldier-characters.mjs?v=5';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=17';
+import { CHARACTERS } from './soldier-characters.mjs?v=6';
 
 export { idlePose };
 
@@ -24,13 +24,13 @@ export async function createHomeViewer(canvas, status) {
   const turning = () => Math.abs(targetYaw - yaw) > .0001;
   const active = () => visible();
   function labels() {
-    status.textContent = `${CHARACTERS[characterId].name} · 드래그/방향키 회전 · 자동 호흡·몸풀기`;
+    status.textContent = `${CHARACTERS[characterId].name.replace('\n', ' ')} · 드래그/방향키 회전 · ${rig.isStatic ? '정지 3D 모델' : '자동 호흡·몸풀기'}`;
   }
   function draw() {
-    canvas.dataset.motion = visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
+    canvas.dataset.motion = rig.isStatic ? 'still' : visible() && turning() ? 'turn' : visible() ? idlePose(seconds).stretch > .001 ? 'stretch' : 'breathe' : 'still';
     canvas.dataset.yaw = yaw.toFixed(5);
     canvas.dataset.seconds = seconds.toFixed(3);
-    canvas.dataset.rig = 'supplied-skeleton';
+    canvas.dataset.rig = rig.isStatic ? 'supplied-static-model' : 'supplied-skeleton';
     canvas.dataset.model = 'supplied-glb';
     canvas.dataset.character = characterId;
     canvas.dataset.loading = String(loading);

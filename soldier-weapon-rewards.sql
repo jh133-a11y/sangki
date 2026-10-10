@@ -6,7 +6,7 @@ create table if not exists public.soldier_weapon_items (
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
   weapon text not null check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')),
   color text not null default 'standard',
-  grade text not null check (grade in ('D','C','B','A','S')),
+  grade text not null check (grade in ('D','C','B','A','S','S+')),
   level integer not null default 1 check (level between 1 and 7),
   equipped boolean not null default false,
   source text not null check (length(source) between 1 and 120),
@@ -14,6 +14,9 @@ create table if not exists public.soldier_weapon_items (
   created_at timestamptz not null default now(),
   unique (client_id,reward_key)
 );
+alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_grade_check;
+alter table public.soldier_weapon_items add constraint soldier_weapon_items_grade_check
+  check (grade in ('D','C','B','A','S','S+'));
 alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_weapon_check;
 alter table public.soldier_weapon_items add constraint soldier_weapon_items_weapon_check
   check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'));
@@ -57,8 +60,8 @@ begin
     insert into public.soldier_equipment(client_id,weapon) values(sess.client_id,p_weapon) on conflict do nothing;
     select * into item from public.soldier_equipment where client_id=sess.client_id and weapon=p_weapon for update;
     if item.level<>p_level then raise exception '무기 레벨이 변경되었습니다. 장비를 새로 불러오세요.'; end if;
-    base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 end;
-    increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 end;
+    base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 when 'S+' then 40000 end;
+    increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 when 'S+' then 20000 end;
     cost:=base+(item.level-1)*increment;
     if balance<cost then raise exception '솔져 골드가 부족합니다. 필요한 골드: %',cost; end if;
     update public.soldier_profiles set gold=gold-cost where client_id=sess.client_id;
@@ -119,7 +122,7 @@ returns uuid language plpgsql security definer set search_path=public as $$
 declare granted uuid; previous public.soldier_weapon_items%rowtype;
 begin
   if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
-    or p_grade is null or p_grade not in ('D','C','B','A','S')
+    or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
     or p_source is null or length(p_source) not between 1 and 120
     or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
     raise exception '보상 지급 정보가 올바르지 않습니다.';
@@ -147,7 +150,7 @@ returns uuid language plpgsql security definer set search_path=public as $$
 declare granted uuid; previous public.soldier_weapon_items%rowtype;
 begin
   if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
-    or p_grade is null or p_grade not in ('D','C','B','A','S')
+    or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
     or p_color is null or p_color not in ('standard','gold','red','silver')
     or p_source is null or length(p_source) not between 1 and 120
     or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
@@ -219,7 +222,7 @@ begin
     if not found then raise exception '보유하지 않은 무기입니다.'; end if;
     if (p_action='combine' and item_a.level<>7)
       or (p_action='disassemble' and (item_a.equipped or item_a.source='default')) then
-      raise exception '조합은 MAX 무기만, 분해는 미장착 S급 무기만 가능합니다.';
+      raise exception '조합은 MAX 무기만, 분해는 미장착 S/S+급 무기만 가능합니다.';
     end if;
     if p_action='combine' then
       select * into item_b from public.soldier_weapon_items
@@ -228,10 +231,10 @@ begin
         or item_b.grade<>item_a.grade then
         raise exception '같은 등급의 MAX 무기 두 개가 필요합니다.';
       end if;
-      cost:=case item_a.grade when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50 end;
-      if cost is null then raise exception 'S급 무기는 조합할 수 없습니다.'; end if;
+      cost:=case item_a.grade when 'D' then 5 when 'C' then 10 when 'B' then 20 when 'A' then 50 when 'S' then 100 end;
+      if cost is null then raise exception 'S+급 무기는 조합할 수 없습니다.'; end if;
       if balance<cost then raise exception '보석이 부족합니다. 필요한 보석: %',cost; end if;
-      next_grade:=case item_a.grade when 'D' then 'C' when 'C' then 'B' when 'B' then 'A' else 'S' end;
+      next_grade:=case item_a.grade when 'D' then 'C' when 'C' then 'B' when 'B' then 'A' when 'A' then 'S' else 'S+' end;
       delete from public.soldier_weapon_items where id in (p_item,p_other);
       if item_a.weapon=item_b.weapon and item_a.color=item_b.color then
         weapon_id:=item_a.weapon; color_id:=item_a.color;
@@ -297,7 +300,8 @@ begin
       rewards:=jsonb_build_array(jsonb_build_object(
         'id',reward_id,'weapon',weapon_id,'color',color_id,'grade',next_grade,'level',1));
     else
-      if item_a.grade<>'S' then raise exception 'S급 무기만 분해할 수 있습니다.'; end if;
+      if item_a.grade not in ('S','S+') then raise exception 'S/S+급 무기만 분해할 수 있습니다.'; end if;
+      grade_id:=case item_a.grade when 'S+' then 'S' else 'A' end;
       delete from public.soldier_weapon_items where id=p_item;
       for i in 1..2 loop
         select array_agg(candidate) into eligible_weapons
@@ -316,10 +320,10 @@ begin
         weapon_id:=eligible_weapons[1+floor(random()*array_length(eligible_weapons,1))::integer];
         color_id:=color_pool[1+floor(random()*array_length(color_pool,1))::integer];
         insert into public.soldier_weapon_items(client_id,weapon,color,grade,level,source,reward_key)
-          values(owner_id,weapon_id,color_id,'A',1,'disassemble','operation-'||p_request::text||'-'||i::text)
+          values(owner_id,weapon_id,color_id,grade_id,1,'disassemble','operation-'||p_request::text||'-'||i::text)
           returning id into reward_id;
         rewards:=rewards||jsonb_build_array(jsonb_build_object(
-          'id',reward_id,'weapon',weapon_id,'color',color_id,'grade','A','level',1));
+          'id',reward_id,'weapon',weapon_id,'color',color_id,'grade',grade_id,'level',1));
       end loop;
     end if;
     insert into public.soldier_weapon_operations(client_id,request_id,action,inputs,results)
@@ -364,8 +368,8 @@ begin
       if p_level is null or p_level not between 1 and 6 or item.level<>p_level then
         raise exception '강화 레벨이 변경되었거나 MAX입니다. 장비를 새로 불러오세요.';
       end if;
-      base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 end;
-      increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 end;
+      base:=case item.grade when 'D' then 1000 when 'C' then 3000 when 'B' then 5000 when 'A' then 10000 when 'S' then 20000 when 'S+' then 40000 end;
+      increment:=case item.grade when 'D' then 1000 when 'C' then 1000 when 'B' then 2000 when 'A' then 5000 when 'S' then 10000 when 'S+' then 20000 end;
       cost:=base+(item.level-1)*increment;
       if balance<cost then raise exception '솔져 골드가 부족합니다. 필요한 골드: %',cost; end if;
       update public.soldier_profiles set gold=gold-cost where client_id=owner_id;

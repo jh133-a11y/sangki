@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WEAPONS } from './soldier-core.mjs';
-import { weaponInventoryStats, inventoryWeapons, inventoryCharacters, characterInventoryCount, INVENTORY_LIMIT } from './soldier-inventory.mjs';
+import { weaponInventoryStats, characterInventoryStats, sortInventoryEntries, inventoryWeapons, inventoryCharacters, characterInventoryCount, INVENTORY_LIMIT } from './soldier-inventory.mjs';
 import { readFileSync } from 'node:fs';
 
 test('character slots swap without duplicating the equipped character or losing the default', () => {
@@ -38,7 +38,7 @@ test('every weapon exposes the seven reference inventory fields using actual gam
   assert.throws(() => weaponInventoryStats('invalid'), /무기/);
 });
 
-test('requested D Lv1 K2, M870 and M9 stats are exact and comparisons use the selected grade/level', () => {
+test('requested D Lv1 K-200, S-870 and M-90B stats are exact and comparisons use the selected grade/level', () => {
   assert.deepEqual(weaponInventoryStats('k2').map(([,value])=>value), ['30 / 90',19,650,76,86,4040,'5%']);
   assert.deepEqual(weaponInventoryStats('shotgun').map(([,value])=>value), ['4 / 16',45,20,61,4,3550,'6%']);
   assert.deepEqual(weaponInventoryStats('stick').map(([,value])=>value), ['-',135,80,'-','-','-','31%']);
@@ -46,6 +46,36 @@ test('requested D Lv1 K2, M870 and M9 stats are exact and comparisons use the se
   assert.equal(weaponInventoryStats('k2','A',3)[6][1],'6%');
   assert.equal(weaponInventoryStats('stick','S',7)[1][1],183);
   assert.equal(weaponInventoryStats('stick','S',7)[6][1],'40%');
+});
+
+test('weapon sorting uses canonical display names and places S+ above S', () => {
+  const names = ['k2', 'psg1', 'p90', 'm249', 'akm', 'shotgun', 'auga3', 'stick']
+    .map(id => ({ id }));
+  assert.deepEqual(sortInventoryEntries(names, {}, 'name').map(entry => WEAPONS[entry.id].name),
+    ['ARK-M', 'AUG-BP', 'K-200', 'M-24', 'M-90B', 'P-SR1', 'PDW-90', 'S-870']);
+  const ranked = sortInventoryEntries([
+    { id: 'k2', item: { grade: 'S' } },
+    { id: 'psg1', item: { grade: 'S+' } }
+  ], {});
+  assert.deepEqual(ranked.map(entry => entry.item.grade), ['S+', 'S']);
+});
+
+test('matching-grade color sets apply the correct inventory preview bonuses', () => {
+  const redBase = weaponInventoryStats('k2', 'A', 1, 'red')[6][1];
+  const redSet = weaponInventoryStats('k2', 'A', 1, 'red', { grade: 'A', color: 'red' })[6][1];
+  const wrongGrade = weaponInventoryStats('k2', 'A', 1, 'red', { grade: 'S', color: 'red' })[6][1];
+  assert.equal(Number.parseFloat(redSet) - Number.parseFloat(redBase), 5);
+  assert.equal(wrongGrade, redBase);
+  assert.equal(weaponInventoryStats('k2', 'A', 1, 'gold', { grade: 'A', color: 'gold' })[1][1]
+    - weaponInventoryStats('k2', 'A', 1, 'gold')[1][1], 3);
+});
+
+test('character inventory shows health, evasion, damage and critical abilities', () => {
+  const labels = characterInventoryStats('korean-girl', 1).map(([label]) => label);
+  assert.deepEqual(labels, ['체력', '회피율', '위력 증가', '크리티컬 확률 증가']);
+  assert.equal(characterInventoryStats('korean-girl', 1)[2][1], '+1');
+  assert.equal(characterInventoryStats('korean-girl', 10)[2][1], '+3');
+  assert.equal(characterInventoryStats('korean-girl', 10)[3][1], '+3%');
 });
 
 test('enhancement UI keeps XP internal and exposes level-adjacent progress and a plain upgrade button', () => {
@@ -97,8 +127,11 @@ test('selected weapons show their own level and progress using the equipped mete
 
 test('equipped and default MAX cards can be combined, including as material', () => {
   const source = readFileSync('soldier-inventory.mjs', 'utf8');
-  assert.match(source, /combine\.disabled = weaponBusy \|\| item\.level !== 7 \|\| item\.grade === 'S';/);
+  assert.match(source, /combine\.disabled = weaponBusy \|\| item\.level !== 7 \|\| item\.grade === 'S\+';/);
+  assert.match(source, /const price = isCombine \? \(\{ D: 5, C: 10, B: 20, A: 50, S: 100 \}/);
   assert.match(source, /candidate\.grade === item\.grade\s*&& candidate\.level === 7\)/);
+  assert.match(source, /if \(item\.grade === 'S' \|\| item\.grade === 'S\+'\)/);
+  assert.match(source, /S\+급 무기를 분해하면 같은 분류의 S급 Lv\.1 무기 2개/);
   const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
   assert.match(sql, /if item_a\.equipped or item_b\.equipped then/);
   assert.match(sql, /set equipped=true where id=reward_id/);
@@ -107,6 +140,18 @@ test('equipped and default MAX cards can be combined, including as material', ()
 test('weapon art stays centered on every grade and color card', () => {
   const css = readFileSync('soldier.css', 'utf8');
   assert.match(css, /\.weapon-image \{[^}]*top: 50%; transform: translateY\(-50%\)/);
+  assert.match(css, /\.equipment-card\[data-set-color="red"\]/);
+  assert.match(readFileSync('sanggi-soldier.html', 'utf8'), /id="weapon-set-effect"/);
+});
+
+test('disassembly uses a reduced-motion-aware split-card animation rather than supplied video', () => {
+  const source = readFileSync('soldier-inventory.mjs', 'utf8');
+  const css = readFileSync('soldier.css', 'utf8');
+  assert.doesNotMatch(source, /<video|soldier-weapon-disassemble\.mp4/);
+  assert.match(source, /weapon-disassembly-shard-\$\{side\}/);
+  assert.match(source, /prefers-reduced-motion/);
+  assert.match(css, /@keyframes disassembly-left/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*weapon-disassembly-results/);
 });
 
 test('weapon actions share a vertical stack and compact landscape layout', () => {

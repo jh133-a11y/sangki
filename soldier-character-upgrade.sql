@@ -6,24 +6,64 @@ alter table public.soldier_characters add constraint soldier_characters_level_ch
 alter table public.soldier_profiles add column if not exists default_character_level integer not null default 1
   check (default_character_level between 1 and 10);
 
+-- The user explicitly requested removal of FSB records without swaps or refunds.
+update public.soldier_profiles set equipped_character='black-water' where equipped_character='fsb-agent';
+delete from public.soldier_characters where character='fsb-agent';
+-- JAMES is now the free default. Keep any already-owned growth under the canonical default.
+update public.soldier_profiles s set default_character_level=greatest(s.default_character_level,c.level)
+from public.soldier_characters c where c.client_id=s.client_id and c.character='james';
+update public.soldier_profiles set equipped_character='black-water' where equipped_character='james';
+delete from public.soldier_characters where character='james';
+alter table public.soldier_characters drop constraint if exists soldier_characters_character_check;
+alter table public.soldier_characters add constraint soldier_characters_character_check
+  check (character in ('fighter','thief','korean-girl','roka-swc'));
+alter table public.soldier_profiles drop constraint if exists soldier_profiles_equipped_character_check;
+alter table public.soldier_profiles add constraint soldier_profiles_equipped_character_check
+  check (equipped_character in ('black-water','fighter','thief','korean-girl','roka-swc'));
+
 create or replace function public.soldier_character_stats(p_character text,p_level integer)
 returns jsonb language plpgsql immutable set search_path=public as $$
-declare health integer; evasion numeric;
+declare health integer; evasion numeric; damage_bonus integer:=0; critical_bonus integer:=0;
 begin
-  if p_character is null or p_character not in ('black-water','roka-swc','fsb-agent')
+  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc')
     or p_level is null or p_level not between 1 and 10 then
     raise exception '캐릭터 또는 레벨이 올바르지 않습니다.';
   end if;
   if p_character='roka-swc' then
     health:=125+(p_level-1)*8; evasion:=(40+p_level-1)::numeric/1000;
-  elsif p_character='fsb-agent' then
+  elsif p_character='thief' then
     health:=98+(p_level-1)*5; evasion:=(20+p_level-1)::numeric/100;
+  elsif p_character='fighter' then
+    health:=115+(p_level-1)*6; evasion:=(60+p_level-1)::numeric/1000;
+  elsif p_character='korean-girl' then
+    health:=105+(p_level-1)*7; evasion:=(10+p_level-1)::numeric/100;
+    -- MAX adds two to the level-one bonus of one.
+    damage_bonus:=case when p_level=10 then 3 else 1 end;
+    critical_bonus:=damage_bonus;
   else
     health:=110+(p_level-1)*5; evasion:=(40+p_level-1)::numeric/1000;
   end if;
-  return jsonb_build_object('hp',health,'evasion',evasion);
+  return jsonb_build_object('hp',health,'evasion',evasion,
+    'damageBonus',damage_bonus,'criticalBonus',critical_bonus);
 end $$;
 revoke all on function public.soldier_character_stats(text,integer) from public,anon,authenticated;
+
+create or replace function public.soldier_owned_character_stats(p_client uuid)
+returns jsonb language plpgsql stable security definer set search_path=public as $$
+declare profile public.soldier_profiles%rowtype; owned_level integer;
+begin
+  select * into profile from public.soldier_profiles where client_id=p_client;
+  if not found then raise exception '솔져 프로필이 없습니다.'; end if;
+  if profile.equipped_character='black-water' then
+    owned_level:=profile.default_character_level;
+  else
+    select level into owned_level from public.soldier_characters
+    where client_id=p_client and character=profile.equipped_character;
+    if not found then raise exception '장착 캐릭터의 보유 정보가 없습니다.'; end if;
+  end if;
+  return public.soldier_character_stats(profile.equipped_character,owned_level);
+end $$;
+revoke all on function public.soldier_owned_character_stats(uuid) from public,anon,authenticated;
 
 create or replace function public.soldier_shop_api(p_token uuid,p_action text default 'read',p_character text default null)
 returns jsonb language plpgsql security definer set search_path=public as $$
@@ -34,7 +74,7 @@ begin
   select * into profile from public.soldier_profiles where client_id=sess.client_id for update;
   if p_action is null or p_action not in ('read','buy','equip') then raise exception '상점 요청이 올바르지 않습니다.'; end if;
   if p_action in ('buy','equip') then
-    if p_character is null or p_character not in ('black-water','fsb-agent','roka-swc') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
+    if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
     if exists (
       select 1 from public.soldier_players p join public.soldier_rooms r on r.id=p.room_id
       where p.client_id=sess.client_id and p.last_seen>clock_timestamp()-interval '12 seconds'
@@ -44,9 +84,13 @@ begin
       if p_character='black-water' then raise exception '기본 캐릭터는 구매할 필요가 없습니다.'; end if;
       if exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '이미 보유한 캐릭터입니다.'; end if;
       if (select count(*) from public.soldier_characters where client_id=sess.client_id)+1>=50 then raise exception '캐릭터 인벤토리는 기본 캐릭터 포함 최대 50개입니다.'; end if;
-      if profile.gems<125 then raise exception '보석이 부족합니다. 필요한 보석: 125'; end if;
+      if profile.gems < (case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end) then
+        raise exception '보석이 부족합니다. 필요한 보석: %',(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end);
+      end if;
       insert into public.soldier_characters(client_id,character) values(sess.client_id,p_character);
-      update public.soldier_profiles set gems=gems-125 where client_id=sess.client_id;
+      update public.soldier_profiles
+      set gems=gems-(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end)
+      where client_id=sess.client_id;
     else
       if p_character<>'black-water' and not exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '보유하지 않은 캐릭터입니다.'; end if;
       update public.soldier_profiles set equipped_character=p_character where client_id=sess.client_id;
@@ -70,7 +114,7 @@ begin
   perform public.soldier_shop_api(p_token);
   select client_id into owner_id from public.soldier_sessions where token=p_token;
   select gold into balance from public.soldier_profiles where client_id=owner_id for update;
-  if p_character is null or p_character not in ('black-water','fsb-agent','roka-swc')
+  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc')
     or p_level is null or p_level not between 1 and 9 then raise exception '캐릭터 강화 요청이 올바르지 않거나 MAX입니다.'; end if;
   if exists (
     select 1 from public.soldier_players p join public.soldier_rooms r on r.id=p.room_id
@@ -98,7 +142,8 @@ revoke all on function public.soldier_character_upgrade_api(uuid,text,integer) f
 grant execute on function public.soldier_character_upgrade_api(uuid,text,integer) to anon,authenticated;
 
 alter table public.soldier_players add column if not exists character text not null default 'black-water'
-  check (character in ('black-water','fsb-agent','roka-swc'));
+  check (character in ('black-water','james','fighter','thief','korean-girl','roka-swc','fsb-agent'));
+alter table public.soldier_players drop constraint if exists soldier_players_character_check;
 alter table public.soldier_players add column if not exists character_level integer not null default 1 check (character_level between 1 and 10);
 alter table public.soldier_players add column if not exists max_hp integer not null default 110 check (max_hp>0);
 alter table public.soldier_players add column if not exists evasion numeric not null default .04 check (evasion between 0 and 1);
@@ -107,6 +152,17 @@ alter table public.soldier_players add column if not exists character_version in
 
 -- Initialize pre-migration players once without healing existing damage.
 drop trigger if exists soldier_character_combat on public.soldier_players;
+-- Do not heal or resurrect active FSB players while removing their retired ID.
+update public.soldier_players p set
+  character='black-water',character_level=s.default_character_level,
+  max_hp=(public.soldier_character_stats('black-water',s.default_character_level)->>'hp')::integer,
+  evasion=(public.soldier_character_stats('black-water',s.default_character_level)->>'evasion')::numeric,
+  hp=least(p.hp,(public.soldier_character_stats('black-water',s.default_character_level)->>'hp')::integer),
+  character_version=2
+from public.soldier_profiles s
+where p.client_id=s.client_id and p.character in ('fsb-agent','james');
+alter table public.soldier_players add constraint soldier_players_character_check
+  check (character in ('black-water','fighter','thief','korean-girl','roka-swc'));
 update public.soldier_players p set
   character=s.equipped_character,
   character_level=case when s.equipped_character='black-water' then s.default_character_level else coalesce(c.level,1) end,
