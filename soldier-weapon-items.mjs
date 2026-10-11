@@ -1,4 +1,4 @@
-import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=7';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=9';
 
 const WEAPON_ART_FILES = {
   k2: 'soldier-weapon-k2.webp?v=3',
@@ -9,7 +9,8 @@ const WEAPON_ART_FILES = {
   p90: 'soldier-weapon-p90.webp?v=1',
   auga3: 'soldier-weapon-auga3.webp?v=1',
   g36c: 'soldier-weapon-g36c.webp?v=1',
-  akm: 'soldier-weapon-akm.webp?v=1'
+  akm: 'soldier-weapon-akm.webp?v=1',
+  utsbp: 'soldier-weapon-utsbp.webp?v=1'
 };
 export const WEAPON_ARTWORK = Object.fromEntries(Object.entries(WEAPON_ART_FILES).map(([weapon, standard]) => [
   weapon, Object.fromEntries(WEAPON_COLORS.map(color => [color,
@@ -87,6 +88,8 @@ export function validateWeaponItems(result) {
       || typeof item.equipped !== 'boolean') {
       throw new Error('서버 보상 무기 정보를 확인할 수 없습니다.');
     }
+    if (item.enchantment != null && (!['damage-1','critical-2','weight-3','recoil-2','accuracy-2','damage-2','critical-3','weight-5','critical-1','accuracy-1'].includes(item.enchantment)
+      || item.grade !== 'S+' || item.level !== 7)) throw new Error('서버 무기 부여 정보를 확인할 수 없습니다.');
     weaponUpgradeCost(item.grade, item.level);
     if (result.material_version === 2 && (!Number.isInteger(item.upgrade_xp)
       || item.upgrade_xp < 0 || item.upgrade_xp >= weaponLevelXp(item.grade)

@@ -3,23 +3,32 @@ begin;
 create table if not exists public.soldier_supply_purchases (
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
   request_id uuid not null,
-  product text not null check (product in ('normal','advanced','special')),
+  product text not null check (product in ('normal','advanced','special','guaranteed-b','guaranteed-a','premium')),
   rewards jsonb not null,
   created_at timestamptz not null default now(),
   primary key (client_id,request_id)
 );
 alter table public.soldier_supply_purchases enable row level security;
+alter table public.soldier_supply_purchases drop constraint if exists soldier_supply_purchases_product_check;
+alter table public.soldier_supply_purchases add constraint soldier_supply_purchases_product_check
+  check (product in ('normal','advanced','special','guaranteed-b','guaranteed-a','premium'));
 revoke all on public.soldier_supply_purchases from public,anon,authenticated;
 
 create or replace function public.soldier_supply_grade(p_product text,p_index integer,p_roll integer)
 returns text language plpgsql immutable set search_path=public as $$
 begin
-  if p_product is null or p_product not in ('normal','advanced','special')
-    or p_index is null or p_index<1 or p_index>(case when p_product='special' then 11 else 1 end)
+  if p_product is null or p_product not in ('normal','advanced','special','guaranteed-b','guaranteed-a','premium')
+    or p_index is null or p_index<1 or p_index>(case when p_product='special' then 11 when p_product='premium' then 3 else 1 end)
     or p_roll is null or p_roll not between 0 and 9999 then
     raise exception '보급함 추첨 정보가 올바르지 않습니다.';
   end if;
-  if p_product='special' and p_index=1 then
+  if p_product='guaranteed-b' then
+    return case when p_roll<8500 then 'B' when p_roll<9500 then 'A' else 'S' end;
+  elsif p_product='guaranteed-a' then
+    return case when p_roll<9000 then 'A' else 'S' end;
+  elsif p_product='premium' then
+    return case when p_index=1 then 'S' when p_roll<7000 then 'B' when p_roll<9500 then 'A' else 'C' end;
+  elsif p_product='special' and p_index=1 then
     return case when p_roll<9500 then 'A' else 'S' end;
   elsif p_product in ('advanced','special') then
     return case when p_roll<6000 then 'C' when p_roll<8500 then 'B' when p_roll<9500 then 'A' else 'S' end;
@@ -31,9 +40,29 @@ revoke all on function public.soldier_supply_grade(text,integer,integer) from pu
 
 create or replace function public.soldier_supply_weapons()
 returns text[] language sql immutable set search_path=public as $$
-  select array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm']::text[]
+  select array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp']::text[]
 $$;
 revoke all on function public.soldier_supply_weapons() from public,anon,authenticated;
+
+create or replace function public.soldier_grant_supply(p_client uuid,p_product text,p_key text,p_source text)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare quantity integer; i integer; weapon_id text; grade_id text; color_id text; item_id uuid;
+  pool text[]:=public.soldier_supply_weapons(); rewards jsonb:='[]'::jsonb;
+begin
+  perform public.soldier_supply_grade(p_product,1,0);
+  quantity:=case p_product when 'special' then 11 when 'premium' then 3 else 1 end;
+  perform 1 from public.soldier_profiles where client_id=p_client for update;
+  if not found then raise exception '솔져 프로필이 없습니다.'; end if;
+  for i in 1..quantity loop
+    weapon_id:=pool[1+floor(random()*array_length(pool,1))::integer];
+    grade_id:=public.soldier_supply_grade(p_product,i,floor(random()*10000)::integer);
+    color_id:=(array['standard','gold','red','silver','blue','green'])[1+floor(random()*6)::integer];
+    item_id:=public.soldier_grant_colored_weapon(p_client,weapon_id,grade_id,color_id,p_source,p_key||'-'||i);
+    rewards:=rewards||jsonb_build_array(jsonb_build_object('id',item_id,'weapon',weapon_id,'grade',grade_id,'color',color_id,'level',1));
+  end loop;
+  return rewards;
+end $$;
+revoke all on function public.soldier_grant_supply(uuid,text,text,text) from public,anon,authenticated;
 
 create or replace function public.soldier_supply_api(
   p_token uuid,p_product text default null,p_request uuid default null
@@ -51,7 +80,7 @@ begin
   select gems into balance from public.soldier_profiles where client_id=owner_id for update;
   weapon_pool:=public.soldier_supply_weapons();
   if p_product is not null then
-    if p_product not in ('normal','advanced','special') or p_request is null then
+    if p_product not in ('normal','advanced','special','guaranteed-b','guaranteed-a','premium') or p_request is null then
       raise exception '보급함 구매 정보가 올바르지 않습니다.';
     end if;
     select * into previous from public.soldier_supply_purchases
@@ -61,14 +90,14 @@ begin
       rewards:=previous.rewards;
       replayed:=true;
     else
-      cost:=case p_product when 'normal' then 3 when 'advanced' then 30 else 300 end;
-      quantity:=case when p_product='special' then 11 else 1 end;
+      cost:=case p_product when 'normal' then 3 when 'advanced' then 30 when 'special' then 300 when 'guaranteed-b' then 60 when 'guaranteed-a' then 120 else 500 end;
+      quantity:=case when p_product='special' then 11 when p_product='premium' then 3 else 1 end;
       if balance<cost then raise exception '보석이 부족합니다. 필요한 보석: %',cost; end if;
       for i in 1..quantity loop
         roll:=floor(random()*10000)::integer;
         grade_id:=public.soldier_supply_grade(p_product,i,roll);
         weapon_id:=weapon_pool[1+floor(random()*array_length(weapon_pool,1))::integer];
-        color_id:=(array['standard','gold','red','silver']::text[])[1+floor(random()*4)::integer];
+        color_id:=(array['standard','gold','red','silver','blue','green']::text[])[1+floor(random()*6)::integer];
         selected_weapons:=array_append(selected_weapons,weapon_id);
         selected_grades:=array_append(selected_grades,grade_id);
         selected_colors:=array_append(selected_colors,color_id);

@@ -25,11 +25,11 @@ test('grade assets share the common card canvas and S content has normalized alp
 test('shop and inventory import the finalized parent-owned module versions', () => {
   const inventory = readFileSync('soldier-inventory.mjs', 'utf8');
   const shop = readFileSync('soldier-shop.mjs', 'utf8');
-  assert.match(inventory, /soldier-core\.mjs\?v=8/);
-  assert.match(inventory, /soldier-weapon-items\.mjs\?v=12/);
-  assert.match(inventory, /soldier-characters\.mjs\?v=8/);
-  assert.match(shop, /soldier-characters\.mjs\?v=8/);
-  assert.match(shop, /soldier-supply\.mjs\?v=7/);
+  assert.match(inventory, /soldier-core\.mjs\?v=9/);
+  assert.match(inventory, /soldier-weapon-items\.mjs\?v=13/);
+  assert.match(inventory, /soldier-characters\.mjs\?v=9/);
+  assert.match(shop, /soldier-characters\.mjs\?v=9/);
+  assert.match(shop, /soldier-supply\.mjs\?v=8/);
 });
 
 test('shop character purchase labels use each product price', () => {
@@ -53,7 +53,7 @@ test('character enhancement uses an in-app confirmation instead of blocked brows
   assert.match(inventory,/await confirmCharacterUpgrade\(id, level\)/);
   assert.match(inventory,/characterConfirmation\.showModal\(\)/);
   assert.match(inventory,/upgrade\.textContent = level === CHARACTER_MAX_LEVEL \? 'MAX' : '강화';/);
-  assert.match(inventory,/강화 1회당 10,000골드/);
+  assert.match(inventory,/강화 1회당 20,000골드/);
 });
 
 test('equipment stat rows share a clean label-value style without changing their layout', () => {

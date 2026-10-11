@@ -1,4 +1,4 @@
-import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=7';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
 
 export const OPENING_TIMING = { turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300 };
 
@@ -106,7 +106,7 @@ export function createSupplyOpening(renderCard, reportError) {
       const spec=SUPPLY_PRODUCTS.find(entry => entry.id===product);
       if (!spec || !items.length) throw new Error('개봉할 보급함 보상이 없습니다.');
       if (dialog.open) throw new Error('이전 보급함 개봉을 먼저 완료하세요.');
-      rewards=items; current=0; counter.hidden=product!=='special';
+      rewards=items; current=0; counter.hidden=items.length<=1;
       const sequence=++generation;
       body.src=lid.src=supplyArtwork(product);
       title.textContent=spec.name; dialog.tabIndex=-1;

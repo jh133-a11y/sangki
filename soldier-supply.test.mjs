@@ -10,8 +10,8 @@ function receipt(product,grades) {
     inventory:{gold:'0',material_version:2,items:rewards.map(item => ({...item,equipped:false,
       source:`supply-${product}`,upgrade_xp:0,upgrade_progress:0}))}};
 }
-test('three supply products disclose exact prices, quantities and requested odds',() => {
-  assert.deepEqual(SUPPLY_PRODUCTS.map(p => [p.id,p.price,p.count]),[['special',300,11],['advanced',30,1],['normal',3,1]]);
+test('six supply products disclose exact prices, quantities and requested odds',() => {
+  assert.deepEqual(SUPPLY_PRODUCTS.map(p => [p.id,p.price,p.count]),[['special',300,11],['advanced',30,1],['normal',3,1],['guaranteed-b',60,1],['guaranteed-a',120,1],['premium',500,3]]);
   assert.match(SUPPLY_PRODUCTS[0].odds,/첫 번째: A 95% · S 5%/);
   assert.match(SUPPLY_PRODUCTS[1].odds,/C 60% · B 25% · A 10% · S 5%/);
   assert.match(SUPPLY_PRODUCTS[2].odds,/D 60% · C 30% · B 6% · A 3% · S 1%/);
@@ -39,7 +39,7 @@ test('purchase SQL is transactional, session-verified, server-priced and durable
   assert.match(sql,/soldier_grant_colored_weapon/);
   assert.match(sql,/enable row level security/);
   assert.match(sql,/p_product='special' and p_index=1/);
-  assert.match(sql,/array\['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'\]/);
+  assert.match(sql,/array\['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp'\]/);
   assert.match(sql,/weapon_pool:=public\.soldier_supply_weapons\(\)/);
   assert.match(sql,/보급함 보상을 받을 인벤토리 공간이 부족합니다/);
   assert.match(sql,/selected_weapons/);
@@ -67,7 +67,7 @@ test('opening keeps reference timing, tap-to-advance all crates and no visible b
   const finish = source.slice(source.indexOf('function finish()'), source.indexOf('function scheduleFinish('));
   assert.doesNotMatch(finish,/setTimeout|dialog\.close|current\+\+/);
   assert.match(source,/dialog\.addEventListener\('click',advance\)/);
-  assert.match(source,/counter\.hidden=product!=='special'/);
+  assert.match(source,/counter\.hidden=items\.length<=1/);
   assert.match(source,/supply-accessible-status/);
   assert.doesNotMatch(source,/WebGLRenderer|forceContextLoss|requestAnimationFrame|renderer\.render/);
   assert.match(source,/await Promise\.all/);

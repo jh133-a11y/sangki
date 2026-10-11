@@ -5,9 +5,9 @@ import { WEAPON_COLORS } from './soldier-core.mjs';
 import { WEAPON_REWARDS, weaponColorLabel, validateWeaponItems, fillWeaponCard, materialCost, upgradeMaterials, selectBulkUpgradeMaterials, weaponLevelXp, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs';
 
 test('all weapon colors and grades reuse the same card layout and colored assets', () => {
-  assert.equal(WEAPON_REWARDS.length, 216);
-  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 216);
-  for (const weapon of ['k2', 'shotgun', 'stick', 'psg1', 'm249', 'p90', 'auga3', 'g36c', 'akm']) {
+  assert.equal(WEAPON_REWARDS.length, 360);
+  assert.equal(new Set(WEAPON_REWARDS.map(item => item.id)).size, 360);
+  for (const weapon of ['k2', 'shotgun', 'stick', 'psg1', 'm249', 'p90', 'auga3', 'g36c', 'akm','utsbp']) {
     for (const color of WEAPON_COLORS) {
       const variants = WEAPON_REWARDS.filter(item => item.weapon === weapon && item.color === color);
       assert.deepEqual(variants.map(item => item.grade), ['D', 'C', 'B', 'A', 'S', 'S+']);
@@ -43,7 +43,7 @@ test('duplicate rewards are separate items and capacity is per category', () => 
   assert.throws(() => validateWeaponItems({ gold: '0', items: [...items, { ...items[0], id: 'extra' }] }), /50/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [items[0], items[0]] }), /서버/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], grade: 'X' }] }), /등급/);
-  assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], color: 'blue' }] }), /무기/);
+  assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], color: 'invalid' }] }), /무기/);
   assert.throws(() => validateWeaponItems({ gold: '0', items: [{ ...items[0], equipped: true }, { ...items[1], equipped: true }] }), /중복/);
   assert.throws(() => validateWeaponItems({ gold: '-1', items: [] }), /서버/);
 });
@@ -67,7 +67,7 @@ test('default weapons remain ordinary owned items and card reuse clears previous
 test('rewards are administrator-only, durable and idempotent', () => {
   const sql = readFileSync('soldier-weapon-rewards.sql', 'utf8');
   assert.match(sql,/psg1','m249','p90','auga3','g36c','akm/);
-  assert.match(sql,/color in \('standard','gold','red','silver'\)/);
+  assert.match(sql,/color in \('standard','gold','red','silver','blue','green'\)/);
   assert.match(sql, /unique \(client_id,reward_key\)/);
   assert.match(sql, /revoke all on function public\.soldier_grant_weapon\(uuid,text,text,text,text\) from public,anon,authenticated/);
   assert.match(sql, /soldier_grant_colored_weapon/);

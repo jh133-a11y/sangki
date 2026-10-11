@@ -15,6 +15,7 @@ returns jsonb language sql immutable set search_path=public as $$
     when 'akm' then '{"damage":53,"delay":0.1,"range":80,"magazine":30,"reserve":90,"accuracy":74,"recoilControl":54,"weight":3950,"critical":12,"reload":2.3,"slot":"primary"}'::jsonb
     when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"accuracy":80,"recoilControl":75,"weight":900,"reload":1.5,"slot":"secondary"}'::jsonb
     when 'shotgun' then '{"damage":45,"delay":3,"range":22,"magazine":4,"reserve":16,"accuracy":61,"recoilControl":4,"weight":3550,"critical":6,"reload":2.4,"slot":"secondary"}'::jsonb
+    when 'utsbp' then '{"damage":20,"delay":1.5,"range":22,"magazine":7,"reserve":14,"accuracy":65,"recoilControl":30,"weight":2900,"critical":1,"reload":2.4,"slot":"secondary"}'::jsonb
     when 'kukri' then '{"damage":45,"delay":0.55,"range":2.8,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'axe' then '{"damage":65,"delay":0.85,"range":2.7,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'shovel' then '{"damage":50,"delay":0.7,"range":3,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
@@ -30,7 +31,7 @@ begin
   spec:=public.soldier_weapon(p_weapon);
   if spec is null or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
     or p_level is null or p_level not between 1 and 7
-    or p_color is null or p_color not in ('standard','gold','red','silver') then
+    or p_color is null or p_color not in ('standard','gold','red','silver','blue','green') then
     raise exception '무기 등급과 레벨이 올바르지 않습니다.';
   end if;
   offset_damage:=case p_grade when 'D' then 0 when 'C' then 6 when 'B' then 12 when 'A' then 18 when 'S+' then 48 else 30 end;
@@ -46,7 +47,7 @@ begin
       case when p_grade='S+' then p_level-1 else ((p_level-1)/2)*per_two_levels end)
     ||case when spec->>'slot'='melee' then '{}'::jsonb else jsonb_build_object(
       'accuracy',(spec->>'accuracy')::integer+grade_steps*3,
-      'recoilControl',(spec->>'recoilControl')::integer+grade_steps*3,
+      'recoilControl',least(100,(spec->>'recoilControl')::integer+grade_steps*3),
       'weight',round((spec->>'weight')::numeric*weight_factor)::integer
     ) end;
   if p_color='gold' then stats:=jsonb_set(stats,'{damage}',to_jsonb((stats->>'damage')::integer+5)); end if;
@@ -62,25 +63,48 @@ returns jsonb language sql immutable set search_path=public as $$
 $$;
 create or replace function public.soldier_weapon_item_managed(p_weapon text)
 returns boolean language sql immutable set search_path=public as $$
-  select p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
+  select p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp')
 $$;
+create or replace function public.soldier_apply_enchantment(p_stats jsonb,p_enchantment text)
+returns jsonb language plpgsql immutable set search_path=public as $$
+declare field_name text; amount integer;
+begin
+  if p_enchantment is null then return p_stats; end if;
+  if p_stats->>'grade'<>'S+' or (p_stats->>'level')::integer<>7 then raise exception '부여는 S+ MAX 무기만 가능합니다.'; end if;
+  field_name:=case split_part(p_enchantment,'-',1) when 'damage' then 'damage' when 'critical' then 'critical'
+    when 'weight' then 'weight' when 'recoil' then 'recoilControl' when 'accuracy' then 'accuracy' end;
+  if p_enchantment not in ('damage-1','critical-2','weight-3','recoil-2','accuracy-2','damage-2','critical-3','weight-5','critical-1','accuracy-1') then
+    raise exception '무기 부여 정보가 올바르지 않습니다.';
+  end if;
+  amount:=split_part(p_enchantment,'-',2)::integer;
+  if p_stats->>field_name is not null then
+    p_stats:=jsonb_set(p_stats,array[field_name],to_jsonb(case when field_name='weight'
+      then round((p_stats->>'weight')::numeric*(100-amount)/100)::integer
+      when field_name='recoilControl' then least(100,(p_stats->>field_name)::integer+amount)
+      else (p_stats->>field_name)::integer+amount end));
+  end if;
+  return p_stats;
+end $$;
+revoke all on function public.soldier_apply_enchantment(jsonb,text) from public,anon,authenticated;
 create or replace function public.soldier_loadout_stats(p_client uuid,p_loadout jsonb)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare slot_name text; weapon_id text; item_grade text; item_level integer; item_color text;
+declare slot_name text; weapon_id text; item_grade text; item_level integer; item_color text; item_enchantment text;
   stats jsonb:='{}'; character_stats jsonb;
 begin
   foreach slot_name in array array['primary','secondary','melee'] loop
     weapon_id:=p_loadout->>slot_name;
-    item_color:='standard';
+    item_color:='standard'; item_enchantment:=null;
     if public.soldier_weapon_item_managed(weapon_id) then
-      select grade,level,color into item_grade,item_level,item_color from public.soldier_weapon_items
+      select grade,level,color,enchantment into item_grade,item_level,item_color,item_enchantment from public.soldier_weapon_items
       where client_id=p_client and weapon=weapon_id and equipped;
     else
       select grade,level into item_grade,item_level from public.soldier_equipment
       where client_id=p_client and weapon=weapon_id;
     end if;
     if not found then raise exception '장착 무기의 보유 정보를 확인할 수 없습니다.'; end if;
-    stats:=jsonb_set(stats,array[slot_name],public.soldier_weapon_stats(weapon_id,item_grade,item_level,item_color));
+    stats:=jsonb_set(stats,array[slot_name],public.soldier_apply_enchantment(
+      public.soldier_weapon_stats(weapon_id,item_grade,item_level,item_color),item_enchantment)
+      ||case when item_enchantment is null then '{}'::jsonb else jsonb_build_object('enchantment',item_enchantment) end);
   end loop;
   if stats->'primary'->>'color'=stats->'secondary'->>'color'
     and stats->'primary'->>'color'=stats->'melee'->>'color'
@@ -96,6 +120,12 @@ begin
       elsif stats->slot_name->>'color'='silver' and stats->slot_name->>'weight' is not null then
         stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*
           case item_grade when 'D' then 0.90 when 'C' then 0.88 when 'B' then 0.86 when 'A' then 0.84 when 'S' then 0.82 when 'S+' then 0.80 end)::integer));
+      elsif stats->slot_name->>'color'='blue' and (stats->slot_name->>'magazine')::integer>0 then
+        stats:=jsonb_set(stats,array[slot_name,'magazine'],to_jsonb(ceil((stats->slot_name->>'magazine')::numeric*
+          case item_grade when 'D' then 1.04 when 'C' then 1.05 when 'B' then 1.06 when 'A' then 1.07 when 'S' then 1.08 when 'S+' then 1.09 end)::integer));
+      elsif stats->slot_name->>'color'='green' and stats->slot_name->>'recoilControl' is not null then
+        stats:=jsonb_set(stats,array[slot_name,'recoilControl'],to_jsonb(least(100,(stats->slot_name->>'recoilControl')::integer+
+          case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 2 when 'A' then 3 when 'S' then 4 when 'S+' then 5 end)));
       end if;
     end loop;
   end if;

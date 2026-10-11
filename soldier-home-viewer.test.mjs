@@ -10,7 +10,10 @@ const fixtures = [
   ['soldier-james.glb', '0a0cf4b1ddfba1c7fc06f7a4447070e1eb299722285659eb7019be7b0b7f10a9'],
   ['soldier-thief.glb', 'd682202040dd6cea39c22154636647203650922bd8cfddc6516f3bdc5e858eac'],
   ['soldier-korean-girl.glb', '6b459bd088640a15740820d9d1d7a740441bd55cb57b1ff17e05f72bbeec4d76'],
-  ['soldier-roka-swc.glb', '56b70c4d3ab69a5099dde824172e1607da8e57895eb53088e0b19eaa05886a54']
+  ['soldier-roka-swc.glb', '56b70c4d3ab69a5099dde824172e1607da8e57895eb53088e0b19eaa05886a54'],
+  ['soldier-rks-girl.glb', 'e784812d343bafa699ec7c157935f365cfee530ca5c4a823a43a3f932f94ea4b'],
+  ['soldier-military-police.glb', '60c1c668280aa39a610dafe06c5cd001ef5bd73ebc5f5a0992676596c771c398'],
+  ['soldier-office-worker.glb', 'be86238941c38410a783f29cdc7e00ea4dac50171a1ef29e7134c506a2aff8a4']
 ];
 const staticFixture = ['soldier-fighter.glb', 'd9807d6364ddd312600b310172da1bf0a2260e1afc43daa24bc3c4bc190373d8'];
 
@@ -32,6 +35,7 @@ function suppliedScene(file) {
     return new THREE.BufferAttribute(values, size, accessor.normalized || false);
   }
   const boneIds = new Set((gltf.skins || []).flatMap(skin => skin.joints));
+  const names = new Map();
   const nodes = gltf.nodes.map((node, index) => {
     let object = boneIds.has(index) ? new THREE.Bone() : new THREE.Object3D();
     if (node.mesh !== undefined) {
@@ -45,6 +49,11 @@ function suppliedScene(file) {
         : new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
     }
     object.name = node.name;
+    if (node.name) {
+      const count = names.get(node.name) || 0;
+      names.set(node.name, count + 1);
+      if (count) object.name += `_${count}`;
+    }
     if (node.matrix) new THREE.Matrix4().fromArray(node.matrix).decompose(object.position, object.quaternion, object.scale);
     if (node.translation) object.position.fromArray(node.translation);
     if (node.rotation) object.quaternion.fromArray(node.rotation);
@@ -68,8 +77,8 @@ for (const [file, hash] of fixtures) {
   test(`${file} is the exact supplied rigged asset with embedded textures and original weights`, () => {
     assert.equal(createHash('sha256').update(readFileSync(file)).digest('hex'), hash);
     const { scene, gltf } = suppliedScene(file);
-    assert.equal(gltf.skins.length, 1);
-    assert.ok(gltf.skins[0].joints.length >= 61);
+    assert.equal(gltf.skins.length, file === 'soldier-office-worker.glb' ? 2 : 1);
+    assert.ok(gltf.skins[0].joints.length >= (file === 'soldier-office-worker.glb' ? 55 : 61));
     assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
     const rig = createHomeRig(scene), other = createHomeRig(scene);
     const original = scene.getObjectByProperty('isSkinnedMesh', true), mesh = rig.meshes[0];
@@ -83,6 +92,7 @@ for (const [file, hash] of fixtures) {
     assert.ok(rig.skeleton.bones.every((bone, index) => bone !== other.skeleton.bones[index] && bone !== original.skeleton.bones[index]));
     for (const name of ['LeftForeArm', 'LeftHand', 'RightHand', 'Spine2', 'LeftUpLeg']) {
       assert.equal(rig.joints[name].isBone, true, `${file}: ${name}`);
+      assert.ok(rig.skeleton.bones.includes(rig.joints[name]), `${file}: animate the bound armature`);
     }
     rig.dispose(); other.dispose();
   });

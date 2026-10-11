@@ -45,7 +45,7 @@ begin
       delete from public.soldier_weapon_items where id=item.id;
     else
       if public.soldier_weapon(p_weapon) is null
-        or p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm') then
+        or p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp') then
         raise exception '판매할 무기를 찾을 수 없습니다.';
       end if;
       if exists (

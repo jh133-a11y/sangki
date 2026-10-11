@@ -1,13 +1,15 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=19';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=23';
-import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=34';
-import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=12';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=20';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=24';
+import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=35';
+import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=13';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
-import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=8';
-import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=16';
-import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=7';
-import { WEAPONS, WEAPON_COLORS, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=8';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=9';
+import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=17';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=8';
+import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=1';
+import { createCodex } from './soldier-codex.mjs?v=1';
+import { WEAPONS, WEAPON_COLORS, WEAPON_ENCHANTMENTS, applyWeaponEnchantment, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=9';
 
 const $ = id => document.getElementById(id);
 setupFullscreen($('fullscreen-open'), $('fullscreen-status'));
@@ -68,7 +70,7 @@ const inventory = createEquipmentInventory({
   getEquipment: () => equipment, getLoadout: () => loadout,
   getWeaponItems: () => weaponItems, getWeaponItemsError: () => weaponItemsError,
   changeWeaponItem: changeWeaponItem, sellWeaponItems,
-  operateWeapon: operateWeapon, getGems: () => identity?.gems,
+  operateWeapon: operateWeapon, enchantWeapon, getGems: () => identity?.gems,
   getCharacters: () => characterState,
   equipCharacter: id => refreshCharacters('equip', id),
   upgradeCharacter: (id, level) => id ? refreshCharacters('upgrade', id, level) : refreshCharacters(),
@@ -100,6 +102,30 @@ async function changeWeaponItem(action = 'read', item = null, weapon = null, mat
     if (equipped) loadout[slot] = equipped.weapon;
   }
   Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
+}
+async function enchantWeapon(item) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('부여 요청의 계정 정보를 확인할 수 없습니다.');
+  const key = `sanggi-enchantment-pending-${owner}`;
+  let pending = JSON.parse(localStorage.getItem(key) || 'null');
+  if (pending && pending.item !== item.id) throw new Error('이전 무기의 부여 결과를 먼저 확인하세요.');
+  pending ||= { item: item.id, expected: item.enchantment ?? null, request: crypto.randomUUID() };
+  localStorage.setItem(key, JSON.stringify(pending));
+  let result;
+  try {
+    result = await rpc('soldier_weapon_enchant_api', { p_token: identity.token, p_item: pending.item, p_expected: pending.expected, p_request: pending.request });
+  } catch (error) {
+    if (error.rpcRejected) localStorage.removeItem(key);
+    throw error;
+  }
+  if (result?.enchant_version !== 1 || result.client_id !== owner || result.request !== pending.request
+    || result.item_id !== item.id || !WEAPON_ENCHANTMENTS.some(entry => entry.id === result.enchantment)
+    || !/^\d+$/.test(String(result.gems))) throw new Error('부여 결과를 확인할 수 없습니다. 같은 무기로 다시 확인하세요.');
+  weaponItems = validateWeaponItems(result.inventory);
+  identity.gold = result.inventory.gold; identity.gems = result.gems;
+  localStorage.removeItem(key); updateWallet(identity); Object.keys(loadout).forEach(renderWeaponCard); inventory.refresh();
+  return result.enchantment;
 }
 async function operateWeapon(action, item, other, request) {
   if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
@@ -194,6 +220,37 @@ const shop = createShop({
   }
 });
 let supplyReady = false, supplyBusy = false, supplyOwner = null, supplyError = null, supplyErrorCode = null;
+const daily = createDailyRewards({ request: requestDaily, showSupply: (items,product) => shop.openSupply(product,items) });
+createCodex();
+async function requestDaily(action='read', args={}) {
+  if (!identity) throw new Error('먼저 사이트에 접속해 주세요.');
+  const owner = supplyOwner || localStorage.getItem('sanggi-investment-client-id');
+  if (!owner) throw new Error('보상 요청의 계정 정보를 확인할 수 없습니다.');
+  const key=`sanggi-daily-pending-${owner}`;
+  let pending=JSON.parse(localStorage.getItem(key)||'null');
+  if (action==='read' && pending) {
+    await requestDaily(pending.action,pending.args);
+    pending=null;
+  }
+  if (action!=='read') {
+    if (pending && (pending.action!==action || JSON.stringify(pending.args)!==JSON.stringify(args))) {
+      throw new Error('미확인 보상 요청이 있습니다. 창을 다시 열어 이전 결과를 확인하세요.');
+    }
+    pending ||= {action,args,request:crypto.randomUUID()};
+    localStorage.setItem(key,JSON.stringify(pending));
+  }
+  let result;
+  try {
+    result=await rpc('soldier_daily_api',{p_token:identity.token,p_action:action,p_request:pending?.request||null,
+      p_table:args.table??null,p_mail:args.mail??null});
+  } catch(error) { if(error.rpcRejected) localStorage.removeItem(key);throw error; }
+  validateDaily(result,owner,action,pending?.request||null);
+  weaponItems=validateWeaponItems(result.inventory);
+  identity.gems=result.gems;identity.gold=result.gold;updateRank(result.xp);updateWallet(identity);
+  Object.keys(loadout).forEach(renderWeaponCard);inventory.refresh();
+  if(action!=='read') localStorage.removeItem(key);
+  return result;
+}
 async function buySupply(product) {
   if (!identity || !supplyReady) throw new Error('보급함 상점에 연결되지 않았습니다.');
   if (supplyBusy) throw new Error('이전 보급함 구매를 처리 중입니다.');
@@ -487,6 +544,7 @@ async function connect() {
       $('shop-status').textContent = `보급함 연결 실패: ${error.message}`;
       console.error('보급함 불러오기 오류',error);
     }
+    await daily.refresh();
     ready = true;
     $('play-open').disabled = false;
     $('home-status').textContent = identity.home_version === 2 ? '장비를 선택하고 게임을 시작하세요.' : '계급 승리 보너스·재화 기능은 soldier-home-upgrade.sql 실행 후 새로고침하세요.';
@@ -682,7 +740,7 @@ function equip(next) {
   updateHud();
 }
 function resetAmmo() {
-  ammo = initialWeaponAmmo(loadout);
+  ammo = initialWeaponAmmo(loadout, matchWeapons);
 }
 function applyControls() {
   for (const [id, config] of Object.entries(settings.controls)) {
@@ -798,7 +856,7 @@ function startMatch(isOnline) {
   const stats = characterStats(characterState.equipped, ownedCharacterLevel(characterState, characterState.equipped));
   matchWeapons = applyCharacterBonuses(applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([key, id]) => {
     const item = weaponItems.find(entry => entry.weapon === id && entry.equipped) || equipment[id];
-    return [key, weaponStats(id, item?.grade || 'D', item?.level || 1, item?.color || 'standard')];
+    return [key, applyWeaponEnchantment(weaponStats(id, item?.grade || 'D', item?.level || 1, item?.color || 'standard'), item?.enchantment)];
   }))), stats);
   resetAmmo(); reloadEnds = 0; respawnAt = 0; protectionEnds = performance.now() / 1000 + 2;
   player = { ...player, x: -42, y: 0, z: -42, yaw: -Math.PI * .75, pitch: 0, crouch: false, hp: stats.hp, maxHp: stats.hp, evasion: stats.evasion, lastDodge: null, kills: 0, deaths: 0 };

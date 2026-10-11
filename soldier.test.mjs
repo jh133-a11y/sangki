@@ -52,8 +52,8 @@ test('home offers equipment inventory and icon-only initial zero balances', () =
     assert.ok(html.includes(`data-equipment-tab="${slot}"`));
   }
 });
-test('all sixteen weapons match server-authoritative specifications', () => {
-  assert.equal(Object.keys(WEAPONS).length, 16);
+test('all seventeen weapons match server-authoritative specifications', () => {
+  assert.equal(Object.keys(WEAPONS).length, 17);
   for (const [id, spec] of Object.entries(WEAPONS)) {
     const match = sql.match(new RegExp(`when '${id}' then '([^']+)'`));
     assert.ok(match, id);

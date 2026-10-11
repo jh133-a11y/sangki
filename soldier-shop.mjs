@@ -1,12 +1,15 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=8';
-import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=7';
-import { createSupplyOpening } from './soldier-supply-opening.mjs?v=4';
+import { CHARACTERS } from './soldier-characters.mjs?v=9';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
+import { createSupplyOpening } from './soldier-supply-opening.mjs?v=5';
 
 export { SUPPLY_PRODUCTS };
 export const GOLD_PRODUCTS = [
   { id: 'gold-5000', name: '5,000 골드', price: 10, gold: 5000, description: '골드 5,000 획득' },
   { id: 'gold-30000', name: '30,000 골드', price: 50, gold: 30000, description: '골드 25,000 + 보너스 5,000' },
-  { id: 'gold-65000', name: '65,000 골드', price: 100, gold: 65000, description: '골드 50,000 + 보너스 15,000' }
+  { id: 'gold-65000', name: '65,000 골드', price: 100, gold: 65000, description: '골드 50,000 + 보너스 15,000' },
+  { id: 'gold-150000', name: '150,000 골드', price: 200, gold: 150000, description: '골드 100,000 + 보너스 50,000' },
+  { id: 'gold-450000', name: '450,000 골드', price: 500, gold: 450000, description: '골드 250,000 + 보너스 200,000' },
+  { id: 'gold-1500000', name: '1,500,000 골드', price: 1000, gold: 1500000, description: '골드 500,000 + 보너스 1,000,000' }
 ];
 export function createShop({ getState, buy, refresh, isReady, buySupply, isSupplyReady, getSupplyCapacity, getSupplyError, getSupplyErrorCode, buyGold, isGoldReady, renderCard }) {
   const $ = id => document.getElementById(id);
@@ -241,5 +244,5 @@ export function createShop({ getState, buy, refresh, isReady, buySupply, isSuppl
     if (keyboardOpened) $('shop-open').focus();
     else if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   });
-  return { refresh() { if (dialog.open) render(); } };
+  return { refresh() { if (dialog.open) render(); }, openSupply: (product,items) => opening.open(product,items) };
 }

@@ -97,13 +97,13 @@ test('requested D Lv1 base stats are used for every supported weapon', () => {
 });
 
 test('weapon colors apply individual modifiers and same-color equipment set bonuses', () => {
-  assert.deepEqual(WEAPON_COLORS, ['standard','gold','red','silver']);
+  assert.deepEqual(WEAPON_COLORS, ['standard','gold','red','silver','blue','green']);
   const base=weaponStats('k2','D',1);
   assert.equal(weaponStats('k2','D',1,'gold').damage,base.damage+5);
   assert.equal(weaponStats('k2','D',1,'red').critical,base.critical+5);
   assert.equal(weaponStats('k2','D',1,'silver').weight,Math.round(base.weight*.9));
   assert.equal(weaponStats('stick','D',1,'silver').weight,null);
-  assert.throws(()=>weaponStats('k2','D',1,'blue'),RangeError);
+  assert.throws(()=>weaponStats('k2','D',1,'invalid'),RangeError);
   const gold=applyWeaponSetBonuses(Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
     .map(([slot,id])=>[slot,weaponStats(id,'D',1,'gold')])));
   for(const [slot,id] of Object.entries(DEFAULT_LOADOUT)) {
@@ -149,7 +149,7 @@ test('combat migration preserves base specs and captures trusted stats instead o
   assert.match(migration,/ammo=public\.soldier_reload_ammo\(ammo,reload_slot,weapon_stats->reload_slot\)/);
   assert.match(migration,/damage:=damage\*2/);
   assert.match(migration,/grant execute on function public\.soldier_api/);
-  assert.match(migration,/p_color not in \('standard','gold','red','silver'\)/);
+  assert.match(migration,/p_color not in \('standard','gold','red','silver','blue','green'\)/);
   assert.match(migration,/item_color text/);
   assert.match(migration,/stats->'primary'->>'color'/);
 });

@@ -52,7 +52,7 @@ grant execute on function public.soldier_shop_api(uuid,text,text) to anon,authen
 create table if not exists public.soldier_gold_exchange_requests (
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
   request_id uuid not null,
-  product text not null check (product in ('gold-5000','gold-30000','gold-65000')),
+  product text not null check (product in ('gold-5000','gold-30000','gold-65000','gold-150000','gold-450000','gold-1500000')),
   gold_awarded bigint not null check (gold_awarded>0),
   created_at timestamptz not null default now(),
   primary key (client_id,request_id)
@@ -60,6 +60,9 @@ create table if not exists public.soldier_gold_exchange_requests (
 alter table public.soldier_gold_exchange_requests enable row level security;
 revoke all on public.soldier_gold_exchange_requests from public,anon,authenticated;
 
+alter table public.soldier_gold_exchange_requests drop constraint if exists soldier_gold_exchange_requests_product_check;
+alter table public.soldier_gold_exchange_requests add constraint soldier_gold_exchange_requests_product_check
+  check (product in ('gold-5000','gold-30000','gold-65000','gold-150000','gold-450000','gold-1500000'));
 create or replace function public.soldier_gold_exchange_api(
   p_token uuid,p_product text,p_request uuid
 )
@@ -72,7 +75,7 @@ begin
   perform public.soldier_equipment_api(p_token);
   select client_id into owner_id from public.soldier_sessions where token=p_token;
   select * into profile from public.soldier_profiles where client_id=owner_id for update;
-  if p_product is null or p_product not in ('gold-5000','gold-30000','gold-65000') or p_request is null then
+  if p_product is null or p_product not in ('gold-5000','gold-30000','gold-65000','gold-150000','gold-450000','gold-1500000') or p_request is null then
     raise exception '골드 교환 상품 정보가 올바르지 않습니다.';
   end if;
   select * into previous from public.soldier_gold_exchange_requests
@@ -82,8 +85,8 @@ begin
     gold_amount:=previous.gold_awarded;
     replayed:=true;
   else
-    gems_cost:=case p_product when 'gold-5000' then 10 when 'gold-30000' then 50 else 100 end;
-    gold_amount:=case p_product when 'gold-5000' then 5000 when 'gold-30000' then 30000 else 65000 end;
+    gems_cost:=case p_product when 'gold-5000' then 10 when 'gold-30000' then 50 when 'gold-65000' then 100 when 'gold-150000' then 200 when 'gold-450000' then 500 else 1000 end;
+    gold_amount:=case p_product when 'gold-5000' then 5000 when 'gold-30000' then 30000 when 'gold-65000' then 65000 when 'gold-150000' then 150000 when 'gold-450000' then 450000 else 1500000 end;
     if profile.gems<gems_cost then raise exception '보석이 부족합니다. 필요한 보석: %',gems_cost; end if;
     update public.soldier_profiles set gems=gems-gems_cost,gold=gold+gold_amount where client_id=owner_id;
     insert into public.soldier_gold_exchange_requests(client_id,request_id,product,gold_awarded)

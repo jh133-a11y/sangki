@@ -1,5 +1,5 @@
-import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=12';
-import { WEAPON_COLORS } from './soldier-core.mjs?v=7';
+import { validateWeaponItems, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=13';
+import { WEAPON_COLORS } from './soldier-core.mjs?v=9';
 
 export const SUPPLY_PRODUCTS = [
   { id: 'special', name: '스페셜보급함(11개)', price: 300, count: 11, color: '#f1a00b',
@@ -8,7 +8,13 @@ export const SUPPLY_PRODUCTS = [
   { id: 'advanced', name: '고급보급함', price: 30, count: 1, color: '#b51d36',
     description: 'C클래스 이상의 무기 1개 획득', odds: 'D 0% · C 60% · B 25% · A 10% · S 5%' },
   { id: 'normal', name: '일반보급함', price: 3, count: 1, color: '#cbd1d8',
-    description: 'D클래스 이상의 무기 1개 획득', odds: 'D 60% · C 30% · B 6% · A 3% · S 1%' }
+    description: 'D클래스 이상의 무기 1개 획득', odds: 'D 60% · C 30% · B 6% · A 3% · S 1%' },
+  { id: 'guaranteed-b', name: 'B급 이상 확정 무기 상자', price: 60, count: 1, color: '#6bcdd4',
+    description: 'B급 이상의 무기 1개 획득', odds: 'B 85% · A 10% · S 5%' },
+  { id: 'guaranteed-a', name: 'A급 이상 확정 무기 상자', price: 120, count: 1, color: '#c99efa',
+    description: 'A급 이상의 무기 1개 획득', odds: 'A 90% · S 10%' },
+  { id: 'premium', name: '프리미엄 보급함(3개)', price: 500, count: 3, color: '#f5c762',
+    description: '첫 무기는 S급 확정 · 총 3개 획득', odds: '첫 번째: S 100% / 나머지 2개: B 70% · A 25% · C 5%' }
 ];
 
 export function supplyArtwork(product) {
@@ -37,8 +43,12 @@ export function validateSupply(result, product = null, request = null) {
     ids.add(reward.id);
     if (product !== 'normal' && reward.grade === 'D') throw new Error('보급함 최소 등급이 올바르지 않습니다.');
   }
-  if (product === 'special' && !['A','S'].includes(result.rewards[0].grade)) {
+  if ((product === 'special' || product === 'guaranteed-a') && !['A','S'].includes(result.rewards[0].grade)) {
     throw new Error('스페셜보급함 보장 보상을 확인할 수 없습니다.');
+  }
+  if (product === 'guaranteed-b' && !['B','A','S'].includes(result.rewards[0].grade)) throw new Error('B급 보장 보상을 확인할 수 없습니다.');
+  if (product === 'premium' && (result.rewards[0].grade !== 'S' || result.rewards.slice(1).some(item => !['B','A','C'].includes(item.grade)))) {
+    throw new Error('프리미엄 보장 보상을 확인할 수 없습니다.');
   }
   return items;
 }

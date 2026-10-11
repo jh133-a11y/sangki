@@ -1063,6 +1063,61 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 }
 #home .play-button { border-radius: 12px; border-color: #62bbc8; box-shadow: 0 6px 24px #02152655; }
 #shop-open { border-color: #62bbc8; }
+#codex-open { position: absolute; right: 36%; bottom: 6%; min-width: 60px; padding: 12px; }
+.home-reward-actions { position: absolute; right: 2%; top: 42%; display: flex; gap: 8px; }
+.home-reward-actions button { padding: 12px 16px; }
+#mailbox-open { font-size: 12px; }
+#mailbox-count { padding: 2px 6px; border-radius: 20px; background: #246c78; color: #fff; }
+.soldier-feature-dialog { width: min(920px,94vw); max-height: 92dvh; overflow-y: auto; }
+.soldier-feature-dialog > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.soldier-feature-dialog > header h2 { margin: 4px 0; }
+.soldier-feature-dialog > header button { min-width: 40px; }
+.soldier-feature-dialog [role="status"] { white-space: pre-line; }
+.roulette-stage { width: min(340px,65vw); aspect-ratio: 1; position: relative; margin: 24px auto; }
+#roulette-wheel { width: 100%; height: 100%; border-radius: 50%; border: 5px solid #77c8d3; box-shadow: 0 8px 24px #0005; position: relative; }
+.roulette-pointer { position: absolute; top: -16px; left: calc(50% - 12px); color: #ffe39a; font-size: 28px; filter: drop-shadow(0 2px 3px #000); }
+.roulette-sector { position: absolute; inset: 0; text-align: center; padding-top: 12%; font-size: 10px; font-weight: 700; color: #fff; transform: rotate(var(--angle)); pointer-events: none; }
+#roulette-spin { display: block; margin: 12px auto; min-width: 210px; }
+#roulette-prizes { columns: 2; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+#attendance-choices { display: flex; gap: 10px; margin: 14px 0; }
+#attendance-choices button[aria-pressed="true"], #codex-items button[aria-pressed="true"] { border-color: #74d6e0; background: #225464; }
+#attendance-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.attendance-day { display: flex; flex-direction: column; gap: 10px; min-height: 85px; padding: 10px; border: 1px solid #526776; border-radius: 10px; background: #203743; font-size: 12px; }
+.attendance-day strong { color: #8cd6df; }
+.attendance-day.claimed { opacity: .6; border-color: #5d9c86; }
+.mailbox-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; margin: 10px 0; padding: 15px; border: 1px solid #526776; border-radius: 10px; background: #203743; }
+.mailbox-item small { grid-column: 1; color: #afc3d0; }
+.mailbox-item button { grid-column: 2; grid-row: 1 / 3; }
+.codex-filters { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0; }
+.codex-filters label { display: flex; gap: 8px; align-items: center; }
+.codex-filters input { width: 70px; }
+.codex-body { display: grid; grid-template-columns: minmax(120px,1fr) minmax(0,3fr); gap: 20px; }
+#codex-items { display: flex; flex-direction: column; gap: 6px; }
+#codex-detail { display: grid; grid-template-columns: minmax(100px,1fr) minmax(0,2fr); gap: 12px; min-width: 0; }
+#codex-detail h3, .codex-set { grid-column: 1 / -1; }
+#codex-detail .equipment-card, #codex-detail .character-card { position: relative; width: 100%; max-width: 210px; align-self: start; }
+#codex-detail dl { display: grid; grid-template-columns: auto minmax(0,1fr); align-content: start; gap: 8px; margin: 0; font-size: 13px; }
+#codex-detail dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+#weapon-enchant-dialog { max-width: 460px; text-align: center; }
+#weapon-enchant-dialog .equipment-card { width: 140px; margin: 16px auto; }
+.enchantment-roll { display: block; padding: 24px; margin: 12px 0; color: #ffe39a; border: 1px solid #70beca; border-radius: 14px; background: #203e4c; font-size: 24px; }
+.weapon-enchantment-label { color: #a58122; font-size: 12px; }
+.equipment-card[data-set-color="blue"] { --set-glow: #4798ffb0; --set-edge: #90c5ff; }
+.equipment-card[data-set-color="green"] { --set-glow: #40cb8fb0; --set-edge: #8cf0b8; }
+.equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] { animation: weapon-set-pulse 3.2s ease-in-out infinite; }
+.home-set-effect[data-set-color="blue"], .inventory-set-effect[data-set-color="blue"] { color: #4996ea; border-color: #4798ff; }
+.home-set-effect[data-set-color="green"], .inventory-set-effect[data-set-color="green"] { color: #41bf83; border-color: #40cb8f; }
+@media(max-height:500px), (max-width:650px) {
+  #codex-open { bottom: 3%; padding: 7px; font-size: 12px; min-width: 46px; }
+  .home-reward-actions { top: 42%; gap: 4px; }
+  .home-reward-actions button { padding: 7px; font-size: 12px; }
+  .soldier-feature-dialog { max-height: 94dvh; padding: 12px; }
+  #attendance-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .attendance-day { padding: 7px; font-size: 11px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] { animation: none; }
+}
 #home .home-status, .soldier-music-controls { border-radius: 8px; background: #162f40dc; border: 1px solid #52788b; }
 .currency, .shop-wallet > span {
   background: #172f42; border-color: #5b7d92; border-radius: 8px; box-shadow: none;

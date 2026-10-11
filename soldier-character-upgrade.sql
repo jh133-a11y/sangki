@@ -16,27 +16,34 @@ update public.soldier_profiles set equipped_character='black-water' where equipp
 delete from public.soldier_characters where character='james';
 alter table public.soldier_characters drop constraint if exists soldier_characters_character_check;
 alter table public.soldier_characters add constraint soldier_characters_character_check
-  check (character in ('fighter','thief','korean-girl','roka-swc'));
+  check (character in ('fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker'));
 alter table public.soldier_profiles drop constraint if exists soldier_profiles_equipped_character_check;
 alter table public.soldier_profiles add constraint soldier_profiles_equipped_character_check
-  check (equipped_character in ('black-water','fighter','thief','korean-girl','roka-swc'));
+  check (equipped_character in ('black-water','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker'));
 
 create or replace function public.soldier_character_stats(p_character text,p_level integer)
 returns jsonb language plpgsql immutable set search_path=public as $$
 declare health integer; evasion numeric; damage_bonus integer:=0; critical_bonus integer:=0;
 begin
-  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc')
+  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker')
     or p_level is null or p_level not between 1 and 10 then
     raise exception '캐릭터 또는 레벨이 올바르지 않습니다.';
   end if;
   if p_character='roka-swc' then
     health:=125+(p_level-1)*8; evasion:=(40+p_level-1)::numeric/1000;
+  elsif p_character='rks-girl' then
+    health:=115+(p_level-1)*8; evasion:=(80+p_level-1)::numeric/1000;
+  elsif p_character='military-police' then
+    health:=110+(p_level-1)*6; evasion:=(90+p_level-1)::numeric/1000;
+    critical_bonus:=1;
+  elsif p_character='office-worker' then
+    health:=108+(p_level-1)*6; evasion:=(15+p_level-1)::numeric/100;
   elsif p_character='thief' then
     health:=98+(p_level-1)*5; evasion:=(20+p_level-1)::numeric/100;
   elsif p_character='fighter' then
     health:=115+(p_level-1)*6; evasion:=(60+p_level-1)::numeric/1000;
   elsif p_character='korean-girl' then
-    health:=105+(p_level-1)*7; evasion:=(10+p_level-1)::numeric/100;
+    health:=92+(p_level-1)*5; evasion:=(10+p_level-1)::numeric/100;
     -- MAX adds two to the level-one bonus of one.
     damage_bonus:=case when p_level=10 then 3 else 1 end;
     critical_bonus:=damage_bonus;
@@ -74,7 +81,7 @@ begin
   select * into profile from public.soldier_profiles where client_id=sess.client_id for update;
   if p_action is null or p_action not in ('read','buy','equip') then raise exception '상점 요청이 올바르지 않습니다.'; end if;
   if p_action in ('buy','equip') then
-    if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
+    if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker') then raise exception '캐릭터가 올바르지 않습니다.'; end if;
     if exists (
       select 1 from public.soldier_players p join public.soldier_rooms r on r.id=p.room_id
       where p.client_id=sess.client_id and p.last_seen>clock_timestamp()-interval '12 seconds'
@@ -84,12 +91,12 @@ begin
       if p_character='black-water' then raise exception '기본 캐릭터는 구매할 필요가 없습니다.'; end if;
       if exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '이미 보유한 캐릭터입니다.'; end if;
       if (select count(*) from public.soldier_characters where client_id=sess.client_id)+1>=50 then raise exception '캐릭터 인벤토리는 기본 캐릭터 포함 최대 50개입니다.'; end if;
-      if profile.gems < (case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end) then
-        raise exception '보석이 부족합니다. 필요한 보석: %',(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end);
+      if profile.gems < (case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 when 'rks-girl' then 125 else 150 end) then
+        raise exception '보석이 부족합니다. 필요한 보석: %',(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 when 'rks-girl' then 125 else 150 end);
       end if;
       insert into public.soldier_characters(client_id,character) values(sess.client_id,p_character);
       update public.soldier_profiles
-      set gems=gems-(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 else 150 end)
+      set gems=gems-(case p_character when 'korean-girl' then 250 when 'roka-swc' then 125 when 'rks-girl' then 125 else 150 end)
       where client_id=sess.client_id;
     else
       if p_character<>'black-water' and not exists(select 1 from public.soldier_characters where client_id=sess.client_id and character=p_character) then raise exception '보유하지 않은 캐릭터입니다.'; end if;
@@ -115,7 +122,7 @@ begin
   perform public.soldier_shop_api(p_token);
   select client_id into owner_id from public.soldier_sessions where token=p_token;
   select gold into balance from public.soldier_profiles where client_id=owner_id for update;
-  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc')
+  if p_character is null or p_character not in ('black-water','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker')
     or p_level is null or p_level not between 1 and 9 then raise exception '캐릭터 강화 요청이 올바르지 않거나 MAX입니다.'; end if;
   if exists (
     select 1 from public.soldier_players p join public.soldier_rooms r on r.id=p.room_id
@@ -130,8 +137,8 @@ begin
     if not found then raise exception '보유하지 않은 캐릭터입니다.'; end if;
   end if;
   if current_level<>p_level then raise exception '캐릭터 레벨이 변경되었습니다. 새로 불러오세요.'; end if;
-  if balance<10000 then raise exception '솔져 골드가 부족합니다. 필요한 골드: 10000'; end if;
-  update public.soldier_profiles set gold=gold-10000 where client_id=owner_id;
+  if balance<20000 then raise exception '솔져 골드가 부족합니다. 필요한 골드: 20000'; end if;
+  update public.soldier_profiles set gold=gold-20000 where client_id=owner_id;
   if p_character='black-water' then
     update public.soldier_profiles set default_character_level=default_character_level+1 where client_id=owner_id;
   else
@@ -143,7 +150,7 @@ revoke all on function public.soldier_character_upgrade_api(uuid,text,integer) f
 grant execute on function public.soldier_character_upgrade_api(uuid,text,integer) to anon,authenticated;
 
 alter table public.soldier_players add column if not exists character text not null default 'black-water'
-  check (character in ('black-water','james','fighter','thief','korean-girl','roka-swc','fsb-agent'));
+  check (character in ('black-water','james','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker','fsb-agent'));
 alter table public.soldier_players drop constraint if exists soldier_players_character_check;
 alter table public.soldier_players add column if not exists character_level integer not null default 1 check (character_level between 1 and 10);
 alter table public.soldier_players add column if not exists max_hp integer not null default 110 check (max_hp>0);
@@ -163,7 +170,7 @@ update public.soldier_players p set
 from public.soldier_profiles s
 where p.client_id=s.client_id and p.character in ('fsb-agent','james');
 alter table public.soldier_players add constraint soldier_players_character_check
-  check (character in ('black-water','fighter','thief','korean-girl','roka-swc'));
+  check (character in ('black-water','fighter','thief','korean-girl','roka-swc','rks-girl','military-police','office-worker'));
 update public.soldier_players p set
   character=s.equipped_character,
   character_level=case when s.equipped_character='black-water' then s.default_character_level else coalesce(c.level,1) end,

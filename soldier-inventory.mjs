@@ -1,6 +1,6 @@
-import { WEAPONS, weaponStats, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=8';
-import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=8';
-import { upgradeMaterials, selectBulkUpgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=12';
+import { WEAPONS, weaponStats, applyWeaponEnchantment, WEAPON_ENCHANTMENTS, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=9';
+import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=9';
+import { upgradeMaterials, selectBulkUpgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=13';
 
 export const INVENTORY_LIMIT = 50;
 export function sortInventoryEntries(entries, equipment, mode = 'grade', selectedKey = null) {
@@ -21,8 +21,8 @@ export function characterInventoryCount(state) {
 export function inventoryWeapons(equipment, slot) {
   return Object.keys(equipment).filter(id => WEAPONS[id]?.slot === slot);
 }
-export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standard', setColor = null) {
-  const weapon = WEAPONS[id] && weaponStats(id, grade, level, color);
+export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standard', setColor = null, enchantment = null) {
+  const weapon = WEAPONS[id] && applyWeaponEnchantment(weaponStats(id, grade, level, color), enchantment);
   if (!weapon) throw new Error('무기 정보를 확인할 수 없습니다.');
   const matchingSet = typeof setColor === 'object' && setColor !== null
     ? setColor.grade === grade && setColor.color === color : setColor === color;
@@ -33,6 +33,8 @@ export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standa
     if (bonus.weightPercent && Number.isInteger(weapon.weight)) {
       weapon.weight = Math.round(weapon.weight * (100 - bonus.weightPercent) / 100);
     }
+    if (bonus.magazinePercent && weapon.magazine) weapon.magazine = Math.ceil(weapon.magazine * (100 + bonus.magazinePercent) / 100);
+    if (bonus.recoilControl && Number.isFinite(weapon.recoilControl)) weapon.recoilControl = Math.min(100, weapon.recoilControl + bonus.recoilControl);
   }
   return [
     ['탄창/보유탄환', weapon.slot === 'melee' ? '-' : `${weapon.magazine} / ${weapon.reserve ?? '미설정'}`, '초기 탄창/추가 보유탄환입니다. 근접무기는 탄환을 소모하지 않습니다.'],
@@ -62,13 +64,15 @@ export function formatWeaponSetStats(values, set) {
     if (name === '위력' && bonus.damage) value = `${value} + ${bonus.damage}`;
     if (name === '크리티컬 확률' && bonus.critical) value = `${value} + ${bonus.critical}%`;
     if (name === '무게' && bonus.weightPercent && Number.isInteger(value)) value = `${value} - ${bonus.weightPercent}%`;
+    if (name === '탄창/보유탄환' && bonus.magazinePercent && value !== '-') value = `${value} (+${bonus.magazinePercent}% 탄창)`;
+    if (name === '반동제어' && bonus.recoilControl && Number.isFinite(value)) value = `${value} + ${bonus.recoilControl} (≤100)`;
     return [name, value, explanation];
   });
 }
 
 export function createEquipmentInventory({ getEquipment, getLoadout, getCharacters, equipCharacter, renderCard,
   getWeaponItems = () => [], getWeaponItemsError = () => null,
-  changeWeaponItem, sellWeaponItems, operateWeapon, getGems = () => null, upgradeCharacter }) {
+  changeWeaponItem, sellWeaponItems, operateWeapon, enchantWeapon, getGems = () => null, upgradeCharacter }) {
   const $ = id => document.getElementById(id);
   const dialog = $('equipment-dialog');
   const tabs = [...dialog.querySelectorAll('[data-equipment-tab]')];
@@ -249,7 +253,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
     let values = CHARACTERS[id]
       ? characterInventoryStats(id, ownedCharacterLevel(getCharacters(), id))
       : weaponInventoryStats(id, item?.grade || getEquipment()[id]?.grade || 'D',
-        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard');
+        item?.level || getEquipment()[id]?.level || 1, item?.color || 'standard', null, item?.enchantment);
     if (!CHARACTERS[id]) values = formatWeaponSetStats(addCharacterStats(values), set);
     for (const [name, value, explanation] of values) {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
@@ -587,7 +591,7 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       const level = ownedCharacterLevel(getCharacters(), id);
       upgrade.textContent = level === CHARACTER_MAX_LEVEL ? 'MAX' : '강화';
       upgrade.disabled = characterBusy || level === CHARACTER_MAX_LEVEL || !getCharacters().upgradeReady;
-      upgrade.title = getCharacters().upgradeReady ? '강화 1회당 10,000골드' : 'soldier-character-upgrade.sql 실행 후 새로고침하세요.';
+      upgrade.title = getCharacters().upgradeReady ? '강화 1회당 20,000골드' : 'soldier-character-upgrade.sql 실행 후 새로고침하세요.';
       upgrade.addEventListener('click', async () => {
         if (characterBusy) return;
         characterBusy = true; render();
@@ -615,8 +619,15 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
         }
       }
       const option = document.createElement('button'); option.type = 'button'; option.className = 'weapon-item-action';
-      option.textContent = '옵션'; option.disabled = true; option.title = '옵션 기능은 준비 중입니다.';
+      option.textContent = '부여'; option.disabled = weaponBusy || !enchantWeapon || item?.grade !== 'S+' || item?.level !== 7;
+      option.title = 'S+ MAX 무기 · 첫 부여 무료 · 재부여 10보석';
+      option.addEventListener('click', () => openEnchantment(item));
       actions.append(option);
+      if (item?.enchantment) {
+        const bonus = document.createElement('p'); bonus.className = 'weapon-enchantment-label';
+        bonus.textContent = `부여 · ${WEAPON_ENCHANTMENTS.find(entry => entry.id === item.enchantment).label}`;
+        body.append(bonus);
+      }
       if (item && changeWeaponItem) {
         const equip = weaponAction('장착', 'equip', item); equip.disabled = weaponBusy || item.equipped;
         actions.append(equip);
@@ -624,6 +635,34 @@ export function createEquipmentInventory({ getEquipment, getLoadout, getCharacte
       body.append(actions);
     }
     return body;
+  }
+  const enchantDialog = document.createElement('dialog'); enchantDialog.id = 'weapon-enchant-dialog';
+  enchantDialog.setAttribute('aria-label', '무기 능력치 부여'); document.body.append(enchantDialog);
+  enchantDialog.addEventListener('cancel', event => { if (weaponBusy) event.preventDefault(); });
+  function openEnchantment(item) {
+    if (weaponBusy || item.grade !== 'S+' || item.level !== 7) return;
+    const title = document.createElement('h2'); title.textContent = '능력치 부여';
+    const card = inventoryCard(item.weapon, item);
+    const roll = document.createElement('strong'); roll.className = 'enchantment-roll';
+    roll.textContent = item.enchantment ? WEAPON_ENCHANTMENTS.find(entry => entry.id === item.enchantment).label : '첫 부여 무료';
+    const odds = document.createElement('p'); odds.textContent = '10가지 능력치 중 하나가 동일한 확률(각 10%)로 선택됩니다.';
+    const status = document.createElement('p'); status.setAttribute('role', 'status');
+    const start = document.createElement('button'); start.textContent = item.enchantment ? '재부여 · 10보석' : '부여 · 무료'; start.type = 'button';
+    const close = document.createElement('button'); close.textContent = '닫기'; close.type = 'button'; close.addEventListener('click', () => enchantDialog.close());
+    start.addEventListener('click', async () => {
+      if (weaponBusy) return;
+      weaponBusy = true; start.disabled = close.disabled = true; render();
+      const timer = setInterval(() => { roll.textContent = WEAPON_ENCHANTMENTS[Math.floor(Math.random() * 10)].label; }, 85);
+      try {
+        const [result] = await Promise.all([enchantWeapon(item), new Promise(resolve => setTimeout(resolve, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1600))]);
+        clearInterval(timer); roll.textContent = WEAPON_ENCHANTMENTS.find(entry => entry.id === result).label;
+        status.textContent = '부여 완료 · 무기 능력치에 적용되었습니다.';
+        item = getWeaponItems().find(entry => entry.id === item.id);
+        start.textContent = '재부여 · 10보석';
+      } catch (error) { clearInterval(timer); status.textContent = `부여 실패: ${error.message}`; console.error(error); }
+      finally { weaponBusy = false; start.disabled = close.disabled = false; render(); updateWallet(); }
+    });
+    enchantDialog.replaceChildren(title, card, roll, odds, start, close, status); enchantDialog.showModal();
   }
   function render() {
     const equipment = getEquipment(), loadout = getLoadout();

@@ -4,7 +4,7 @@ begin;
 create table if not exists public.soldier_weapon_items (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.soldier_profiles(client_id) on delete cascade,
-  weapon text not null check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')),
+  weapon text not null check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp')),
   color text not null default 'standard',
   grade text not null check (grade in ('D','C','B','A','S','S+')),
   level integer not null default 1 check (level between 1 and 7),
@@ -19,11 +19,16 @@ alter table public.soldier_weapon_items add constraint soldier_weapon_items_grad
   check (grade in ('D','C','B','A','S','S+'));
 alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_weapon_check;
 alter table public.soldier_weapon_items add constraint soldier_weapon_items_weapon_check
-  check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'));
+  check (weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp'));
 alter table public.soldier_weapon_items add column if not exists color text not null default 'standard';
+alter table public.soldier_weapon_items add column if not exists enchantment text;
+alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_enchantment_check;
+alter table public.soldier_weapon_items add constraint soldier_weapon_items_enchantment_check
+  check (enchantment is null or (grade='S+' and level=7 and enchantment in
+    ('damage-1','critical-2','weight-3','recoil-2','accuracy-2','damage-2','critical-3','weight-5','critical-1','accuracy-1')));
 alter table public.soldier_weapon_items drop constraint if exists soldier_weapon_items_color_check;
 alter table public.soldier_weapon_items add constraint soldier_weapon_items_color_check
-  check (color in ('standard','gold','red','silver'));
+  check (color in ('standard','gold','red','silver','blue','green'));
 create unique index if not exists soldier_weapon_items_equipped
   on public.soldier_weapon_items(client_id,weapon) where equipped;
 alter table public.soldier_weapon_items enable row level security;
@@ -52,7 +57,7 @@ begin
   select gold into balance from public.soldier_profiles where client_id=sess.client_id for update;
   if not found then raise exception '솔져 프로필이 없습니다.'; end if;
   if p_weapon is not null then
-    if p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm') then
+    if p_weapon in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp') then
       raise exception '보상 무기는 아이템별 강화 요청을 사용해야 합니다. 사이트를 새로고침하세요.';
     end if;
     if public.soldier_weapon(p_weapon) is null then raise exception '무기가 올바르지 않습니다.'; end if;
@@ -121,7 +126,7 @@ create or replace function public.soldier_grant_weapon(
 returns uuid language plpgsql security definer set search_path=public as $$
 declare granted uuid; previous public.soldier_weapon_items%rowtype;
 begin
-  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
+  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp')
     or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
     or p_source is null or length(p_source) not between 1 and 120
     or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
@@ -149,9 +154,9 @@ create or replace function public.soldier_grant_colored_weapon(
 returns uuid language plpgsql security definer set search_path=public as $$
 declare granted uuid; previous public.soldier_weapon_items%rowtype;
 begin
-  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm')
+  if p_client is null or p_weapon is null or p_weapon not in ('k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp')
     or p_grade is null or p_grade not in ('D','C','B','A','S','S+')
-    or p_color is null or p_color not in ('standard','gold','red','silver')
+    or p_color is null or p_color not in ('standard','gold','red','silver','blue','green')
     or p_source is null or length(p_source) not between 1 and 120
     or p_reward_key is null or length(p_reward_key) not between 1 and 200 then
     raise exception '보상 지급 정보가 올바르지 않습니다.';
@@ -192,8 +197,8 @@ declare
   owner_id uuid; balance bigint; cost integer; next_grade text; grade_id text;
   item_a public.soldier_weapon_items%rowtype; item_b public.soldier_weapon_items%rowtype;
   previous public.soldier_weapon_operations%rowtype; input_ids uuid[]; input_data jsonb;
-  weapon_pool text[]:=array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm'];
-  color_pool text[]:=array['standard','gold','red','silver'];
+  weapon_pool text[]:=array['k2','shotgun','stick','psg1','m249','p90','auga3','g36c','akm','utsbp'];
+  color_pool text[]:=array['standard','gold','red','silver','blue','green'];
   eligible_weapons text[]; weapon_id text; color_id text; reward_id uuid;
   rewards jsonb:='[]'::jsonb; replayed boolean:=false; i integer; slot_name text; replacement_id uuid;
 begin

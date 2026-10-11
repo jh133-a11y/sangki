@@ -18,13 +18,16 @@ function fixture(saved = {}, play) {
     setAttribute(key, value) { this.attributes[key] = value; }
     closest() { return null; }
   }
-  const ids = ['soldier-lobby-music', 'home', 'equipment-dialog', 'shop-dialog', 'soldier-music-toggle', 'soldier-music-volume', 'soldier-music-volume-label', 'soldier-music-status'];
+  const ids = ['soldier-lobby-music', 'soldier-roulette-music', 'roulette-dialog', 'home', 'equipment-dialog', 'shop-dialog', 'soldier-music-toggle', 'soldier-music-volume', 'soldier-music-volume-label', 'soldier-music-status'];
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const audio = nodes['soldier-lobby-music'], home = nodes.home;
-  audio.paused = true; home.hidden = false;
-  audio.play = play ? () => play(audio) : async () => { audio.paused = false; };
-  audio.pause = () => { audio.paused = true; };
-  audio.load = () => {};
+  home.hidden = false;
+  for (const track of [audio,nodes['soldier-roulette-music']]) {
+    track.paused = true;
+    track.play = play ? () => play(track) : async () => { track.paused = false; };
+    track.pause = () => { track.paused = true; };
+    track.load = () => {};
+  }
   const document = new Element(), window = new Element();
   document.getElementById = id => nodes[id];
   const storage = new Map(Object.entries(saved));
@@ -83,7 +86,17 @@ test('original holiday music continues through inventory and shop with controls 
   const html=readFileSync('sanggi-soldier.html','utf8');
   assert.match(html,/<dialog id="settings">[\s\S]*id="soldier-music-toggle"[\s\S]*id="soldier-music-volume"[\s\S]*?<\/dialog>/);
   assert.doesNotMatch(html.slice(html.indexOf('<main'),html.indexOf('</main>')),/soldier-music-controls/);
-  assert.match(html,/soldier-holiday\.mp3\?v=1/);
+  assert.match(html,/soldier-holiday\.mp3\?v=2/);
   assert.doesNotMatch(html,/src="soldier-lobby\.mp3/);
   assert.ok(readFileSync('soldier-holiday.mp3').length>100000);
+});
+test('roulette switches music exclusively and resumes the same lobby position',async()=>{
+  const f=fixture();await settle();f.audio.currentTime=17;
+  const roulette=f.nodes['soldier-roulette-music'];
+  f.nodes['roulette-dialog'].open=true;f.sync();await settle();
+  assert.equal(f.audio.paused,true);assert.equal(roulette.paused,false);
+  f.nodes['soldier-music-toggle'].on('click');assert.equal(roulette.paused,true);
+  f.nodes['soldier-music-toggle'].on('click');await settle();
+  f.nodes['roulette-dialog'].open=false;f.sync();await settle();
+  assert.equal(roulette.paused,true);assert.equal(f.audio.paused,false);assert.equal(f.audio.currentTime,17);
 });

@@ -3,10 +3,13 @@ export const CHARACTERS = {
   'fighter': { name: 'FIGHTER', image: 'soldier-character-fighter.webp', cardImage: 'soldier-character-fighter-cutout.webp', model: 'soldier-fighter.glb?v=1', price: 150, ability: '밸런스' },
   'thief': { name: 'THIEF', image: 'soldier-character-thief.webp', cardImage: 'soldier-character-thief-cutout.webp', model: 'soldier-thief.glb?v=1', price: 150, ability: '높은 회피율' },
   'korean-girl': { name: 'KOREAN\nGIRL', image: 'soldier-character-korean-girl.webp', cardImage: 'soldier-character-korean-girl-cutout.webp', model: 'soldier-korean-girl.glb?v=1', price: 250, ability: '위력 증가 / 크리티컬 확률 증가' },
-  'roka-swc': { name: 'RKS', image: 'soldier-character-roka-swc-portrait.webp', cardImage: 'soldier-character-roka-swc-cutout.webp', model: 'soldier-roka-swc.glb?v=2', price: 125, ability: '높은 체력' }
+  'roka-swc': { name: 'RKS', image: 'soldier-character-roka-swc-portrait.webp', cardImage: 'soldier-character-roka-swc-cutout.webp', model: 'soldier-roka-swc.glb?v=2', price: 125, ability: '높은 체력' },
+  'rks-girl': { name: 'RKS-GIRL', image: 'soldier-character-rks-girl.webp', cardImage: 'soldier-character-rks-girl-cutout.webp', model: 'soldier-rks-girl.glb?v=1', price: 125, ability: '높은 체력과 준수한 회피율' },
+  'military-police': { name: 'MILITARY\nPOLICE', image: 'soldier-character-military-police.webp', cardImage: 'soldier-character-military-police-cutout.webp', model: 'soldier-military-police.glb?v=1', price: 150, ability: '밸런스 / 크리티컬 확률 증가' },
+  'office-worker': { name: 'OFFICE\nWORKER', image: 'soldier-character-office-worker.webp', cardImage: 'soldier-character-office-worker-cutout.webp', model: 'soldier-office-worker.glb?v=1', price: 150, ability: '높은 회피율' }
 };
 export const CHARACTER_MAX_LEVEL = 10;
-export const CHARACTER_UPGRADE_COST = 10000;
+export const CHARACTER_UPGRADE_COST = 20000;
 export function characterStats(id, level = 1) {
   if (!CHARACTERS[id] || !Number.isInteger(level) || level < 1 || level > CHARACTER_MAX_LEVEL) {
     throw new Error('캐릭터 또는 레벨이 올바르지 않습니다.');
@@ -14,11 +17,14 @@ export function characterStats(id, level = 1) {
   const step = level - 1;
   const bonuses = { damageBonus: 0, criticalBonus: 0 };
   if (id === 'roka-swc') return { hp: 125 + step * 8, evasion: (40 + step) / 1000, ...bonuses };
+  if (id === 'rks-girl') return { hp: 115 + step * 8, evasion: (80 + step) / 1000, ...bonuses };
+  if (id === 'military-police') return { hp: 110 + step * 6, evasion: (90 + step) / 1000, damageBonus: 0, criticalBonus: 1 };
+  if (id === 'office-worker') return { hp: 108 + step * 6, evasion: (15 + step) / 100, ...bonuses };
   if (id === 'thief') return { hp: 98 + step * 5, evasion: (20 + step) / 100, ...bonuses };
   if (id === 'fighter') return { hp: 115 + step * 6, evasion: (60 + step) / 1000, ...bonuses };
   if (id === 'korean-girl') {
     const bonus = level === CHARACTER_MAX_LEVEL ? 3 : 1;
-    return { hp: 105 + step * 7, evasion: (10 + step) / 100, damageBonus: bonus, criticalBonus: bonus };
+    return { hp: 92 + step * 5, evasion: (10 + step) / 100, damageBonus: bonus, criticalBonus: bonus };
   }
   return { hp: 110 + step * 5, evasion: (40 + step) / 1000, ...bonuses };
 }

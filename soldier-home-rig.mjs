@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=8';
+import { CHARACTERS } from './soldier-characters.mjs?v=9';
 
 export const HOME_MODEL = 'soldier-james.glb';
 
@@ -89,12 +89,13 @@ export function createHomeRig(source) {
     for (const skeleton of skeletons) skeleton.dispose();
   }
   const joints = {};
-  model.traverse(part => {
-    if (part.isBone) {
+  // Supplied models may contain unused duplicate armatures. Animate only bound bones.
+  for (const skeleton of skeletons) {
+    for (const part of skeleton.bones) {
       const name = part.name.replace(/^mixamorig[:_]?/i, '');
-      joints[JOINT_ALIASES[name.toLowerCase()] || name] = part;
+      joints[JOINT_ALIASES[name.toLowerCase()] || name.replace(/_\d+$/, '')] = part;
     }
-  });
+  }
   if (!skeletons.size && source.userData.staticCharacter) {
     model.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(model), height = bounds.max.y - bounds.min.y;

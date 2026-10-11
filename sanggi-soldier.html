@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>상기 솔져 — 3D 온라인 FPS</title>
   <link rel="preload" as="fetch" href="soldier-james.glb?v=1" crossorigin>
-  <link rel="stylesheet" href="soldier.css?v=40">
+  <link rel="stylesheet" href="soldier.css?v=41">
 </head>
 <body>
-  <audio id="soldier-lobby-music" src="soldier-holiday.mp3?v=1" preload="auto" loop></audio>
+  <audio id="soldier-lobby-music" src="soldier-holiday.mp3?v=2" preload="auto" loop></audio>
   <canvas id="world" aria-label="3D 캐릭터 및 게임 화면"></canvas>
   <main id="home">
     <div class="home-atmosphere" aria-hidden="true"></div>
@@ -18,7 +18,7 @@
       <div class="currency gold" aria-label="보유 골드"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="soldier-gold-metal" x2="0.8" y2="1"><stop stop-color="#fff2a3"/><stop offset=".45" stop-color="#d8a93d"/><stop offset="1" stop-color="#806022"/></linearGradient></defs><path d="m20 2 13 5 5 13-5 13-13 5-13-5-5-13L7 7Z" fill="url(#soldier-gold-metal)" stroke="#59451f" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="#3a3525" stroke="#ffdc79"/><path d="M25 13h-9l-3 7 3 7h9v-8h-6v4h3" fill="none" stroke="#efcf72" stroke-width="3"/></svg><strong id="gold">0</strong></div>
       <div class="currency gems" aria-label="보유 보석"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M10 5h20l8 12-18 21L2 17Z" fill="#6194a6" stroke="#cbeaf0" stroke-width="1.5"/><path d="m10 5 10 12L30 5M2 17h36M10 5l-2 12 12 21 12-21-2-12" fill="none" stroke="#c9f0f4"/><path d="m10 5 10 12H8ZM30 5l2 12H20Z" fill="#e0f7fa"/><path d="m8 17 12 21V17Z" fill="#97c7d3"/></svg><strong id="gems">0</strong></div>
     </div>
-    <div class="home-top-actions"><a href="index.html" aria-label="홈으로">⌂</a><button id="fullscreen-open" type="button" aria-label="전체화면" aria-pressed="false">⛶</button><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
+    <div class="home-top-actions"><button id="mailbox-open" type="button" aria-label="우편함">우편함 <span id="mailbox-count">0</span></button><a href="index.html" aria-label="홈으로">⌂</a><button id="fullscreen-open" type="button" aria-label="전체화면" aria-pressed="false">⛶</button><button id="settings-open" type="button" aria-label="조작 설정">⚙</button></div>
     <p id="fullscreen-status" role="status"></p>
     <header class="profile">
       <button id="rank-open" class="rank-badge" type="button" aria-label="계급 및 승급 정보"><svg id="rank-badge" viewBox="0 0 64 64" role="img" aria-label="이등병 계급"></svg></button>
@@ -39,6 +39,8 @@
     <div class="home-bottom-mark"><span>◆</span> SANGGI SOLDIER <small>장비를 선택하고 출전하세요</small></div>
     <button id="play-open" class="play-button" type="button" disabled><span aria-hidden="true">✦</span> 게임 시작 <small>방 만들기 · 방 찾기 · AI 연습</small></button>
     <button id="shop-open" type="button"><span aria-hidden="true">▤</span> 상점</button>
+    <button id="codex-open" type="button">도감</button>
+    <nav class="home-reward-actions" aria-label="일일 보상"><button id="attendance-open" type="button">출석 체크</button><button id="roulette-open" type="button">룰렛</button></nav>
     <p id="home-status" class="home-status" role="status">투자 닉네임으로 접속합니다.</p>
   </main>
   <section id="hud" hidden aria-label="게임 조작">
@@ -91,7 +93,37 @@
   <dialog id="rank-dialog"><h2>계급 정보</h2><button class="close" data-close type="button" aria-label="닫기">×</button><p id="rank-detail"></p><p id="rank-next"></p><p id="rank-wins"></p><p>온라인 처치당 20 XP, 단독 1위 승리 시 추가 100 XP. 승급에 필요한 경험치는 단계마다 약 1.5배 증가합니다. AI 연습과 공동 1위는 승리 보너스에 반영되지 않습니다.</p></dialog>
   <dialog id="result"><h2>경기 종료</h2><div id="result-scores"></div><p>온라인 처치당 20 XP · 단독 1위 승리 보너스 100 XP · AI 연습은 계급에 반영되지 않습니다.</p><button id="result-close" type="button">홈으로</button></dialog>
   <div id="rotate" role="status">휴대폰을 가로로 돌려 주세요.<br>상기 솔져는 가로 화면으로 플레이합니다.</div>
-  <script src="soldier-music.js?v=2" defer></script>
+  <dialog id="roulette-dialog" class="soldier-feature-dialog" aria-labelledby="roulette-title">
+    <header><h2 id="roulette-title">룰렛</h2><button data-daily-close type="button" aria-label="닫기">×</button></header>
+    <p id="roulette-free">보상 정보를 불러오는 중…</p>
+    <div class="roulette-stage"><div id="roulette-wheel"></div><span class="roulette-pointer" aria-hidden="true">▼</span></div>
+    <button id="roulette-spin" type="button" disabled>룰렛 돌리기</button>
+    <p>매일 한국 시간 자정에 무료 3회 갱신 · 보상은 우편함으로 전달됩니다.</p>
+    <details><summary>전체 상품과 확률 (판의 크기와 당첨 확률은 다릅니다)</summary><ul id="roulette-prizes"></ul></details>
+    <p role="status"></p>
+  </dialog>
+  <dialog id="attendance-dialog" class="soldier-feature-dialog" aria-labelledby="attendance-title">
+    <header><h2 id="attendance-title">출석 체크</h2><button data-daily-close type="button" aria-label="닫기">×</button></header>
+    <p id="attendance-summary"></p><div id="attendance-choices"></div><div id="attendance-grid"></div>
+    <p>20개 보상을 순서대로 받습니다. 선택한 보상표는 완료할 때까지 유지되며, 마지막 보상을 받은 다음날 자정부터 새 표를 선택할 수 있습니다.</p>
+    <button id="attendance-claim" type="button" disabled>오늘 출석 보상 받기</button><p role="status"></p>
+  </dialog>
+  <dialog id="mailbox-dialog" class="soldier-feature-dialog" aria-labelledby="mailbox-title">
+    <header><h2 id="mailbox-title">우편함</h2><button data-daily-close type="button" aria-label="닫기">×</button></header>
+    <p>출석 체크와 룰렛 보상 · 상자를 받으면 즉시 개봉됩니다. 인벤토리 공간이 부족하면 우편이 유지됩니다.</p>
+    <div id="mailbox-list"></div><p role="status"></p>
+  </dialog>
+  <dialog id="reward-notice-dialog" aria-labelledby="reward-notice-title">
+    <h2 id="reward-notice-title">보상 안내</h2><p id="reward-notice-message"></p><form method="dialog"><button type="submit">확인</button></form>
+  </dialog>
+  <dialog id="codex-dialog" class="soldier-feature-dialog" aria-labelledby="codex-title">
+    <header><h2 id="codex-title">도감</h2><button id="codex-close" type="button" aria-label="닫기">×</button></header>
+    <nav role="tablist" aria-label="도감 분류"><button type="button" role="tab" aria-selected="true" data-codex-category="primary">주무기</button><button type="button" role="tab" data-codex-category="secondary">보조무기</button><button type="button" role="tab" data-codex-category="melee">근접무기</button><button type="button" role="tab" data-codex-category="character">캐릭터</button></nav>
+    <div class="codex-filters"><label>등급 <select id="codex-grade"></select></label><label>색상 <select id="codex-color"></select></label><label>레벨 <input id="codex-level" type="number" min="1" max="7" value="1"></label></div>
+    <div class="codex-body"><div id="codex-items"></div><section id="codex-detail"></section></div>
+  </dialog>
+  <audio id="soldier-roulette-music" src="soldier-roulette.mp3?v=1" loop preload="none"></audio>
+  <script src="soldier-music.js?v=3" defer></script>
   <dialog id="equipment-dialog" aria-label="장비 인벤토리">
     <header class="inventory-topbar"><button id="equipment-back" type="button" aria-label="홈으로 돌아가기">↶</button><div id="inventory-wallet" aria-label="보유 재화"></div><span>SANGGI SOLDIER</span></header>
     <div class="inventory-tabs" role="tablist" aria-label="장비 분류">
@@ -136,6 +168,6 @@
       <button id="shop-confirm-buy" type="submit" value="buy">구매</button>
     </form>
   </dialog>
-  <script type="module" src="soldier.js?v=61"></script>
+  <script type="module" src="soldier.js?v=62"></script>
 </body>
 </html>

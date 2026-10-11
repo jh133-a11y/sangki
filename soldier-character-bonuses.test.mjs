@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_LOADOUT, weaponStats, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, validateCombatWeapons } from './soldier-core.mjs';
+import { characterStats } from './soldier-characters.mjs';
 
 test('character power and critical bonuses stack with weapon color sets on every slot', () => {
   const base=Object.fromEntries(Object.entries(DEFAULT_LOADOUT).map(([slot,id])=>[slot,weaponStats(id,'S+',7,'red')]));
@@ -22,5 +23,21 @@ test('character power and critical bonuses stack with weapon color sets on every
   }
   for(const character of [null,{}, {damageBonus:-1,criticalBonus:0},{damageBonus:1,criticalBonus:1.5}]) {
     assert.throws(()=>applyCharacterBonuses(set,character),RangeError);
+  }
+});
+
+test('MILITARY POLICE adds one critical percentage point without increasing weapon power at any level', () => {
+  const base = Object.fromEntries(Object.entries(DEFAULT_LOADOUT).map(([slot, id]) => [slot, weaponStats(id, 'S+', 7, 'red')]));
+  const set = applyWeaponSetBonuses(base);
+  for (let level = 1; level <= 10; level++) {
+    const character = characterStats('military-police', level);
+    const weapons = applyCharacterBonuses(set, character);
+    for (const slot of Object.keys(DEFAULT_LOADOUT)) {
+      assert.equal(weapons[slot].damage, set[slot].damage);
+      assert.equal(weapons[slot].critical, set[slot].critical + 1);
+    }
+    const state = { weapon_version: 1, ammo: initialWeaponAmmo(DEFAULT_LOADOUT), weapon_stats: Object.fromEntries(
+      Object.entries(weapons).map(([slot, stats]) => [slot, { ...stats, weapon: DEFAULT_LOADOUT[slot] }])) };
+    assert.deepEqual(validateCombatWeapons(state, DEFAULT_LOADOUT, character), weapons);
   }
 });

@@ -1,5 +1,8 @@
 (() => {
-  const audio = document.getElementById('soldier-lobby-music');
+  const lobbyAudio = document.getElementById('soldier-lobby-music');
+  const rouletteAudio = document.getElementById('soldier-roulette-music');
+  const roulette = document.getElementById('roulette-dialog');
+  let audio = lobbyAudio;
   const home = document.getElementById('home');
   const menus = ['equipment-dialog', 'shop-dialog'].map(id => document.getElementById(id));
   const button = document.getElementById('soldier-music-toggle');
@@ -26,7 +29,7 @@
   }
   const allowed = () => enabled && pageActive && (!home.hidden || menus.some(menu => menu.open));
   function applyVolume() {
-    audio.volume = volume / 100; input.value = String(volume);
+    lobbyAudio.volume = rouletteAudio.volume = volume / 100; input.value = String(volume);
     output.textContent = `${volume}%`; input.setAttribute('aria-valuetext', `${volume}%`);
   }
   function render() {
@@ -41,19 +44,22 @@
   async function start() {
     if (!allowed() || starting || failed || !audio.paused) return;
     starting = true;
+    const target = audio;
     try {
-      await audio.play();
-      if (!allowed()) audio.pause();
+      await target.play();
+      if (!allowed() || target!==audio) target.pause();
       else status.textContent = '';
     } catch (error) {
       if (!allowed() && error.name === 'AbortError') return;
       if (error.name === 'NotAllowedError') {
         if (allowed()) status.textContent = '화면을 누르면 배경음악이 시작됩니다.';
       } else reportFailure(error);
-    } finally { starting = false; }
+    } finally { starting = false; if (target!==audio) sync(); }
   }
   function sync() {
-    if (!allowed()) audio.pause();
+    const target = roulette.open ? rouletteAudio : lobbyAudio;
+    if (target!==audio) { audio.pause(); audio=target; }
+    if (!allowed()) { lobbyAudio.pause();rouletteAudio.pause(); }
     else start();
   }
   button.addEventListener('click', () => {
@@ -66,13 +72,14 @@
   });
   function unlock(event) {
     if (event.target instanceof Element && event.target.closest('#soldier-music-toggle')) return;
-    start();
+    sync();
   }
   for (const type of ['pointerdown', 'click', 'keydown']) document.addEventListener(type, unlock, true);
   new MutationObserver(sync).observe(home, { attributes: true, attributeFilter: ['hidden'] });
   for (const menu of menus) new MutationObserver(sync).observe(menu, { attributes: true, attributeFilter: ['open'] });
-  audio.addEventListener('error', () => reportFailure(audio.error));
-  window.addEventListener('pagehide', () => { pageActive = false; audio.pause(); });
+  new MutationObserver(sync).observe(roulette, {attributes:true,attributeFilter:['open']});
+  for (const track of [lobbyAudio,rouletteAudio]) track.addEventListener('error', () => reportFailure(track.error));
+  window.addEventListener('pagehide', () => { pageActive = false; lobbyAudio.pause();rouletteAudio.pause(); });
   window.addEventListener('pageshow', () => { pageActive = true; sync(); });
   applyVolume(); render(); sync();
 })();

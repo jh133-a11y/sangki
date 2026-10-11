@@ -60,6 +60,7 @@ returns jsonb language sql immutable set search_path=public as $$
     when 'akm' then '{"damage":53,"delay":0.1,"range":80,"magazine":30,"reserve":90,"accuracy":74,"recoilControl":54,"weight":3950,"critical":12,"reload":2.3,"slot":"primary"}'::jsonb
     when 'pistol' then '{"damage":28,"delay":0.32,"range":55,"magazine":12,"accuracy":80,"recoilControl":75,"weight":900,"reload":1.5,"slot":"secondary"}'::jsonb
     when 'shotgun' then '{"damage":45,"delay":3,"range":22,"magazine":4,"reserve":16,"accuracy":61,"recoilControl":4,"weight":3550,"critical":6,"reload":2.4,"slot":"secondary"}'::jsonb
+    when 'utsbp' then '{"damage":20,"delay":1.5,"range":22,"magazine":7,"reserve":14,"accuracy":65,"recoilControl":30,"weight":2900,"critical":1,"reload":2.4,"slot":"secondary"}'::jsonb
     when 'kukri' then '{"damage":45,"delay":0.55,"range":2.8,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'axe' then '{"damage":65,"delay":0.85,"range":2.7,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
     when 'shovel' then '{"damage":50,"delay":0.7,"range":3,"magazine":0,"reload":0,"slot":"melee"}'::jsonb
