@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { WEAPONS, EQUIPMENT_GRADES, WEAPON_ENCHANTMENTS, weaponStats, applyWeaponEnchantment, applyWeaponSetBonuses, initialWeaponAmmo } from './soldier-core.mjs';
-import { ATTENDANCE_TABLES, ROULETTE_PRIZES, validateDaily } from './soldier-daily.mjs';
+import { ATTENDANCE_TABLES, ROULETTE_PRIZES, rewardItemName, rewardQuantity, validateDaily } from './soldier-daily.mjs';
 import { validateWeaponItems } from './soldier-weapon-items.mjs';
-import { validateSupply } from './soldier-supply.mjs';
+import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs';
 
 test('UTS-BP base stats and blue/green set scaling match all grades and actual ammunition',()=>{
   assert.deepEqual(['magazine','reserve','damage','accuracy','recoilControl','weight','critical'].map(key=>WEAPONS.utsbp[key]),[7,14,20,65,30,2900,1]);
@@ -51,9 +51,18 @@ test('experience reward artwork is an accessible standalone SVG',()=>{
   assert.match(artwork,/aria-label="경험치"/);
   assert.match(artwork,/<svg\b/);
   assert.match(artwork,/<path\b/);
-  assert.match(daily,/rewardDisplay\(reward,'attendance-reward'\)/);
+  assert.match(daily,/rewardDetailsDisplay\(reward,'attendance-reward'\)/);
+  assert.match(daily,/rewardDetailsDisplay\(prize,'roulette-reward'\)/);
   assert.match(daily,/supplyArtwork\(reward\.product\)/);
   assert.match(daily,/soldier-xp-icon\.svg/);
+});
+test('attendance and roulette reward details separate item names from quantities',()=>{
+  assert.equal(rewardItemName({kind:'gems'}),'보석');
+  assert.equal(rewardItemName({kind:'gold'}),'골드');
+  assert.equal(rewardItemName({kind:'xp'}),'경험치');
+  assert.equal(rewardItemName({kind:'crate',product:SUPPLY_PRODUCTS[0].id}),SUPPLY_PRODUCTS[0].name);
+  assert.equal(rewardQuantity({amount:1}),'× 1');
+  assert.equal(rewardQuantity({amount:1000}),'× 1,000');
 });
 test('new crates reject impossible guarantee responses and daily responses reject invalid balances/prizes',()=>{
   const owner='00000000-0000-0000-0000-000000000001';

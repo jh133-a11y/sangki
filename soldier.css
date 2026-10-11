@@ -1085,13 +1085,17 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 .attendance-day { display: flex; flex-direction: column; gap: 10px; min-height: 85px; padding: 10px; border: 1px solid #526776; border-radius: 10px; background: #203743; font-size: 12px; }
 .attendance-day strong { color: #8cd6df; }
 .attendance-day.claimed { opacity: .6; border-color: #5d9c86; }
-.reward-display, .attendance-reward, .mailbox-reward { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.reward-display, .mailbox-reward, .reward-details { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
 .reward-icon { display: inline-block; width: 26px; height: 26px; flex: 0 0 26px; object-fit: contain; vertical-align: middle; }
-.attendance-reward { align-items: flex-start; font-size: 12px; line-height: 1.25; }
-.attendance-reward > span:last-child { overflow-wrap: anywhere; }
+.reward-details-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.reward-item-name { overflow-wrap: anywhere; }
+.reward-quantity { padding: 2px 6px; border: 1px solid #496c7c; border-radius: 999px; background: #183949; color: #b5e7dc; font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+.attendance-reward, .roulette-reward { width: 100%; }
+.attendance-reward { align-items: center; font-size: 12px; line-height: 1.25; }
+.attendance-reward .reward-icon, .roulette-reward .reward-icon { width: 32px; height: 32px; flex-basis: 32px; }
 .reward-crate-icon { object-fit: contain; border-radius: 5px; }
-#roulette-prizes li { display: flex; align-items: center; gap: 4px; min-height: 38px; }
-#roulette-prizes .reward-icon { width: 24px; height: 24px; flex-basis: 24px; }
+#roulette-prizes li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 54px; break-inside: avoid; }
+.roulette-probability { color: #a8bfca; font-size: 11px; white-space: nowrap; }
 .mailbox-reward { font-weight: 800; }
 .mailbox-reward .reward-icon { width: 34px; height: 34px; flex-basis: 34px; }
 .mailbox-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; margin: 10px 0; padding: 15px; border: 1px solid #526776; border-radius: 10px; background: #203743; }

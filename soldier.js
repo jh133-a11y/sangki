@@ -7,7 +7,7 @@ import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
 import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=11';
 import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=17';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=8';
-import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=2';
+import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=3';
 import { createCodex } from './soldier-codex.mjs?v=1';
 import { WEAPONS, WEAPON_COLORS, WEAPON_ENCHANTMENTS, applyWeaponEnchantment, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=10';
 

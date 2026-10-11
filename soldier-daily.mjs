@@ -14,6 +14,19 @@ export function rewardLabel(reward) {
   return reward.kind === 'crate' ? `${SUPPLY_PRODUCTS.find(item => item.id === reward.product)?.name || reward.product} ×${reward.amount}`
     : reward.kind === 'gems' ? `보석 ${reward.amount}개` : reward.kind === 'gold' ? `${reward.amount.toLocaleString('ko-KR')} 골드` : `경험치 ${reward.amount}`;
 }
+export function rewardItemName(reward) {
+  if (reward.kind === 'crate') {
+    const product = SUPPLY_PRODUCTS.find(item => item.id === reward.product);
+    if (!product) throw new Error(`지원하지 않는 보급함 보상입니다: ${reward.product}`);
+    return product.name;
+  }
+  const itemName = { gems: '보석', gold: '골드', xp: '경험치' }[reward.kind];
+  if (!itemName) throw new Error(`지원하지 않는 보상 이름입니다: ${reward.kind}`);
+  return itemName;
+}
+export function rewardQuantity(reward) {
+  return `× ${reward.amount.toLocaleString('ko-KR')}`;
+}
 let rewardIconId = 0;
 function rewardIcon(reward) {
   if (reward.kind === 'crate') {
@@ -56,6 +69,21 @@ export function rewardDisplay(reward, className = 'reward-display') {
   const label = document.createElement('span');
   label.textContent = rewardLabel(reward);
   display.append(icon, label);
+  return display;
+}
+function rewardDetailsDisplay(reward, className) {
+  const display = document.createElement('span');
+  display.className = `reward-details ${className}`;
+  const details = document.createElement('span');
+  details.className = 'reward-details-copy';
+  const name = document.createElement('strong');
+  name.className = 'reward-item-name';
+  name.textContent = rewardItemName(reward);
+  const quantity = document.createElement('span');
+  quantity.className = 'reward-quantity';
+  quantity.textContent = rewardQuantity(reward);
+  details.append(name, quantity);
+  display.append(rewardIcon(reward), details);
   return display;
 }
 function validReward(reward) {
@@ -127,7 +155,10 @@ export function createDailyRewards({ request, showSupply }) {
     label.textContent = prize.kind === 'crate' ? `상자 ×${prize.amount}` : `${{gems:'◆',gold:'G',xp:'XP'}[prize.kind]} ${prize.amount}`;
     wheel.append(label);
     const line = document.createElement('li');
-    line.append(rewardDisplay(prize), document.createTextNode(` · ${prize.weight/100}%`)); $('roulette-prizes').append(line);
+    const probability = document.createElement('small');
+    probability.className = 'roulette-probability';
+    probability.textContent = `${prize.weight/100}%`;
+    line.append(rewardDetailsDisplay(prize,'roulette-reward'), probability); $('roulette-prizes').append(line);
   });
   $('roulette-spin').addEventListener('click', () => action('spin', {}, roulette, async result => {
     const end = rotation + 360*6 + ((360 - result.outcome.reward.index*360/17 - rotation%360)+360)%360;
@@ -156,7 +187,7 @@ export function createDailyRewards({ request, showSupply }) {
       const done = state.attendance_table === table && index<state.attendance_step && !state.can_select;
       cell.classList.toggle('claimed',done);
       const day = document.createElement('strong');day.textContent=`DAY ${index+1}${done ? ' · 완료' : ''}`;
-      cell.append(day,rewardDisplay(reward,'attendance-reward'));
+      cell.append(day,rewardDetailsDisplay(reward,'attendance-reward'));
       $('attendance-grid').append(cell);
     });
     $('attendance-claim').disabled = busy || !state.attendance_available;
