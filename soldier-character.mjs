@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=10';
+import { CHARACTERS } from './soldier-characters.mjs?v=11';
 
 export async function loadCharacterTextures() {
   const image = new Image(); image.src = CHARACTERS['black-water'].image;

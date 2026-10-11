@@ -6,7 +6,7 @@ export const CHARACTERS = {
   'roka-swc': { name: 'RKS', image: 'soldier-character-roka-swc-portrait.webp', cardImage: 'soldier-character-roka-swc-cutout.webp', model: 'soldier-roka-swc.glb?v=2', price: 125, ability: '높은 체력' },
   'rks-girl': { name: 'RKS-GIRL', image: 'soldier-character-rks-girl.webp', cardImage: 'soldier-character-rks-girl-cutout.webp', model: 'soldier-rks-girl.glb?v=1', price: 125, ability: '높은 체력과 준수한 회피율' },
   'military-police': { name: 'MILITARY\nPOLICE', image: 'soldier-character-military-police.webp', cardImage: 'soldier-character-military-police-cutout.webp', model: 'soldier-military-police.glb?v=1', price: 150, ability: '밸런스 / 크리티컬 확률 증가' },
-  'office-worker': { name: 'OFFICE\nWORKER', image: 'soldier-character-office-worker.webp', cardImage: 'soldier-character-office-worker-cutout.webp', model: 'soldier-office-worker.glb?v=2', price: 150, ability: '높은 회피율' }
+  'office-worker': { name: 'OFFICE\nWORKER', image: 'soldier-character-office-worker.webp', cardImage: 'soldier-character-office-worker-cutout.webp', model: 'soldier-office-worker.glb?v=3', price: 150, ability: '높은 회피율' }
 };
 export const CHARACTER_MAX_LEVEL = 10;
 export const CHARACTER_UPGRADE_COST = 20000;

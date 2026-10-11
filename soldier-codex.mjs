@@ -1,5 +1,5 @@
 import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, weaponSetDescription } from './soldier-core.mjs?v=10';
-import { CHARACTERS, CHARACTER_MAX_LEVEL, characterCard } from './soldier-characters.mjs?v=10';
+import { CHARACTERS, CHARACTER_MAX_LEVEL, characterCard } from './soldier-characters.mjs?v=11';
 import { weaponInventoryStats, characterInventoryStats } from './soldier-inventory.mjs?v=35';
 import { fillWeaponCard, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=13';
 

@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=21';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=25';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=22';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=26';
 import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=35';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=13';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
-import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=10';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=11';
 import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=17';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=8';
 import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=2';

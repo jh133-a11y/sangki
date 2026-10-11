@@ -63,6 +63,7 @@ function suppliedScene(file) {
   gltf.nodes.forEach((node, index) => node.children?.forEach(child => nodes[index].add(nodes[child])));
   const scene = new THREE.Group();
   gltf.scenes[gltf.scene || 0].nodes.forEach(index => scene.add(nodes[index]));
+  if (file === 'soldier-office-worker.glb') scene.userData.homeFacingYaw = Math.PI / 2;
   scene.updateMatrixWorld(true);
   (gltf.nodes || []).forEach((node, index) => {
     if (node.skin === undefined) return;
@@ -107,6 +108,9 @@ for (const [file, hash] of fixtures) {
       assert.ok((elbow.x - arm.x) * outward > 0, `${file}: ${side} elbow opens outward`);
       assert.ok(Math.abs(elbow.x - arm.x) / Math.abs(arm.y - elbow.y) > .18,
         `${file}: ${side} arm is not pressed against the torso`);
+      if (file === 'soldier-office-worker.glb') {
+        assert.ok(Math.abs(elbow.z - arm.z) < .04, `${file}: front-facing orientation aligns the shoulders`);
+      }
     }
     if (file !== 'soldier-roka-swc.glb') {
       const weights = rig.meshes.map(mesh => Object.fromEntries(['skinIndex', 'skinWeight']

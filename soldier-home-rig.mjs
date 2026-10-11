@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=10';
+import { CHARACTERS } from './soldier-characters.mjs?v=11';
 
 export const HOME_MODEL = 'soldier-james.glb';
 
@@ -25,6 +25,7 @@ export async function loadCharacterSource(id = 'black-water') {
         }
       });
       if (id === 'fighter') gltf.scene.userData.staticCharacter = true;
+      if (id === 'office-worker') gltf.scene.userData.homeFacingYaw = Math.PI / 2;
       return gltf.scene;
     }).catch(error => {
       sources.delete(id);
@@ -58,6 +59,7 @@ const JOINT_ALIASES = {
 export function createHomeRig(source) {
   if (!source?.isObject3D) throw new Error('3D 캐릭터 장면이 필요합니다.');
   const model = source.clone(true), clones = new Map(), meshes = [], skeletons = new Set(), materials = new Set();
+  model.rotation.y += source.userData.homeFacingYaw || 0;
   function pair(original, copy) {
     clones.set(original, copy);
     original.children.forEach((child, index) => pair(child, copy.children[index]));
