@@ -110,20 +110,18 @@ for (const [file, hash] of fixtures) {
     const sourceRightLeg = scene.getObjectByName('mixamorig:RightLeg');
     assert.ok(sourceRightLeg && rig.joints.RightLeg.quaternion.angleTo(sourceRightLeg.quaternion) < .04,
       `${file}: weight rests more on the straighter right leg`);
-    const sourceRightHand = scene.getObjectByName('mixamorig:RightHand');
-    assert.ok(sourceRightHand && rig.joints.RightHand.getWorldPosition(new THREE.Vector3())
-      .distanceTo(rig.joints.Hips.getWorldPosition(new THREE.Vector3())) < .18,
-    `${file}: one relaxed hand rests near the waist`);
     const sourceFinger = scene.getObjectByName('mixamorig:LeftHandMiddle1');
     assert.ok(sourceFinger && rig.joints.LeftHandMiddle1.quaternion.angleTo(sourceFinger.quaternion) > .02,
       `${file}: hanging fingers curl into a relaxed pose`);
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = rig.joints[side + 'ForeArm'].getWorldPosition(new THREE.Vector3());
+      const hand = rig.joints[side + 'Hand'].getWorldPosition(new THREE.Vector3());
       const outward = side === 'Left' ? 1 : -1;
       assert.ok((elbow.x - arm.x) * outward > 0, `${file}: ${side} elbow opens outward`);
       assert.ok(Math.abs(elbow.x - arm.x) / Math.abs(arm.y - elbow.y) > .18,
         `${file}: ${side} arm is not pressed against the torso`);
+      assert.ok(hand.y < elbow.y && elbow.y < arm.y, `${file}: ${side} hand hangs naturally beside the body`);
       if (file === 'soldier-office-worker.glb') {
         assert.ok(Math.abs(elbow.z - arm.z) < .04, `${file}: front-facing orientation aligns the shoulders`);
       }
@@ -153,15 +151,9 @@ for (const [file, hash] of fixtures) {
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = pivotRest[side + 'ForeArm'], hand = pivotRest[side + 'Hand'];
-      if (side === 'Left') {
-        assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .30, 'one arm hangs beside torso');
-        assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, 'hanging forearm points down');
-        assert.ok(hand.y < elbow.y && elbow.y < arm.y, 'hanging hand stays below the elbow');
-      } else {
-        assert.ok(Math.abs(elbow.x - arm.x) / Math.abs(arm.y - elbow.y) > .18, 'bent elbow opens away from the waist');
-        assert.ok(hand.distanceTo(rig.joints.Hips.getWorldPosition(new THREE.Vector3())) < .18,
-          'bent hand rests at the waist');
-      }
+      assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .30, `${side} upper arm hangs beside torso`);
+      assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, `${side} forearm points down`);
+      assert.ok(hand.y < elbow.y && elbow.y < arm.y, `${side} hand stays below the elbow`);
       const point = name => rig.joints[side + name].getWorldPosition(new THREE.Vector3());
       const fingers = point('HandMiddle1').sub(hand);
       const across = point('HandIndex1').sub(point('HandPinky1'));

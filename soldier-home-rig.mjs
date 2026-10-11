@@ -207,35 +207,6 @@ export function createHomeRig(source) {
     hand.quaternion.multiply(rotation.setFromAxisAngle(wristAxis, handTwist(side)));
     root.updateMatrixWorld(true);
   }
-  const hip = joints.Hips.getWorldPosition(new THREE.Vector3());
-  const shoulder = joints.RightArm.getWorldPosition(new THREE.Vector3());
-  const elbow = joints.RightForeArm.getWorldPosition(new THREE.Vector3());
-  const wrist = joints.RightHand.getWorldPosition(new THREE.Vector3());
-  const side = Math.sign(shoulder.x - hip.x) || 1;
-  const upperLength = shoulder.distanceTo(elbow);
-  const lowerLength = elbow.distanceTo(wrist);
-  const target = hip.clone().add(new THREE.Vector3(side * .075, .065, .025));
-  const toTarget = target.clone().sub(shoulder);
-  const distance = THREE.MathUtils.clamp(toTarget.length(), Math.abs(upperLength - lowerLength) + .001,
-    upperLength + lowerLength - .001);
-  const direction = toTarget.normalize();
-  target.copy(shoulder).addScaledVector(direction, distance);
-  const lateral = new THREE.Vector3(side, 0, 0).addScaledVector(direction, -side * direction.x).normalize();
-  const along = (upperLength ** 2 - lowerLength ** 2 + distance ** 2) / (2 * distance);
-  const bend = Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2));
-  const handOnHipElbow = shoulder.clone().addScaledVector(direction, along).addScaledVector(lateral, bend);
-  function aimBone(bone, child, destination) {
-    const origin = bone.getWorldPosition(new THREE.Vector3());
-    const current = child.getWorldPosition(new THREE.Vector3()).sub(origin).normalize();
-    const desired = destination.clone().sub(origin).normalize();
-    const worldRotation = new THREE.Quaternion().setFromUnitVectors(current, desired);
-    const parentRotation = bone.parent.getWorldQuaternion(new THREE.Quaternion());
-    const localRotation = parentRotation.clone().invert().multiply(worldRotation).multiply(parentRotation);
-    bone.quaternion.premultiply(localRotation);
-    root.updateMatrixWorld(true);
-  }
-  aimBone(joints.RightArm, joints.RightForeArm, handOnHipElbow);
-  aimBone(joints.RightForeArm, joints.RightHand, target);
   for (const handSide of ['Left', 'Right']) {
     const fingerPoint = name => joints[handSide + name].getWorldPosition(new THREE.Vector3());
     const across = fingerPoint('HandIndex1').sub(fingerPoint('HandPinky1'))
