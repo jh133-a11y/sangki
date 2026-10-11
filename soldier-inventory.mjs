@@ -1,6 +1,6 @@
-import { WEAPONS, weaponStats, applyWeaponEnchantment, WEAPON_ENCHANTMENTS, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=10';
+import { WEAPONS, weaponStats, applyWeaponEnchantment, WEAPON_ENCHANTMENTS, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=11';
 import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=11';
-import { upgradeMaterials, selectBulkUpgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=13';
+import { upgradeMaterials, selectBulkUpgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=14';
 
 export const INVENTORY_LIMIT = 50;
 export function sortInventoryEntries(entries, equipment, mode = 'grade', selectedKey = null) {
@@ -33,7 +33,7 @@ export function weaponInventoryStats(id, grade = 'D', level = 1, color = 'standa
     if (bonus.weightPercent && Number.isInteger(weapon.weight)) {
       weapon.weight = Math.round(weapon.weight * (100 - bonus.weightPercent) / 100);
     }
-    if (bonus.magazinePercent && weapon.magazine) weapon.magazine = Math.ceil(weapon.magazine * (100 + bonus.magazinePercent) / 100);
+    if (bonus.accuracy && Number.isFinite(weapon.accuracy)) weapon.accuracy = Math.min(100, weapon.accuracy + bonus.accuracy);
     if (bonus.recoilControl && Number.isFinite(weapon.recoilControl)) weapon.recoilControl = Math.min(100, weapon.recoilControl + bonus.recoilControl);
   }
   return [
@@ -64,8 +64,12 @@ export function formatWeaponSetStats(values, set) {
     if (name === '위력' && bonus.damage) value = `${value} + ${bonus.damage}`;
     if (name === '크리티컬 확률' && bonus.critical) value = `${value} + ${bonus.critical}%`;
     if (name === '무게' && bonus.weightPercent && Number.isInteger(value)) value = `${value} - ${bonus.weightPercent}%`;
-    if (name === '탄창/보유탄환' && bonus.magazinePercent && value !== '-') value = `${value} (+${bonus.magazinePercent}% 탄창)`;
-    if (name === '반동제어' && bonus.recoilControl && Number.isFinite(value)) value = `${value} + ${bonus.recoilControl} (≤100)`;
+    if (name === '정확도' && bonus.accuracy && Number.isFinite(value)) {
+      value = `${Math.min(100, value + bonus.accuracy)} (세트 +${bonus.accuracy} · 최대 100)`;
+    }
+    if (name === '반동제어' && bonus.recoilControl && Number.isFinite(value)) {
+      value = `${Math.min(100, value + bonus.recoilControl)} (세트 +${bonus.recoilControl} · 최대 100)`;
+    }
     return [name, value, explanation];
   });
 }

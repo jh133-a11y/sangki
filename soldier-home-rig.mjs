@@ -140,6 +140,7 @@ export function createHomeRig(source) {
     rest.set(bone, {
       rotation: bone.quaternion.clone(),
       x: new THREE.Vector3(1, 0, 0).applyQuaternion(inverseWorld),
+      y: new THREE.Vector3(0, 1, 0).applyQuaternion(inverseWorld),
       z: new THREE.Vector3(0, 0, 1).applyQuaternion(inverseWorld)
     });
   }
@@ -156,15 +157,18 @@ export function createHomeRig(source) {
       .applyQuaternion(joints[`${side}Arm`].getWorldQuaternion(new THREE.Quaternion()).invert());
     attention[side] = { arm: -upperAngle + clearance, elbow: upperAngle - lowerAngle, armAxis };
   }
-  function rotate(name, x, z = 0) {
+  function rotate(name, x, z = 0, y = 0) {
     const bone = joints[name], bind = rest.get(bone);
     bone.quaternion.copy(bind.rotation)
       .multiply(rotation.setFromAxisAngle(bind.x, x))
+      .multiply(rotation.setFromAxisAngle(bind.y, y))
       .multiply(rotation.setFromAxisAngle(bind.z, z));
   }
-  rotate('Hips', .012, .025);
-  rotate('LeftUpLeg', .02, .01);
-  rotate('LeftLeg', -.07);
+  rotate('Hips', .02, .035);
+  rotate('LeftUpLeg', .035, .065, .025);
+  rotate('LeftLeg', -.11);
+  rotate('LeftFoot', .015, .025, .16);
+  if (joints.LeftToeBase) rotate('LeftToeBase', 0, 0, .08);
   rotate('RightUpLeg', -.008, -.004);
   for (const side of ['Left', 'Right']) {
     const sign = side === 'Left' ? 1 : -1;
@@ -203,11 +207,56 @@ export function createHomeRig(source) {
     hand.quaternion.multiply(rotation.setFromAxisAngle(wristAxis, handTwist(side)));
     root.updateMatrixWorld(true);
   }
+  const hip = joints.Hips.getWorldPosition(new THREE.Vector3());
+  const shoulder = joints.RightArm.getWorldPosition(new THREE.Vector3());
+  const elbow = joints.RightForeArm.getWorldPosition(new THREE.Vector3());
+  const wrist = joints.RightHand.getWorldPosition(new THREE.Vector3());
+  const side = Math.sign(shoulder.x - hip.x) || 1;
+  const upperLength = shoulder.distanceTo(elbow);
+  const lowerLength = elbow.distanceTo(wrist);
+  const target = hip.clone().add(new THREE.Vector3(side * .075, .065, .025));
+  const toTarget = target.clone().sub(shoulder);
+  const distance = THREE.MathUtils.clamp(toTarget.length(), Math.abs(upperLength - lowerLength) + .001,
+    upperLength + lowerLength - .001);
+  const direction = toTarget.normalize();
+  target.copy(shoulder).addScaledVector(direction, distance);
+  const lateral = new THREE.Vector3(side, 0, 0).addScaledVector(direction, -side * direction.x).normalize();
+  const along = (upperLength ** 2 - lowerLength ** 2 + distance ** 2) / (2 * distance);
+  const bend = Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2));
+  const handOnHipElbow = shoulder.clone().addScaledVector(direction, along).addScaledVector(lateral, bend);
+  function aimBone(bone, child, destination) {
+    const origin = bone.getWorldPosition(new THREE.Vector3());
+    const current = child.getWorldPosition(new THREE.Vector3()).sub(origin).normalize();
+    const desired = destination.clone().sub(origin).normalize();
+    const worldRotation = new THREE.Quaternion().setFromUnitVectors(current, desired);
+    const parentRotation = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+    const localRotation = parentRotation.clone().invert().multiply(worldRotation).multiply(parentRotation);
+    bone.quaternion.premultiply(localRotation);
+    root.updateMatrixWorld(true);
+  }
+  aimBone(joints.RightArm, joints.RightForeArm, handOnHipElbow);
+  aimBone(joints.RightForeArm, joints.RightHand, target);
+  for (const handSide of ['Left', 'Right']) {
+    const fingerPoint = name => joints[handSide + name].getWorldPosition(new THREE.Vector3());
+    const across = fingerPoint('HandIndex1').sub(fingerPoint('HandPinky1'))
+      .multiplyScalar(handSide === 'Left' ? -1 : 1).normalize();
+    for (const finger of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
+      for (const [segment, amount] of [[1, .08], [2, .07], [3, .05], [4, .02]]) {
+        const joint = joints[`${handSide}Hand${finger}${segment}`];
+        if (!joint) continue;
+        const inverse = joint.getWorldQuaternion(new THREE.Quaternion()).invert();
+        const axis = across.clone().applyQuaternion(inverse).normalize();
+        joint.quaternion.multiply(rotation.setFromAxisAngle(axis, amount));
+        root.updateMatrixWorld(true);
+      }
+    }
+  }
   for (const bone of Object.values(joints)) {
     const inverse = bone.getWorldQuaternion(new THREE.Quaternion()).invert();
     const bind = rest.get(bone);
     bind.rotation.copy(bone.quaternion);
     bind.x.set(1, 0, 0).applyQuaternion(inverse);
+    bind.y.set(0, 1, 0).applyQuaternion(inverse);
     bind.z.set(0, 0, 1).applyQuaternion(inverse);
   }
   function animate(seconds) {

@@ -1,7 +1,7 @@
-import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, weaponSetDescription } from './soldier-core.mjs?v=10';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, weaponSetDescription } from './soldier-core.mjs?v=11';
 import { CHARACTERS, CHARACTER_MAX_LEVEL, characterCard } from './soldier-characters.mjs?v=11';
-import { weaponInventoryStats, characterInventoryStats } from './soldier-inventory.mjs?v=35';
-import { fillWeaponCard, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=13';
+import { weaponInventoryStats, characterInventoryStats } from './soldier-inventory.mjs?v=36';
+import { fillWeaponCard, WEAPON_ARTWORK } from './soldier-weapon-items.mjs?v=14';
 
 export function createCodex() {
   const $ = id => document.getElementById(id), dialog = $('codex-dialog');
@@ -39,7 +39,7 @@ export function createCodex() {
     }
     const set=document.createElement('p');set.className='codex-set';
     set.textContent=character ? CHARACTERS[selected].ability || ''
-      : color.value!=='standard' ? `${weaponSetDescription(grade.value,color.value)} · 동일 등급/색상 3슬롯 장착 시 적용` : '색상 세트 효과 없음';
+      : color.value!=='standard' ? `${weaponSetDescription(grade.value,color.value)} · ${['blue','green'].includes(color.value) ? '개별 무기 효과는 항상 적용' : '동일 등급/색상 3슬롯 장착 시 세트 효과 적용'}` : '색상 세트 효과 없음';
     $('codex-detail').append(title,card,stats,set);
   }
   for (const button of dialog.querySelectorAll('[data-codex-category]')) button.addEventListener('click',()=>{

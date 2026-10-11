@@ -1,4 +1,4 @@
-import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=9';
 
 export const OPENING_TIMING = { turn: 200, lid: 360, flash: 400, reveal: 780, finish: 1300 };
 

@@ -1,4 +1,4 @@
-import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=9';
 export const ROULETTE_PRIZES = [
   ['gems',1,1500],['gems',3,1000],['gems',5,300],['gems',100,100],
   ['crate',1,500,'normal'],['crate',3,300,'normal'],['crate',1,300,'advanced'],['crate',2,100,'advanced'],

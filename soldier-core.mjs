@@ -30,7 +30,7 @@ export function weaponStats(id, grade = 'D', level = 1, color = 'standard') {
   }
   const gradeIndex = Math.min(4, EQUIPMENT_GRADES.indexOf(grade));
   const firearmGrowth = weapon.slot === 'melee' ? {} : {
-    accuracy: weapon.accuracy + gradeIndex * 3,
+    accuracy: Math.min(100, weapon.accuracy + gradeIndex * 3),
     recoilControl: Math.min(100, weapon.recoilControl + gradeIndex * 3),
     weight: Math.round(weapon.weight * [1, .95, .9025, .857375, .81450625][gradeIndex])
   };
@@ -40,6 +40,12 @@ export function weaponStats(id, grade = 'D', level = 1, color = 'standard') {
   if (color === 'gold') stats.damage += 5;
   if (color === 'red') stats.critical += 5;
   if (color === 'silver' && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * .9);
+  if (color === 'blue' && Number.isFinite(stats.accuracy)) {
+    stats.accuracy = Math.min(100, stats.accuracy + 1 + EQUIPMENT_GRADES.indexOf(grade));
+  }
+  if (color === 'green' && Number.isFinite(stats.recoilControl)) {
+    stats.recoilControl = Math.min(100, stats.recoilControl + [1, 2, 2, 3, 3, 4][EQUIPMENT_GRADES.indexOf(grade)]);
+  }
   return stats;
 }
 export const WEAPON_SET_BONUSES = {
@@ -55,14 +61,14 @@ export function weaponSetBonus(grade, color) {
   if (!bonus || !WEAPON_COLORS.includes(color) || color === 'standard') throw new RangeError('무기 세트 정보가 올바르지 않습니다.');
   return { damage: color === 'gold' ? bonus.damage : 0, critical: color === 'red' ? bonus.critical : 0,
     weightPercent: color === 'silver' ? bonus.weightPercent : 0,
-    magazinePercent: color === 'blue' ? 1 + EQUIPMENT_GRADES.indexOf(grade) : 0,
+    accuracy: color === 'blue' ? 1 + EQUIPMENT_GRADES.indexOf(grade) : 0,
     recoilControl: color === 'green' ? [1, 2, 2, 3, 3, 4][EQUIPMENT_GRADES.indexOf(grade)] : 0 };
 }
 export function weaponSetDescription(grade, color) {
   const bonus = weaponSetBonus(grade, color);
   const effect = color === 'gold' ? `위력 +${bonus.damage}`
     : color === 'red' ? `크리티컬 +${bonus.critical}%` : color === 'silver' ? `무게 -${bonus.weightPercent}%`
-      : color === 'blue' ? `탄창 +${bonus.magazinePercent}%` : `반동제어 +${bonus.recoilControl} (최대 100)`;
+      : color === 'blue' ? `정확도 +${bonus.accuracy} (최대 100)` : `반동제어 +${bonus.recoilControl} (최대 100)`;
   return `${grade} ${color.toUpperCase()} 세트 · 장착 무기 ${effect}`;
 }
 export function applyWeaponSetBonuses(weapons) {
@@ -75,7 +81,7 @@ export function applyWeaponSetBonuses(weapons) {
       stats.damage += bonus.damage;
       stats.critical += bonus.critical;
       if (bonus.weightPercent && Number.isInteger(stats.weight)) stats.weight = Math.round(stats.weight * (100 - bonus.weightPercent) / 100);
-      if (bonus.magazinePercent && stats.magazine > 0) stats.magazine = Math.ceil(stats.magazine * (100 + bonus.magazinePercent) / 100);
+      if (bonus.accuracy && Number.isFinite(stats.accuracy)) stats.accuracy = Math.min(100, stats.accuracy + bonus.accuracy);
       if (bonus.recoilControl && Number.isFinite(stats.recoilControl)) stats.recoilControl = Math.min(100, stats.recoilControl + bonus.recoilControl);
     }
     return [slot, stats];
@@ -115,7 +121,8 @@ export function applyWeaponEnchantment(stats, enchantment = null) {
     const result = { ...stats };
     if (Number.isFinite(result[spec.stat])) {
       result[spec.stat] = spec.stat === 'weight' ? Math.round(result.weight * (100 + spec.value) / 100)
-        : spec.stat === 'recoilControl' ? Math.min(100, result.recoilControl + spec.value) : result[spec.stat] + spec.value;
+        : ['recoilControl', 'accuracy'].includes(spec.stat)
+          ? Math.min(100, result[spec.stat] + spec.value) : result[spec.stat] + spec.value;
     }
     return result;
 }

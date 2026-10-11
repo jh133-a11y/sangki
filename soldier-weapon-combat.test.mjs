@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { WEAPONS, WEAPON_COLORS, DEFAULT_LOADOUT, weaponStats, applyWeaponSetBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons } from './soldier-core.mjs';
 
 test('grade Lv1 inherits combat growth and firearm accuracy, recoil, and weight scale by grade', () => {
-  const grades=['D','C','B','A','S'];
+  const grades=['D','C','B','A','S','S+'];
   for(const id of Object.keys(WEAPONS)) {
     for(let index=1;index<grades.length;index++) {
       const previous=weaponStats(id,grades[index-1],7),next=weaponStats(id,grades[index],1);
@@ -17,9 +17,10 @@ test('grade Lv1 inherits combat growth and firearm accuracy, recoil, and weight 
       const base=weaponStats(id,'D',1);
       for(const [tier,grade] of grades.entries()) {
         const stats=weaponStats(id,grade,1);
-        assert.equal(stats.accuracy,base.accuracy+tier*3,`${id}.${grade}.accuracy`);
-        assert.equal(stats.recoilControl,base.recoilControl+tier*3,`${id}.${grade}.recoilControl`);
-        assert.equal(stats.weight,Math.round(base.weight*[1,.95,.9025,.857375,.81450625][tier]),`${id}.${grade}.weight`);
+        const gradeIndex=Math.min(tier,4);
+        assert.equal(stats.accuracy,Math.min(100,base.accuracy+gradeIndex*3),`${id}.${grade}.accuracy`);
+        assert.equal(stats.recoilControl,base.recoilControl+gradeIndex*3,`${id}.${grade}.recoilControl`);
+        assert.equal(stats.weight,Math.round(base.weight*[1,.95,.9025,.857375,.81450625][gradeIndex]),`${id}.${grade}.weight`);
       }
     }
     for(const id of Object.keys(WEAPONS).filter(id=>WEAPONS[id].slot==='melee')) {
@@ -102,6 +103,7 @@ test('weapon colors apply individual modifiers and same-color equipment set bonu
   assert.equal(weaponStats('k2','D',1,'gold').damage,base.damage+5);
   assert.equal(weaponStats('k2','D',1,'red').critical,base.critical+5);
   assert.equal(weaponStats('k2','D',1,'silver').weight,Math.round(base.weight*.9));
+  assert.equal(weaponStats('k2','D',1,'blue').accuracy,Math.min(100,base.accuracy+1));
   assert.equal(weaponStats('stick','D',1,'silver').weight,null);
   assert.throws(()=>weaponStats('k2','D',1,'invalid'),RangeError);
   const gold=applyWeaponSetBonuses(Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
@@ -117,6 +119,10 @@ test('weapon colors apply individual modifiers and same-color equipment set bonu
     .map(([slot,id])=>[slot,weaponStats(id,'D',1,'silver')])));
   assert.equal(silver.primary.weight,Math.round(weaponStats('k2','D',1,'silver').weight*.9));
   assert.equal(silver.melee.weight,null);
+  const blue=applyWeaponSetBonuses(Object.fromEntries(Object.entries(DEFAULT_LOADOUT)
+    .map(([slot,id])=>[slot,weaponStats(id,'D',1,'blue')])));
+  assert.equal(blue.primary.accuracy,Math.min(100,weaponStats('k2','D',1,'blue').accuracy+1));
+  assert.equal(blue.primary.magazine,weaponStats('k2','D',1).magazine);
 });
 
 test('combat snapshots require server-owned loadout stats and bounded finite ammo', () => {
@@ -152,4 +158,6 @@ test('combat migration preserves base specs and captures trusted stats instead o
   assert.match(migration,/p_color not in \('standard','gold','red','silver','blue','green'\)/);
   assert.match(migration,/item_color text/);
   assert.match(migration,/stats->'primary'->>'color'/);
+  assert.match(migration,/least\(100,\(spec->>'accuracy'\)::integer\+grade_steps\*3\)/);
+  assert.match(migration,/field_name in \('recoilControl','accuracy'\) then least\(100/);
 });

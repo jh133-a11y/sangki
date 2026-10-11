@@ -46,7 +46,7 @@ begin
     'critical',coalesce((spec->>'critical')::integer,0)+offset_critical+
       case when p_grade='S+' then p_level-1 else ((p_level-1)/2)*per_two_levels end)
     ||case when spec->>'slot'='melee' then '{}'::jsonb else jsonb_build_object(
-      'accuracy',(spec->>'accuracy')::integer+grade_steps*3,
+      'accuracy',least(100,(spec->>'accuracy')::integer+grade_steps*3),
       'recoilControl',least(100,(spec->>'recoilControl')::integer+grade_steps*3),
       'weight',round((spec->>'weight')::numeric*weight_factor)::integer
     ) end;
@@ -54,6 +54,14 @@ begin
   if p_color='red' then stats:=jsonb_set(stats,'{critical}',to_jsonb((stats->>'critical')::integer+5)); end if;
   if p_color='silver' and stats->>'weight' is not null then
     stats:=jsonb_set(stats,'{weight}',to_jsonb(round((stats->>'weight')::numeric*0.9)::integer));
+  end if;
+  if p_color='blue' and stats->>'accuracy' is not null then
+    stats:=jsonb_set(stats,'{accuracy}',to_jsonb(least(100,(stats->>'accuracy')::integer+
+      case p_grade when 'D' then 1 when 'C' then 2 when 'B' then 3 when 'A' then 4 when 'S' then 5 when 'S+' then 6 end)));
+  end if;
+  if p_color='green' and stats->>'recoilControl' is not null then
+    stats:=jsonb_set(stats,'{recoilControl}',to_jsonb(least(100,(stats->>'recoilControl')::integer+
+      case p_grade when 'D' then 1 when 'C' then 2 when 'B' then 2 when 'A' then 3 when 'S' then 3 when 'S+' then 4 end)));
   end if;
   return stats;
 end $$;
@@ -80,7 +88,7 @@ begin
   if p_stats->>field_name is not null then
     p_stats:=jsonb_set(p_stats,array[field_name],to_jsonb(case when field_name='weight'
       then round((p_stats->>'weight')::numeric*(100-amount)/100)::integer
-      when field_name='recoilControl' then least(100,(p_stats->>field_name)::integer+amount)
+      when field_name in ('recoilControl','accuracy') then least(100,(p_stats->>field_name)::integer+amount)
       else (p_stats->>field_name)::integer+amount end));
   end if;
   return p_stats;
@@ -120,9 +128,9 @@ begin
       elsif stats->slot_name->>'color'='silver' and stats->slot_name->>'weight' is not null then
         stats:=jsonb_set(stats,array[slot_name,'weight'],to_jsonb(round((stats->slot_name->>'weight')::numeric*
           case item_grade when 'D' then 0.90 when 'C' then 0.88 when 'B' then 0.86 when 'A' then 0.84 when 'S' then 0.82 when 'S+' then 0.80 end)::integer));
-      elsif stats->slot_name->>'color'='blue' and (stats->slot_name->>'magazine')::integer>0 then
-        stats:=jsonb_set(stats,array[slot_name,'magazine'],to_jsonb(ceil((stats->slot_name->>'magazine')::numeric*
-          case item_grade when 'D' then 1.01 when 'C' then 1.02 when 'B' then 1.03 when 'A' then 1.04 when 'S' then 1.05 when 'S+' then 1.06 end)::integer));
+      elsif stats->slot_name->>'color'='blue' and stats->slot_name->>'accuracy' is not null then
+        stats:=jsonb_set(stats,array[slot_name,'accuracy'],to_jsonb(least(100,(stats->slot_name->>'accuracy')::integer+
+          case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 3 when 'A' then 4 when 'S' then 5 when 'S+' then 6 end)));
       elsif stats->slot_name->>'color'='green' and stats->slot_name->>'recoilControl' is not null then
         stats:=jsonb_set(stats,array[slot_name,'recoilControl'],to_jsonb(least(100,(stats->slot_name->>'recoilControl')::integer+
           case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 2 when 'A' then 3 when 'S' then 3 when 'S+' then 4 end)));

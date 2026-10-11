@@ -101,7 +101,7 @@ for (const [file, hash] of fixtures) {
   test(`${file} animates supplied shoulder/elbow/wrist joints without changing bone lengths, scales or weights`, () => {
     const { scene } = suppliedScene(file), rig = createHomeRig(scene), other = createHomeRig(scene);
     rig.root.updateMatrixWorld(true); rig.skeleton.update();
-    for (const [jointName, minimumAngle] of [['Hips', .02], ['LeftLeg', .04]]) {
+    for (const [jointName, minimumAngle] of [['Hips', .02], ['LeftLeg', .04], ['LeftFoot', .1]]) {
       const sourceJoint = scene.getObjectByName(`mixamorig:${jointName}`);
       assert.ok(sourceJoint, `${file}: source ${jointName}`);
       assert.ok(rig.joints[jointName].quaternion.angleTo(sourceJoint.quaternion) > minimumAngle,
@@ -110,6 +110,13 @@ for (const [file, hash] of fixtures) {
     const sourceRightLeg = scene.getObjectByName('mixamorig:RightLeg');
     assert.ok(sourceRightLeg && rig.joints.RightLeg.quaternion.angleTo(sourceRightLeg.quaternion) < .04,
       `${file}: weight rests more on the straighter right leg`);
+    const sourceRightHand = scene.getObjectByName('mixamorig:RightHand');
+    assert.ok(sourceRightHand && rig.joints.RightHand.getWorldPosition(new THREE.Vector3())
+      .distanceTo(rig.joints.Hips.getWorldPosition(new THREE.Vector3())) < .18,
+    `${file}: one relaxed hand rests near the waist`);
+    const sourceFinger = scene.getObjectByName('mixamorig:LeftHandMiddle1');
+    assert.ok(sourceFinger && rig.joints.LeftHandMiddle1.quaternion.angleTo(sourceFinger.quaternion) > .02,
+      `${file}: hanging fingers curl into a relaxed pose`);
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = rig.joints[side + 'ForeArm'].getWorldPosition(new THREE.Vector3());
@@ -146,14 +153,20 @@ for (const [file, hash] of fixtures) {
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = pivotRest[side + 'ForeArm'], hand = pivotRest[side + 'Hand'];
-      assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .30, 'upper arm hangs beside torso');
-      assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, 'forearm points down, not sideways');
-      assert.ok(hand.y < elbow.y && elbow.y < arm.y, 'attention stance lowers both arms');
+      if (side === 'Left') {
+        assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .30, 'one arm hangs beside torso');
+        assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, 'hanging forearm points down');
+        assert.ok(hand.y < elbow.y && elbow.y < arm.y, 'hanging hand stays below the elbow');
+      } else {
+        assert.ok(Math.abs(elbow.x - arm.x) / Math.abs(arm.y - elbow.y) > .18, 'bent elbow opens away from the waist');
+        assert.ok(hand.distanceTo(rig.joints.Hips.getWorldPosition(new THREE.Vector3())) < .18,
+          'bent hand rests at the waist');
+      }
       const point = name => rig.joints[side + name].getWorldPosition(new THREE.Vector3());
       const fingers = point('HandMiddle1').sub(hand);
       const across = point('HandIndex1').sub(point('HandPinky1'));
       const dorsal = fingers.cross(across).normalize().multiplyScalar(side === 'Left' ? -1 : 1);
-      assert.ok(dorsal.x * (side === 'Left' ? 1 : -1) > .9, 'back of hand faces outward, not the palm');
+      if (side === 'Left') assert.ok(dorsal.x > .9, 'hanging hand back faces outward, not the palm');
     }
     const mesh = rig.meshes[0], positions = mesh.geometry.attributes.position;
     const start = Array.from({ length: positions.count }, (_, index) => mesh.getVertexPosition(index, new THREE.Vector3()));
@@ -171,10 +184,10 @@ for (const [file, hash] of fixtures) {
           const changed = bone.quaternion.toArray().some((value, index) => Math.abs(value - bind.quaternion.toArray()[index]) > 1e-6);
           assert.equal(changed, time !== 0, `${side}${name} at ${time}`);
         }
-        if (time === 1.125) {
+        if (time === 1.125 && side === 'Left') {
           for (const name of ['ForeArm', 'Hand']) {
             assert.ok(rig.joints[side + name].getWorldPosition(new THREE.Vector3()).y > pivotRest[side + name].y + .0001,
-              'inhalation must raise both elbow and hand');
+              'inhalation must raise the hanging arm');
           }
         }
       }

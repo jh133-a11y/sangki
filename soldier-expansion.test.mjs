@@ -1,24 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { WEAPONS, EQUIPMENT_GRADES, WEAPON_ENCHANTMENTS, weaponStats, applyWeaponEnchantment, applyWeaponSetBonuses, initialWeaponAmmo } from './soldier-core.mjs';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_ENCHANTMENTS, weaponStats, applyWeaponEnchantment, applyWeaponSetBonuses } from './soldier-core.mjs';
 import { ATTENDANCE_TABLES, ROULETTE_PRIZES, rewardItemName, rewardQuantity, validateDaily } from './soldier-daily.mjs';
+import { weaponInventoryStats, formatWeaponSetStats } from './soldier-inventory.mjs';
 import { validateWeaponItems } from './soldier-weapon-items.mjs';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs';
 
-test('UTS-BP base stats and blue/green set scaling match all grades and actual ammunition',()=>{
+test('blue and green individual effects stack separately with set effects and accuracy caps at 100',()=>{
   assert.deepEqual(['magazine','reserve','damage','accuracy','recoilControl','weight','critical'].map(key=>WEAPONS.utsbp[key]),[7,14,20,65,30,2900,1]);
   assert.equal(60/WEAPONS.utsbp.delay,40);
   for(const [index,grade] of EQUIPMENT_GRADES.entries()) {
-    const loadout={primary:'k2',secondary:'utsbp',melee:'stick'};
-    const blue=applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([slot,id])=>[slot,weaponStats(id,grade,1,'blue')])));
-    assert.equal(blue.primary.magazine,Math.ceil(30*(101+index)/100));
-    assert.equal(initialWeaponAmmo(loadout,blue).secondary,Math.ceil(7*(101+index)/100));
-    assert.equal(blue.melee.magazine,0);
-    const green=applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([slot,id])=>[slot,weaponStats(id,grade,1,'green')])));
-    assert.equal(green.secondary.recoilControl,Math.min(100,weaponStats('utsbp',grade).recoilControl+[1,2,2,3,3,4][index]));
-    assert.equal(green.melee.recoilControl,null);
+    const blueAmount=index+1, greenAmount=[1,2,2,3,3,4][index];
+    const base=weaponStats('k2',grade), blueWeapon=weaponStats('k2',grade,1,'blue');
+    assert.equal(blueWeapon.magazine,base.magazine);
+    assert.equal(blueWeapon.accuracy,Math.min(100,base.accuracy+blueAmount));
+    const mixedLoadout={
+      primary:blueWeapon,
+      secondary:weaponStats('utsbp',grade,1,'standard'),
+      melee:weaponStats('stick',grade,1,'standard')
+    };
+    assert.equal(applyWeaponSetBonuses(mixedLoadout).primary.accuracy,blueWeapon.accuracy,
+      'blue individual bonus applies without a matching set');
+    const inventoryBlueAccuracy=weaponInventoryStats('k2',grade,1,'blue')[3][1];
+    assert.equal(inventoryBlueAccuracy,blueWeapon.accuracy,'individual blue accuracy appears in weapon stats');
+    const blueSet=applyWeaponSetBonuses({
+      primary:weaponStats('k2',grade,1,'blue'),
+      secondary:weaponStats('utsbp',grade,1,'blue'),
+      melee:weaponStats('stick',grade,1,'blue')
+    });
+    assert.equal(blueSet.primary.magazine,base.magazine);
+    assert.equal(blueSet.primary.accuracy,Math.min(100,weaponStats('k2',grade,1,'blue').accuracy+blueAmount));
+    assert.equal(weaponInventoryStats('k2',grade,1,'blue',{grade,color:'blue'})[3][1],blueSet.primary.accuracy,
+      'blue set accuracy appears in weapon stats once, capped at 100');
+    assert.equal(formatWeaponSetStats(weaponInventoryStats('k2',grade,1,'blue'),{grade,color:'blue'})[3][1],
+      `${blueSet.primary.accuracy} (세트 +${blueAmount} · 최대 100)`);
+    const greenBase=weaponStats('utsbp',grade), greenWeapon=weaponStats('utsbp',grade,1,'green');
+    assert.equal(greenWeapon.recoilControl,Math.min(100,greenBase.recoilControl+greenAmount));
+    assert.equal(weaponInventoryStats('utsbp',grade,1,'green')[4][1],greenWeapon.recoilControl,
+      'individual green recoil control appears in weapon stats');
+    const greenSet=applyWeaponSetBonuses({
+      primary:weaponStats('k2',grade,1,'green'),
+      secondary:weaponStats('utsbp',grade,1,'green'),
+      melee:weaponStats('stick',grade,1,'green')
+    });
+    assert.equal(greenSet.secondary.recoilControl,Math.min(100,greenBase.recoilControl+2*greenAmount));
+    assert.equal(weaponInventoryStats('utsbp',grade,1,'green',{grade,color:'green'})[4][1],greenSet.secondary.recoilControl,
+      'green set recoil control is added separately with its cap');
+    assert.equal(formatWeaponSetStats(weaponInventoryStats('utsbp',grade,1,'green'),{grade,color:'green'})[4][1],
+      `${greenSet.secondary.recoilControl} (세트 +${greenAmount} · 최대 100)`);
+    assert.equal(greenSet.melee.accuracy,null);
+    for(const id of Object.keys(WEAPONS)) {
+      for(const color of ['standard','gold','red','silver','blue','green']) {
+        const accuracy=weaponStats(id,grade,1,color).accuracy;
+        if(Number.isFinite(accuracy)) assert.ok(accuracy<=100,`${id} ${grade} ${color} accuracy is capped`);
+      }
+    }
   }
+  assert.equal(applyWeaponEnchantment({...weaponStats('k2','S+',7),accuracy:100},'accuracy-2').accuracy,100);
   assert.equal(applyWeaponEnchantment({...weaponStats('k2','S+',7),recoilControl:100},'recoil-2').recoilControl,100);
 });
 test('all ten enchantments alter only the requested numeric stat and require S+ MAX',()=>{
@@ -27,7 +66,7 @@ test('all ten enchantments alter only the requested numeric stat and require S+ 
   for(const option of WEAPON_ENCHANTMENTS) {
     const result=applyWeaponEnchantment(base,option.id);
     assert.equal(result[option.stat],option.stat==='weight' ? Math.round(base.weight*(100+option.value)/100)
-      : option.stat==='recoilControl' ? Math.min(100,base.recoilControl+option.value) : base[option.stat]+option.value);
+      : ['recoilControl','accuracy'].includes(option.stat) ? Math.min(100,base[option.stat]+option.value) : base[option.stat]+option.value);
     assert.equal(base.damage,86);
     assert.throws(()=>applyWeaponEnchantment(weaponStats('k2','S+',6),option.id));
     assert.throws(()=>applyWeaponEnchantment(weaponStats('k2','S',7),option.id));

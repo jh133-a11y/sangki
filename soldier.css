@@ -1068,17 +1068,17 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 .home-reward-actions button { padding: 12px 16px; }
 #mailbox-open { font-size: 12px; }
 #mailbox-count { padding: 2px 6px; border-radius: 20px; background: #246c78; color: #fff; }
-.soldier-feature-dialog { width: min(920px,94vw); max-height: 92dvh; overflow-y: auto; }
+.soldier-feature-dialog { width: min(1100px,96vw); max-height: 92dvh; overflow-y: auto; }
 .soldier-feature-dialog > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .soldier-feature-dialog > header h2 { margin: 4px 0; }
 .soldier-feature-dialog > header button { min-width: 40px; }
 .soldier-feature-dialog [role="status"] { white-space: pre-line; }
-.roulette-stage { width: min(340px,65vw); aspect-ratio: 1; position: relative; margin: 24px auto; }
+.roulette-stage { width: min(380px,65vw); aspect-ratio: 1; position: relative; margin: 24px auto; }
 #roulette-wheel { width: 100%; height: 100%; border-radius: 50%; border: 5px solid #77c8d3; box-shadow: 0 8px 24px #0005; position: relative; }
 .roulette-pointer { position: absolute; top: -16px; left: calc(50% - 12px); color: #ffe39a; font-size: 28px; filter: drop-shadow(0 2px 3px #000); }
 .roulette-sector { position: absolute; inset: 0; text-align: center; padding-top: 12%; font-size: 10px; font-weight: 700; color: #fff; transform: rotate(var(--angle)); pointer-events: none; }
 #roulette-spin { display: block; margin: 12px auto; min-width: 210px; }
-#roulette-prizes { columns: 2; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+#roulette-prizes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; padding: 0; list-style: none; font-size: 13px; line-height: 1.2; }
 #attendance-choices { display: flex; gap: 10px; margin: 14px 0; }
 #attendance-choices button[aria-pressed="true"], #codex-items button[aria-pressed="true"] { border-color: #74d6e0; background: #225464; }
 #attendance-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
@@ -1117,7 +1117,6 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 .weapon-enchantment-label { color: #a58122; font-size: 12px; }
 .equipment-card[data-set-color="blue"] { --set-glow: #4798ffb0; --set-edge: #90c5ff; }
 .equipment-card[data-set-color="green"] { --set-glow: #40cb8fb0; --set-edge: #8cf0b8; }
-.equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] { animation: weapon-set-pulse 3.2s ease-in-out infinite; }
 .home-set-effect[data-set-color="blue"], .inventory-set-effect[data-set-color="blue"] { color: #4996ea; border-color: #4798ff; }
 .home-set-effect[data-set-color="green"], .inventory-set-effect[data-set-color="green"] { color: #41bf83; border-color: #40cb8f; }
 @media(max-height:500px), (max-width:650px) {
@@ -1126,10 +1125,8 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
   .home-reward-actions button { padding: 7px; font-size: 12px; }
   .soldier-feature-dialog { max-height: 94dvh; padding: 12px; }
   #attendance-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  #roulette-prizes { grid-template-columns: 1fr; }
   .attendance-day { padding: 7px; font-size: 11px; }
-}
-@media(prefers-reduced-motion:reduce) {
-  .equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] { animation: none; }
 }
 #home .home-status, .soldier-music-controls { border-radius: 8px; background: #162f40dc; border: 1px solid #52788b; }
 .currency, .shop-wallet > span {
@@ -1310,7 +1307,14 @@ body:has(#shop-dialog[open]) #world, body:has(#supply-opening-dialog[open]) #wor
 #supply-opening-dialog[data-paused="true"] * { animation-play-state: paused; }
 .supply-opening-hint { text-align: center; color: #bad7e7; margin: 12px 0; font-size: 13px; }
 .supply-opening-counter { border: 1px solid #577e94; border-radius: 10px; padding: 6px 12px; background: #1a3a50; }
-.equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"] {
+.equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"],
+.equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] {
+  animation: weapon-set-pulse 3.2s ease-in-out infinite;
+}
+.home-set-effect[data-set-color="blue"], .inventory-set-effect[data-set-color="blue"] { --set-glow: #4798ffb0; --set-edge: #4798ff; }
+.home-set-effect[data-set-color="green"], .inventory-set-effect[data-set-color="green"] { --set-glow: #40cb8fb0; --set-edge: #40cb8f; }
+.home-set-effect[data-set-color="blue"], .home-set-effect[data-set-color="green"],
+.inventory-set-effect[data-set-color="blue"], .inventory-set-effect[data-set-color="green"] {
   animation: weapon-set-pulse 3.2s ease-in-out infinite;
 }
 .home-set-effect[data-set-color="gold"] { color: #ffe079; border-color: #ac862e; }
@@ -1333,5 +1337,14 @@ body:has(#shop-dialog[open]) #world, body:has(#supply-opening-dialog[open]) #wor
 @media (prefers-reduced-motion: reduce) {
   :is(#home, #hud, dialog) button { transition: none; }
   [data-phase="opening"] .supply-opening-crate, [data-phase="opening"] .supply-crate-lid { animation: none; }
-  .equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"] { animation: none; }
+  .equipment-card[data-set-color="gold"], .equipment-card[data-set-color="red"], .equipment-card[data-set-color="silver"],
+  .equipment-card[data-set-color="blue"], .equipment-card[data-set-color="green"] {
+    animation: none;
+    box-shadow: inset 0 0 0 2px var(--set-edge), 0 0 12px 3px var(--set-glow);
+  }
+  .home-set-effect[data-set-color="blue"], .home-set-effect[data-set-color="green"],
+  .inventory-set-effect[data-set-color="blue"], .inventory-set-effect[data-set-color="green"] {
+    animation: none;
+    box-shadow: inset 0 0 0 1px var(--set-edge), 0 0 8px 2px var(--set-glow);
+  }
 }
