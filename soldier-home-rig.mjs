@@ -162,6 +162,10 @@ export function createHomeRig(source) {
       .multiply(rotation.setFromAxisAngle(bind.x, x))
       .multiply(rotation.setFromAxisAngle(bind.z, z));
   }
+  rotate('Hips', .012, .025);
+  rotate('LeftUpLeg', .02, .01);
+  rotate('LeftLeg', -.07);
+  rotate('RightUpLeg', -.008, -.004);
   for (const side of ['Left', 'Right']) {
     const sign = side === 'Left' ? 1 : -1;
     rotate(`${side}Shoulder`, 0, sign * .025);

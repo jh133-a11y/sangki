@@ -101,6 +101,15 @@ for (const [file, hash] of fixtures) {
   test(`${file} animates supplied shoulder/elbow/wrist joints without changing bone lengths, scales or weights`, () => {
     const { scene } = suppliedScene(file), rig = createHomeRig(scene), other = createHomeRig(scene);
     rig.root.updateMatrixWorld(true); rig.skeleton.update();
+    for (const [jointName, minimumAngle] of [['Hips', .02], ['LeftLeg', .04]]) {
+      const sourceJoint = scene.getObjectByName(`mixamorig:${jointName}`);
+      assert.ok(sourceJoint, `${file}: source ${jointName}`);
+      assert.ok(rig.joints[jointName].quaternion.angleTo(sourceJoint.quaternion) > minimumAngle,
+        `${file}: relaxed asymmetric standing pose rotates ${jointName}`);
+    }
+    const sourceRightLeg = scene.getObjectByName('mixamorig:RightLeg');
+    assert.ok(sourceRightLeg && rig.joints.RightLeg.quaternion.angleTo(sourceRightLeg.quaternion) < .04,
+      `${file}: weight rests more on the straighter right leg`);
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = rig.joints[side + 'ForeArm'].getWorldPosition(new THREE.Vector3());
