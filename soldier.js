@@ -1,15 +1,15 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=20';
-import { createHomeViewer } from './soldier-home-viewer.mjs?v=24';
+import { loadHomeRig, loadCharacterSource } from './soldier-home-rig.mjs?v=21';
+import { createHomeViewer } from './soldier-home-viewer.mjs?v=25';
 import { createEquipmentInventory, inventoryWeapons, INVENTORY_LIMIT } from './soldier-inventory.mjs?v=35';
 import { fillWeaponCard as fillCard, validateWeaponItems } from './soldier-weapon-items.mjs?v=13';
 import { setupFullscreen } from './soldier-fullscreen.mjs?v=1';
-import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=9';
+import { CHARACTERS, characterCard, characterStats, ownedCharacterLevel, evadesAttack, CHARACTER_MAX_LEVEL } from './soldier-characters.mjs?v=10';
 import { createShop, GOLD_PRODUCTS } from './soldier-shop.mjs?v=17';
 import { SUPPLY_PRODUCTS, validateSupply } from './soldier-supply.mjs?v=8';
-import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=1';
+import { createDailyRewards, validateDaily } from './soldier-daily.mjs?v=2';
 import { createCodex } from './soldier-codex.mjs?v=1';
-import { WEAPONS, WEAPON_COLORS, WEAPON_ENCHANTMENTS, applyWeaponEnchantment, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=9';
+import { WEAPONS, WEAPON_COLORS, WEAPON_ENCHANTMENTS, applyWeaponEnchantment, weaponStats, weaponSetColor, weaponSetDescription, applyWeaponSetBonuses, applyCharacterBonuses, initialWeaponAmmo, reloadWeaponAmmo, weaponHitDamage, validateCombatWeapons, rankProgress, DEFAULT_LOADOUT, weaponUpgradeCost, DEFAULT_CONTROLS, COVER, SPAWNS, blocked, direction, coverDistance, targetDistance, settingsFrom } from './soldier-core.mjs?v=10';
 
 const $ = id => document.getElementById(id);
 setupFullscreen($('fullscreen-open'), $('fullscreen-status'));

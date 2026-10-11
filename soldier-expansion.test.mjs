@@ -12,11 +12,11 @@ test('UTS-BP base stats and blue/green set scaling match all grades and actual a
   for(const [index,grade] of EQUIPMENT_GRADES.entries()) {
     const loadout={primary:'k2',secondary:'utsbp',melee:'stick'};
     const blue=applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([slot,id])=>[slot,weaponStats(id,grade,1,'blue')])));
-    assert.equal(blue.primary.magazine,Math.ceil(30*(104+index)/100));
-    assert.equal(initialWeaponAmmo(loadout,blue).secondary,Math.ceil(7*(104+index)/100));
+    assert.equal(blue.primary.magazine,Math.ceil(30*(101+index)/100));
+    assert.equal(initialWeaponAmmo(loadout,blue).secondary,Math.ceil(7*(101+index)/100));
     assert.equal(blue.melee.magazine,0);
     const green=applyWeaponSetBonuses(Object.fromEntries(Object.entries(loadout).map(([slot,id])=>[slot,weaponStats(id,grade,1,'green')])));
-    assert.equal(green.secondary.recoilControl,Math.min(100,weaponStats('utsbp',grade).recoilControl+[1,2,2,3,4,5][index]));
+    assert.equal(green.secondary.recoilControl,Math.min(100,weaponStats('utsbp',grade).recoilControl+[1,2,2,3,3,4][index]));
     assert.equal(green.melee.recoilControl,null);
   }
   assert.equal(applyWeaponEnchantment({...weaponStats('k2','S+',7),recoilControl:100},'recoil-2').recoilControl,100);
@@ -44,6 +44,16 @@ test('roulette exact weights sum to 100% and three attendance tables retain all 
   assert.equal(ATTENDANCE_TABLES[2][19].product,'guaranteed-a');
   assert.deepEqual(ATTENDANCE_TABLES[2].slice(16,19).map(reward=>reward.amount),[1,2,3]);
   assert.match(readFileSync('soldier-daily-rewards.sql','utf8'),/Asia\/Seoul/);
+});
+test('experience reward artwork is an accessible standalone SVG',()=>{
+  const artwork=readFileSync('soldier-xp-icon.svg','utf8');
+  const daily=readFileSync('soldier-daily.mjs','utf8');
+  assert.match(artwork,/aria-label="경험치"/);
+  assert.match(artwork,/<svg\b/);
+  assert.match(artwork,/<path\b/);
+  assert.match(daily,/rewardDisplay\(reward,'attendance-reward'\)/);
+  assert.match(daily,/supplyArtwork\(reward\.product\)/);
+  assert.match(daily,/soldier-xp-icon\.svg/);
 });
 test('new crates reject impossible guarantee responses and daily responses reject invalid balances/prizes',()=>{
   const owner='00000000-0000-0000-0000-000000000001';

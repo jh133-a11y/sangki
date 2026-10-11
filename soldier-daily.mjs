@@ -1,4 +1,4 @@
-import { SUPPLY_PRODUCTS } from './soldier-supply.mjs?v=8';
+import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
 export const ROULETTE_PRIZES = [
   ['gems',1,1500],['gems',3,1000],['gems',5,300],['gems',100,100],
   ['crate',1,500,'normal'],['crate',3,300,'normal'],['crate',1,300,'advanced'],['crate',2,100,'advanced'],
@@ -13,6 +13,50 @@ export const ATTENDANCE_TABLES = [
 export function rewardLabel(reward) {
   return reward.kind === 'crate' ? `${SUPPLY_PRODUCTS.find(item => item.id === reward.product)?.name || reward.product} ×${reward.amount}`
     : reward.kind === 'gems' ? `보석 ${reward.amount}개` : reward.kind === 'gold' ? `${reward.amount.toLocaleString('ko-KR')} 골드` : `경험치 ${reward.amount}`;
+}
+let rewardIconId = 0;
+function rewardIcon(reward) {
+  if (reward.kind === 'crate') {
+    const image = document.createElement('img');
+    image.src = supplyArtwork(reward.product);
+    image.alt = '';
+    image.className = 'reward-icon reward-crate-icon';
+    return image;
+  }
+  if (reward.kind === 'xp') {
+    const image = document.createElement('img');
+    image.src = 'soldier-xp-icon.svg?v=1';
+    image.alt = '';
+    image.className = 'reward-icon';
+    return image;
+  }
+  const currencyName = { gold: 'gold', gems: 'gems' }[reward.kind];
+  if (!currencyName) throw new Error(`지원하지 않는 보상 아이콘입니다: ${reward.kind}`);
+  const currency = document.querySelector(`.currency.${currencyName} svg`);
+  if (!currency) throw new Error(`보상 아이콘을 찾을 수 없습니다: ${reward.kind}`);
+  const icon = currency.cloneNode(true);
+  const prefix = `soldier-reward-${++rewardIconId}-`;
+  const ids = new Map([...icon.querySelectorAll('[id]')].map(element => [element.id, `${prefix}${element.id}`]));
+  for (const element of [icon, ...icon.querySelectorAll('*')]) {
+    for (const attribute of [...element.attributes]) {
+      let value = attribute.value;
+      for (const [previous, next] of ids) value = value.replaceAll(`#${previous}`, `#${next}`);
+      element.setAttribute(attribute.name, value);
+    }
+    if (ids.has(element.id)) element.id = ids.get(element.id);
+  }
+  icon.classList.add('reward-icon', `currency-${currencyName}-icon`);
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
+}
+export function rewardDisplay(reward, className = 'reward-display') {
+  const display = document.createElement('span');
+  display.className = className;
+  const icon = rewardIcon(reward);
+  const label = document.createElement('span');
+  label.textContent = rewardLabel(reward);
+  display.append(icon, label);
+  return display;
 }
 function validReward(reward) {
   return reward && ['gems','gold','xp','crate'].includes(reward.kind) && Number.isSafeInteger(reward.amount) && reward.amount>0
@@ -82,7 +126,8 @@ export function createDailyRewards({ request, showSupply }) {
     const label = document.createElement('span'); label.className = 'roulette-sector'; label.style.setProperty('--angle', `${index*360/17}deg`);
     label.textContent = prize.kind === 'crate' ? `상자 ×${prize.amount}` : `${{gems:'◆',gold:'G',xp:'XP'}[prize.kind]} ${prize.amount}`;
     wheel.append(label);
-    const line = document.createElement('li'); line.textContent = `${rewardLabel(prize)} · ${prize.weight/100}%`; $('roulette-prizes').append(line);
+    const line = document.createElement('li');
+    line.append(rewardDisplay(prize), document.createTextNode(` · ${prize.weight/100}%`)); $('roulette-prizes').append(line);
   });
   $('roulette-spin').addEventListener('click', () => action('spin', {}, roulette, async result => {
     const end = rotation + 360*6 + ((360 - result.outcome.reward.index*360/17 - rotation%360)+360)%360;
@@ -111,7 +156,7 @@ export function createDailyRewards({ request, showSupply }) {
       const done = state.attendance_table === table && index<state.attendance_step && !state.can_select;
       cell.classList.toggle('claimed',done);
       const day = document.createElement('strong');day.textContent=`DAY ${index+1}${done ? ' · 완료' : ''}`;
-      const label = document.createElement('span');label.textContent=rewardLabel(reward);cell.append(day,label);
+      cell.append(day,rewardDisplay(reward,'attendance-reward'));
       $('attendance-grid').append(cell);
     });
     $('attendance-claim').disabled = busy || !state.attendance_available;
@@ -125,7 +170,7 @@ export function createDailyRewards({ request, showSupply }) {
     if (!pending.length) $('mailbox-list').textContent = '받지 않은 우편이 없습니다.';
     for (const mail of pending) {
       const row = document.createElement('article'); row.className = 'mailbox-item';
-      const title = document.createElement('strong');title.textContent=rewardLabel(mail.reward);
+      const title = rewardDisplay(mail.reward,'mailbox-reward');
       const info = document.createElement('small');info.textContent=`${mail.source === 'attendance' ? '출석 체크' : '룰렛'} · ${new Date(mail.created_at).toLocaleString('ko-KR')}`;
       const claim = document.createElement('button');claim.type='button';claim.textContent='받기';claim.disabled=busy;
       claim.addEventListener('click', () => action('claim',{mail:mail.id},mailbox,async result => {

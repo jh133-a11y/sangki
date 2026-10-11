@@ -1,4 +1,4 @@
-import { CHARACTERS } from './soldier-characters.mjs?v=9';
+import { CHARACTERS } from './soldier-characters.mjs?v=10';
 import { SUPPLY_PRODUCTS, supplyArtwork } from './soldier-supply.mjs?v=8';
 import { createSupplyOpening } from './soldier-supply-opening.mjs?v=5';
 

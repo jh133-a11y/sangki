@@ -13,7 +13,7 @@ const fixtures = [
   ['soldier-roka-swc.glb', '56b70c4d3ab69a5099dde824172e1607da8e57895eb53088e0b19eaa05886a54'],
   ['soldier-rks-girl.glb', 'e784812d343bafa699ec7c157935f365cfee530ca5c4a823a43a3f932f94ea4b'],
   ['soldier-military-police.glb', '60c1c668280aa39a610dafe06c5cd001ef5bd73ebc5f5a0992676596c771c398'],
-  ['soldier-office-worker.glb', 'be86238941c38410a783f29cdc7e00ea4dac50171a1ef29e7134c506a2aff8a4']
+  ['soldier-office-worker.glb', 'bb7cd3beaaa2eeaafcdc7dbabcce53ab812c7fb669ccbe4aba085f0fd5294eb1']
 ];
 const staticFixture = ['soldier-fighter.glb', 'd9807d6364ddd312600b310172da1bf0a2260e1afc43daa24bc3c4bc190373d8'];
 
@@ -77,8 +77,8 @@ for (const [file, hash] of fixtures) {
   test(`${file} is the exact supplied rigged asset with embedded textures and original weights`, () => {
     assert.equal(createHash('sha256').update(readFileSync(file)).digest('hex'), hash);
     const { scene, gltf } = suppliedScene(file);
-    assert.equal(gltf.skins.length, file === 'soldier-office-worker.glb' ? 2 : 1);
-    assert.ok(gltf.skins[0].joints.length >= (file === 'soldier-office-worker.glb' ? 55 : 61));
+    assert.equal(gltf.skins.length, 1);
+    assert.ok(gltf.skins[0].joints.length >= 61);
     assert.ok(gltf.images.every(image => image.bufferView !== undefined && !image.uri));
     const rig = createHomeRig(scene), other = createHomeRig(scene);
     const original = scene.getObjectByProperty('isSkinnedMesh', true), mesh = rig.meshes[0];
@@ -99,6 +99,15 @@ for (const [file, hash] of fixtures) {
 
   test(`${file} animates supplied shoulder/elbow/wrist joints without changing bone lengths, scales or weights`, () => {
     const { scene } = suppliedScene(file), rig = createHomeRig(scene), other = createHomeRig(scene);
+    rig.root.updateMatrixWorld(true); rig.skeleton.update();
+    for (const side of ['Left', 'Right']) {
+      const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
+      const elbow = rig.joints[side + 'ForeArm'].getWorldPosition(new THREE.Vector3());
+      const outward = side === 'Left' ? 1 : -1;
+      assert.ok((elbow.x - arm.x) * outward > 0, `${file}: ${side} elbow opens outward`);
+      assert.ok(Math.abs(elbow.x - arm.x) / Math.abs(arm.y - elbow.y) > .18,
+        `${file}: ${side} arm is not pressed against the torso`);
+    }
     if (file !== 'soldier-roka-swc.glb') {
       const weights = rig.meshes.map(mesh => Object.fromEntries(['skinIndex', 'skinWeight']
         .map(name => [name, mesh.geometry.attributes[name]?.array && Array.from(mesh.geometry.attributes[name].array)])));
@@ -124,7 +133,7 @@ for (const [file, hash] of fixtures) {
     for (const side of ['Left', 'Right']) {
       const arm = rig.joints[side + 'Arm'].getWorldPosition(new THREE.Vector3());
       const elbow = pivotRest[side + 'ForeArm'], hand = pivotRest[side + 'Hand'];
-      assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .13, 'upper arm hangs beside torso');
+      assert.ok(Math.abs(elbow.x - arm.x) / (arm.y - elbow.y) < .30, 'upper arm hangs beside torso');
       assert.ok(Math.abs(hand.x - elbow.x) / (elbow.y - hand.y) < .13, 'forearm points down, not sideways');
       assert.ok(hand.y < elbow.y && elbow.y < arm.y, 'attention stance lowers both arms');
       const point = name => rig.joints[side + name].getWorldPosition(new THREE.Vector3());
@@ -232,4 +241,32 @@ test('all character IDs select new assets and automatic motion remains continuou
   assert.ok(viewer.includes('rig.animate(seconds);'));
   assert.ok(viewer.includes('const active = () => visible();'));
   assert.ok(!readFileSync('sanggi-soldier.html', 'utf8').includes('id="home-character-preview"'));
+});
+
+test('new character rigs use the shared attention pose and breathing animation', () => {
+  for (const [file] of fixtures.slice(-3)) {
+    const { scene } = suppliedScene(file), rig = createHomeRig(scene);
+    const animatedJoints = ['Spine2', 'Neck', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+      'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand'];
+    const initial = new Map(animatedJoints.map(name => [name, rig.joints[name].quaternion.clone()]));
+    assert.equal(rig.root.userData.motion, 'breathe', `${file}: initializes in the shared idle pose`);
+    const posed = ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm', 'LeftHand', 'RightHand']
+      .map(name => initial.get(name));
+    rig.animate(1.125);
+    rig.root.updateMatrixWorld(true);
+    rig.skeleton.update();
+    assert.equal(rig.root.userData.motion, 'breathe', file);
+    for (const name of animatedJoints) {
+      const joint = rig.joints[name];
+      assert.ok(joint.quaternion.toArray().every(Number.isFinite), `${file}: ${name}`);
+      assert.ok(Math.abs(joint.quaternion.length() - 1) < 1e-6, `${file}: normalized ${name}`);
+    }
+    assert.ok(animatedJoints.some(name => rig.joints[name].quaternion.angleTo(initial.get(name)) > 1e-6),
+      `${file}: breathing changes pose`);
+    rig.animate(0);
+    for (const [index, name] of ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm', 'LeftHand', 'RightHand'].entries()) {
+      assert.ok(rig.joints[name].quaternion.angleTo(posed[index]) < 1e-6, `${file}: restores default pose for ${name}`);
+    }
+    rig.dispose();
+  }
 });

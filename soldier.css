@@ -1085,6 +1085,15 @@ dialog input[type="range"], dialog input[type="checkbox"] { accent-color: #118b9
 .attendance-day { display: flex; flex-direction: column; gap: 10px; min-height: 85px; padding: 10px; border: 1px solid #526776; border-radius: 10px; background: #203743; font-size: 12px; }
 .attendance-day strong { color: #8cd6df; }
 .attendance-day.claimed { opacity: .6; border-color: #5d9c86; }
+.reward-display, .attendance-reward, .mailbox-reward { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.reward-icon { display: inline-block; width: 26px; height: 26px; flex: 0 0 26px; object-fit: contain; vertical-align: middle; }
+.attendance-reward { align-items: flex-start; font-size: 12px; line-height: 1.25; }
+.attendance-reward > span:last-child { overflow-wrap: anywhere; }
+.reward-crate-icon { object-fit: contain; border-radius: 5px; }
+#roulette-prizes li { display: flex; align-items: center; gap: 4px; min-height: 38px; }
+#roulette-prizes .reward-icon { width: 24px; height: 24px; flex-basis: 24px; }
+.mailbox-reward { font-weight: 800; }
+.mailbox-reward .reward-icon { width: 34px; height: 34px; flex-basis: 34px; }
 .mailbox-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; margin: 10px 0; padding: 15px; border: 1px solid #526776; border-radius: 10px; background: #203743; }
 .mailbox-item small { grid-column: 1; color: #afc3d0; }
 .mailbox-item button { grid-column: 2; grid-row: 1 / 3; }

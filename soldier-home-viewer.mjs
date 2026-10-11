@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
-import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=20';
-import { CHARACTERS } from './soldier-characters.mjs?v=9';
+import { loadHomeRig, idlePose } from './soldier-home-rig.mjs?v=21';
+import { CHARACTERS } from './soldier-characters.mjs?v=10';
 
 export { idlePose };
 

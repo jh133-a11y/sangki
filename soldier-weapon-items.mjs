@@ -1,4 +1,4 @@
-import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=9';
+import { WEAPONS, EQUIPMENT_GRADES, WEAPON_COLORS, WEAPON_COLOR_LABELS, weaponLevelLabel, weaponUpgradeCost } from './soldier-core.mjs?v=10';
 
 const WEAPON_ART_FILES = {
   k2: 'soldier-weapon-k2.webp?v=3',

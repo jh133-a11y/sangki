@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { CHARACTERS } from './soldier-characters.mjs?v=9';
+import { CHARACTERS } from './soldier-characters.mjs?v=10';
 
 export const HOME_MODEL = 'soldier-james.glb';
 
@@ -149,7 +149,7 @@ export function createHomeRig(source) {
     const hand = joints[`${side}Hand`].getWorldPosition(new THREE.Vector3());
     const upperAngle = Math.atan2(elbow.x - arm.x, arm.y - elbow.y);
     const lowerAngle = Math.atan2(hand.x - elbow.x, elbow.y - hand.y);
-    const clearance = side === 'Left' ? .12 : -.12;
+    const clearance = side === 'Left' ? .22 : -.22;
     const armAxis = elbow.clone().sub(arm).normalize()
       .applyQuaternion(joints[`${side}Arm`].getWorldQuaternion(new THREE.Quaternion()).invert());
     attention[side] = { arm: -upperAngle + clearance, elbow: upperAngle - lowerAngle, armAxis };
@@ -161,6 +161,8 @@ export function createHomeRig(source) {
       .multiply(rotation.setFromAxisAngle(bind.z, z));
   }
   for (const side of ['Left', 'Right']) {
+    const sign = side === 'Left' ? 1 : -1;
+    rotate(`${side}Shoulder`, 0, sign * .025);
     rotate(`${side}Arm`, 0, attention[side].arm);
     rotate(`${side}ForeArm`, 0, attention[side].elbow);
   }
@@ -184,7 +186,7 @@ export function createHomeRig(source) {
     const inverse = forearm.getWorldQuaternion(new THREE.Quaternion()).invert();
     const direction = hand.getWorldPosition(new THREE.Vector3())
       .sub(forearm.getWorldPosition(new THREE.Vector3())).normalize().applyQuaternion(inverse);
-    const target = new THREE.Vector3(side === 'Left' ? .12 : -.12, -1, .12).normalize().applyQuaternion(inverse);
+    const target = new THREE.Vector3(side === 'Left' ? .18 : -.18, -1, .12).normalize().applyQuaternion(inverse);
     forearm.quaternion.multiply(rotation.setFromUnitVectors(direction, target));
     // Spread pronation across the arm rather than twisting only the wrist.
     forearm.quaternion.multiply(rotation.setFromAxisAngle(direction, twist * .7));

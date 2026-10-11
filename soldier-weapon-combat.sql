@@ -122,10 +122,10 @@ begin
           case item_grade when 'D' then 0.90 when 'C' then 0.88 when 'B' then 0.86 when 'A' then 0.84 when 'S' then 0.82 when 'S+' then 0.80 end)::integer));
       elsif stats->slot_name->>'color'='blue' and (stats->slot_name->>'magazine')::integer>0 then
         stats:=jsonb_set(stats,array[slot_name,'magazine'],to_jsonb(ceil((stats->slot_name->>'magazine')::numeric*
-          case item_grade when 'D' then 1.04 when 'C' then 1.05 when 'B' then 1.06 when 'A' then 1.07 when 'S' then 1.08 when 'S+' then 1.09 end)::integer));
+          case item_grade when 'D' then 1.01 when 'C' then 1.02 when 'B' then 1.03 when 'A' then 1.04 when 'S' then 1.05 when 'S+' then 1.06 end)::integer));
       elsif stats->slot_name->>'color'='green' and stats->slot_name->>'recoilControl' is not null then
         stats:=jsonb_set(stats,array[slot_name,'recoilControl'],to_jsonb(least(100,(stats->slot_name->>'recoilControl')::integer+
-          case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 2 when 'A' then 3 when 'S' then 4 when 'S+' then 5 end)));
+          case item_grade when 'D' then 1 when 'C' then 2 when 'B' then 2 when 'A' then 3 when 'S' then 3 when 'S+' then 4 end)));
       end if;
     end loop;
   end if;

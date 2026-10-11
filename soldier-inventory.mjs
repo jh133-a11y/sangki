@@ -1,5 +1,5 @@
-import { WEAPONS, weaponStats, applyWeaponEnchantment, WEAPON_ENCHANTMENTS, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=9';
-import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=9';
+import { WEAPONS, weaponStats, applyWeaponEnchantment, WEAPON_ENCHANTMENTS, weaponLevelLabel, weaponSetColor, weaponSetBonus, weaponSetDescription } from './soldier-core.mjs?v=10';
+import { CHARACTERS, characterStats, ownedCharacterLevel, characterLevelLabel, CHARACTER_MAX_LEVEL, CHARACTER_UPGRADE_COST } from './soldier-characters.mjs?v=10';
 import { upgradeMaterials, selectBulkUpgradeMaterials, weaponMaterialXp, weaponUpgradePreview } from './soldier-weapon-items.mjs?v=13';
 
 export const INVENTORY_LIMIT = 50;

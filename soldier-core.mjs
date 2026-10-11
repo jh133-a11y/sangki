@@ -55,8 +55,8 @@ export function weaponSetBonus(grade, color) {
   if (!bonus || !WEAPON_COLORS.includes(color) || color === 'standard') throw new RangeError('무기 세트 정보가 올바르지 않습니다.');
   return { damage: color === 'gold' ? bonus.damage : 0, critical: color === 'red' ? bonus.critical : 0,
     weightPercent: color === 'silver' ? bonus.weightPercent : 0,
-    magazinePercent: color === 'blue' ? 4 + EQUIPMENT_GRADES.indexOf(grade) : 0,
-    recoilControl: color === 'green' ? [1, 2, 2, 3, 4, 5][EQUIPMENT_GRADES.indexOf(grade)] : 0 };
+    magazinePercent: color === 'blue' ? 1 + EQUIPMENT_GRADES.indexOf(grade) : 0,
+    recoilControl: color === 'green' ? [1, 2, 2, 3, 3, 4][EQUIPMENT_GRADES.indexOf(grade)] : 0 };
 }
 export function weaponSetDescription(grade, color) {
   const bonus = weaponSetBonus(grade, color);
