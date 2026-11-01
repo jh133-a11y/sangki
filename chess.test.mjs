@@ -138,6 +138,27 @@ test('AI speed patch matches the full migration and retains bounded server compu
   assert.match(patch, /limit 6 loop/);
   assert.match(patch, /revoke all on function public\.chess_search_fast/);
 });
+test('online team chess enforces server-owned lobby, turn rotation, and proposal flow', () => {
+  const migration = readFileSync(new URL('./chess-teams.sql', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('./chess.html', import.meta.url), 'utf8');
+  for (const requirement of [
+    /capacity integer not null check \(capacity between 3 and 4\)/,
+    /v_count < 3 or v_count > v_game\.capacity/,
+    /not ready/,
+    /chess_team_current_player\(p_game_id\) is distinct from v_account/,
+    /v_turn_number % v_player_count/,
+    /chess_legal\(v_game\.state\)/,
+    /recipient_id <> v_account/,
+    /status = 'expired'/,
+    /interval '24 hours'/
+  ]) assert.match(migration, requirement);
+  assert.match(html, /data-value="team">온라인 팀 대국/);
+  assert.match(source, /rpc\('chess_team_create'/);
+  assert.match(source, /rpc\('chess_team_join'/);
+  assert.match(source, /rpc\('chess_team_request_suggestion'/);
+  assert.match(source, /rpc\('chess_team_suggest_move'/);
+  assert.match(source, /setInterval\(\(\) => \{ void pollTeamRoom\(\); \}, 3000\)/);
+});
 test('player move is rendered before even an immediate server opponent response', async () => {
   let finishDisplay;
   const renders = [];

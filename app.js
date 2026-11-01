@@ -566,7 +566,53 @@ const getInvestmentClientId = () => {
   return id;
 };
 
-const formatWon = (value) => `₩${Number(value || 0).toLocaleString('ko-KR')}`;
+const parseExactDecimal = (value) => {
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(String(value ?? 0));
+  if (!match) throw new Error('숫자 형식이 올바르지 않습니다.');
+  const fraction = match[2] || '';
+  return {
+    scaled: BigInt(match[1] + fraction),
+    scale: 10n ** BigInt(fraction.length)
+  };
+};
+const exactWon = (value) => {
+  if (typeof value === 'bigint') return value;
+  const text = String(value ?? 0);
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(text);
+  if (!match) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) throw new Error('숫자 형식이 올바르지 않습니다.');
+    return BigInt(Math.round(number));
+  }
+  const fraction = match[3] || '';
+  const scale = 10n ** BigInt(fraction.length);
+  const scaled = BigInt(match[2] + fraction);
+  const rounded = (scaled + scale / 2n) / scale;
+  return match[1] ? -rounded : rounded;
+};
+const multiplyPriceByQuantity = (price, quantity) => {
+  const { scaled, scale } = parseExactDecimal(price);
+  return (scaled * BigInt(String(quantity)) + scale / 2n) / scale;
+};
+const sharesAffordable = (cash, price) => {
+  const { scaled, scale } = parseExactDecimal(price);
+  return scaled > 0n ? (BigInt(String(cash)) * scale) / scaled : 0n;
+};
+const formatWon = (value) => {
+  const exact = exactWon(value);
+  return `₩${exact < 0n ? `-${(-exact).toLocaleString('ko-KR')}` : exact.toLocaleString('ko-KR')}`;
+};
+const formatStockPrice = (value) => {
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(String(value ?? 0));
+  if (!match) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) throw new Error('주가 형식이 올바르지 않습니다.');
+    return `₩${number.toLocaleString('ko-KR', { maximumFractionDigits: 6 })}`;
+  }
+  const fraction = (match[2] || '').replace(/0+$/, '');
+  const integer = BigInt(match[1]).toLocaleString('ko-KR');
+  return `₩${integer}${fraction ? `.${fraction}` : ''}`;
+};
 const confirmBackdrop = document.querySelector('#confirm-backdrop');
 const confirmModal = document.querySelector('#confirm-modal');
 const confirmMessage = document.querySelector('#confirm-message');
@@ -1416,13 +1462,13 @@ const renderInvestmentState = (state) => {
   transferTarget.append(...state.ranking
     .filter((entry) => entry.client_id !== getInvestmentClientId())
     .map((entry) => new Option(
-      `${entry.nickname} · ${formatWon(entry.total_asset)}`,
+      `${entry.nickname} · ${formatWon(entry.total_asset_exact ?? entry.total_asset)}`,
       entry.client_id
     )));
   investmentHoldings.hidden = false;
   portfolioNickname.textContent = state.nickname;
-  portfolioCash.textContent = formatWon(state.cash);
-  portfolioTotal.textContent = formatWon(state.total_asset);
+  portfolioCash.textContent = formatWon(state.cash_exact ?? state.cash);
+  portfolioTotal.textContent = formatWon(state.total_asset_exact ?? state.total_asset);
   marketUpdated.textContent = `${state.market_date} · 5분마다 갱신`;
 
   investmentProducts.replaceChildren(...state.assets.map((asset) => {
@@ -1438,7 +1484,9 @@ const renderInvestmentState = (state) => {
     name.querySelector('.investment-product-notices').textContent = notices.join(' · ');
     const price = document.createElement('strong');
     price.className = 'investment-price';
-    price.textContent = asset.listed ? formatWon(asset.current_price) : '—';
+    price.textContent = asset.listed
+      ? formatStockPrice(asset.current_price_exact ?? asset.current_price)
+      : '—';
     const change = document.createElement('span');
     change.className = 'investment-change';
     if (!asset.listed) {
@@ -1466,7 +1514,8 @@ const renderInvestmentState = (state) => {
     sell.type = 'button';
     sell.textContent = '매도';
     const ownedHolding = state.holdings.find((item) => item.symbol === asset.symbol);
-    sell.disabled = !asset.listed || !ownedHolding || BigInt(String(ownedHolding.quantity)) < 1n;
+    sell.disabled = !asset.listed || !ownedHolding
+      || BigInt(String(ownedHolding.quantity_exact ?? ownedHolding.quantity)) < 1n;
     sell.addEventListener('click', () => tradeInvestment(asset.symbol, 'sell', quantity));
     const maxBuy = document.createElement('button');
     maxBuy.type = 'button';
@@ -1474,8 +1523,7 @@ const renderInvestmentState = (state) => {
     maxBuy.disabled = !asset.listed;
     maxBuy.addEventListener('click', () => {
       const cash = BigInt(String(state.cash_exact ?? state.cash));
-      const price = BigInt(String(asset.current_price_exact ?? asset.current_price));
-      quantity.value = String(price > 0n ? cash / price : 0n);
+      quantity.value = String(sharesAffordable(cash, asset.current_price_exact ?? asset.current_price));
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
@@ -1483,7 +1531,7 @@ const renderInvestmentState = (state) => {
     maxSell.disabled = sell.disabled;
     maxSell.addEventListener('click', () => {
       const holding = state.holdings.find((item) => item.symbol === asset.symbol);
-      quantity.value = String(holding ? holding.quantity : 0);
+      quantity.value = String(holding ? holding.quantity_exact ?? holding.quantity : 0);
     });
     trade.append(quantity, buy, sell, maxBuy, maxSell);
     row.append(name, price, change, trade);
@@ -1496,19 +1544,25 @@ const renderInvestmentState = (state) => {
     return option;
   }));
 
-  const holdings = state.holdings.filter((holding) => holding.quantity > 0);
+  const holdings = state.holdings.filter((holding) =>
+    BigInt(String(holding.quantity_exact ?? holding.quantity)) > 0n);
   holdingsList.replaceChildren(...(holdings.length ? holdings.map((holding) => {
     const asset = state.assets.find((item) => item.symbol === holding.symbol);
     const row = document.createElement('div');
     row.className = 'holding-row';
-    const value = asset && asset.listed ? asset.current_price * holding.quantity : 0;
-    const invested = Number(holding.invested_amount || 0);
-    const returnPct = invested > 0 ? ((value - invested) / invested) * 100 : 0;
+    const quantityExact = holding.quantity_exact ?? holding.quantity;
+    const value = asset && asset.listed
+      ? multiplyPriceByQuantity(asset.current_price_exact ?? asset.current_price, quantityExact)
+      : 0n;
+    const invested = BigInt(String(holding.invested_amount_exact ?? holding.invested_amount ?? 0));
+    const returnPct = invested > 0n
+      ? Number((value - invested) * 10000n / invested) / 100
+      : 0;
     const name = document.createElement('span');
     name.className = 'holding-name';
     name.innerHTML = '<strong></strong><small></small>';
     name.querySelector('strong').textContent = asset ? asset.name : holding.symbol;
-    name.querySelector('small').textContent = `${holding.quantity}주 보유`;
+    name.querySelector('small').textContent = `${quantityExact}주 보유`;
     const change = document.createElement('span');
     const changePct = asset ? Number(asset.change_pct) : 0;
     change.className = `holding-change ${changePct > 0 ? 'positive' : changePct < 0 ? 'negative' : 'flat'}`;
@@ -1544,15 +1598,14 @@ const renderInvestmentState = (state) => {
     maxBuy.disabled = !asset || !asset.listed;
     maxBuy.addEventListener('click', () => {
       const cash = BigInt(String(state.cash_exact ?? state.cash));
-      const price = BigInt(String(asset.current_price_exact ?? asset.current_price));
-      quantity.value = String(price > 0n ? cash / price : 0n);
+      quantity.value = String(sharesAffordable(cash, asset.current_price_exact ?? asset.current_price));
     });
     const maxSell = document.createElement('button');
     maxSell.type = 'button';
     maxSell.textContent = '최대 매도';
     maxSell.disabled = !asset || !asset.listed;
     maxSell.addEventListener('click', () => {
-      quantity.value = String(holding.quantity);
+      quantity.value = String(quantityExact);
     });
     trade.append(quantity, buy, sell, maxBuy, maxSell);
     total.dataset.return = returnPct;
@@ -1593,7 +1646,7 @@ const renderInvestmentState = (state) => {
     name.append(level, nickname);
     const total = document.createElement('span');
     total.className = 'ranking-value';
-    total.textContent = formatWon(entry.total_asset);
+    total.textContent = formatWon(entry.total_asset_exact ?? entry.total_asset);
     item.append(name, total);
     if (investmentAdminMode) {
       const rename = document.createElement('div');
@@ -1981,7 +2034,7 @@ const tradeInvestment = async (symbol, side, quantityInput) => {
   try {
     if (side === 'sell') {
       const holding = investmentState?.holdings.find((item) => item.symbol === symbol);
-      if (!holding || BigInt(String(holding.quantity)) < BigInt(quantityText)) {
+      if (!holding || BigInt(String(holding.quantity_exact ?? holding.quantity)) < BigInt(quantityText)) {
         throw new Error('보유 주식보다 많이 팔 수 없습니다.');
       }
     }

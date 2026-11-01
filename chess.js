@@ -32,7 +32,12 @@
   let statsFocus = null;
   let profileError = '';
   let guestNickname = '';
-  const assistsAllowed = () => settings.mode === 'local' || settings.level === 1;
+  let teamRoom = null;
+  let teamGame = null;
+  let teamSuggestionMode = false;
+  let teamSyncBusy = false;
+  let pendingTeamRequestId = null;
+  const assistsAllowed = () => settings.mode === 'local' || (settings.mode === 'ai' && settings.level === 1);
   const accountMessage = (text) => { $('#chess-account-status').textContent = text; };
   const rpc = async (name, payload = {}) => {
     const controller = new AbortController();
@@ -382,7 +387,8 @@
   };
 
   /* ---------- UI ---------- */
-  const humanTurn = () => settings.mode === 'local' || state.turn === settings.side;
+  const humanTurn = () => settings.mode === 'local'
+    || (settings.mode === 'team' ? Boolean(teamGame?.my_turn) : state.turn === settings.side);
 
   const POINTS = { p: 1, n: 3, b: 3, r: 5, q: 9 };
   const capturedFor = (color) => {
@@ -434,6 +440,10 @@
     const name = (color) => {
       const label = color === 'w' ? '백' : '흑';
       if (settings.mode === 'local') return `${label}`;
+      if (settings.mode === 'team') {
+        const members = (teamGame?.players || []).filter((player) => player.team === color);
+        return `${label} 팀 · ${members.map((player) => player.nickname).join(' · ') || '참가자 없음'}`;
+      }
       return color === settings.side ? `${label} · 나` : `${label} · 컴퓨터`;
     };
     const fill = (target, color) => {
@@ -441,7 +451,16 @@
       const mine = capturedFor(color === 'w' ? 'b' : 'w');
       const theirs = capturedFor(color);
       const lead = mine.points - theirs.points;
-      target.innerHTML = `<strong>${name(color)}${turnMark}</strong><span class="chess-captured">${mine.text.replace(/./gu, (glyph) => `${glyph}\uFE0E`)}<b class="chess-points">${mine.points}점${lead > 0 ? ` (+${lead})` : ''}</b></span>`;
+      const title = document.createElement('strong');
+      title.textContent = `${name(color)}${turnMark}`;
+      const captured = document.createElement('span');
+      captured.className = 'chess-captured';
+      captured.textContent = mine.text.replace(/./gu, (glyph) => `${glyph}\uFE0E`);
+      const points = document.createElement('b');
+      points.className = 'chess-points';
+      points.textContent = `${mine.points}점${lead > 0 ? ` (+${lead})` : ''}`;
+      captured.append(points);
+      target.replaceChildren(title, captured);
     };
     fill($('#chess-top-player'), top);
     fill($('#chess-bottom-player'), bottom);
@@ -524,6 +543,17 @@
     });
     $('#chess-sync').hidden = !serverGame;
     $('#chess-sync').disabled = thinking;
+    $('#chess-team-play').hidden = !teamGame;
+    $('#chess-team-answer').disabled = thinking || !teamGame?.suggestions?.some((item) =>
+      item.status === 'open' && item.recipient_id === profile?.account_id);
+    $('#chess-team-request').disabled = thinking || !teamGame?.my_turn
+      || Boolean(teamGame?.suggestions?.some((item) => item.requester_id === profile?.account_id
+        && ['open', 'suggested'].includes(item.status)));
+    $('#chess-new').disabled = thinking || Boolean(teamGame);
+    $('#chess-result-new').hidden = Boolean(teamGame);
+    $('#chess-game-practice').hidden = Boolean(teamGame);
+    $('#chess-undo').hidden = Boolean(teamGame);
+    $('#chess-flip').hidden = Boolean(teamGame);
   };
 
   const showResult = (title, text) => {
@@ -563,13 +593,19 @@
       showResult('무승부', '같은 포지션이 3번 반복되었습니다.');
     } else {
       gameOver = false;
-      const mine = settings.mode === 'ai' ? (humanTurn() ? '내 차례' : '컴퓨터 생각 중...') : `${side} 차례`;
+      const mine = settings.mode === 'ai' ? (humanTurn() ? '내 차례' : '컴퓨터 생각 중...')
+        : settings.mode === 'team' ? (humanTurn() ? '내 팀 차례' : '상대 팀 차례')
+          : `${side} 차례`;
       setStatus(inCheck(state) ? `체크! · ${mine}` : mine, inCheck(state));
     }
     return gameOver;
   };
 
   const commitMove = (move) => {
+    if (teamGame) {
+      void submitTeamMove(move);
+      return;
+    }
     if (serverGame) {
       void submitServerMove(move);
       return;
@@ -623,7 +659,7 @@
   });
 
   const onSquare = async (index) => {
-    if (gameOver || thinking || !humanTurn()) return;
+    if (gameOver || thinking || (!humanTurn() && !teamSuggestionMode)) return;
     const piece = state.board[index];
     if (selected >= 0) {
       const candidates = legalCache.filter((m) => m.from === selected && m.to === index);
@@ -631,6 +667,10 @@
         const id = gameId;
         const move = candidates.length > 1 ? await askPromotion(candidates) : candidates[0];
         if (id !== gameId || thinking || gameOver) return;
+        if (teamSuggestionMode) {
+          await sendTeamSuggestion(move);
+          return;
+        }
         commitMove(move);
         return;
       }
@@ -700,6 +740,223 @@
     refresh();
   };
 
+  const renderTeamRoom = (room) => {
+    teamRoom = room;
+    $('#chess-team-room-status').textContent = room.status === 'lobby'
+      ? '대기 중입니다. 팀을 정하고 모두 준비한 뒤 방장이 시작하세요.'
+      : room.status === 'active' ? '대국 진행 중입니다.' : '대국이 종료되었습니다.';
+    $('#chess-team-room-controls').hidden = room.status !== 'lobby';
+    $('#chess-team-room-code').textContent = room.room_code;
+    $('#chess-team-ready').textContent = room.my_ready ? '준비 취소' : '준비';
+    $('#chess-team-ready').disabled = room.status !== 'lobby';
+    $('#chess-team-start').hidden = !room.is_host || room.status !== 'lobby';
+    $('#chess-team-white').classList.toggle('is-on', room.my_team === 'w');
+    $('#chess-team-black').classList.toggle('is-on', room.my_team === 'b');
+    const players = room.players || [];
+    $('#chess-team-players').replaceChildren(...players.map((player) => {
+      const item = document.createElement('li');
+      const label = player.team === 'w' ? '백 팀' : '흑 팀';
+      item.textContent = `${label} · ${player.nickname}${player.is_me ? ' (나)' : ''} · ${player.ready ? '준비 완료' : '준비 중'}`;
+      return item;
+    }));
+  };
+
+  const restoreTeamGame = (room) => {
+    const isNew = teamGame?.id !== room.id;
+    const changedPosition = teamGame && JSON.stringify(teamGame.moves) !== JSON.stringify(room.moves);
+    if (isNew || changedPosition) gameId += 1;
+    teamGame = room;
+    teamRoom = room;
+    serverGame = null;
+    settings.mode = 'team';
+    state = newState();
+    history = [];
+    positionCounts = { [positionKey(state)]: 1 };
+    room.moves.forEach((move) => {
+      const moves = legalMoves(state);
+      history.push({ state, move, san: sanFor(state, move, moves), counts: { ...positionCounts } });
+      state = applyMove(state, move);
+      const key = positionKey(state);
+      positionCounts[key] = (positionCounts[key] || 0) + 1;
+    });
+    selected = -1;
+    teamSuggestionMode = false;
+    lastMove = room.moves.at(-1) || null;
+    if (isNew) flipped = false;
+    thinking = false;
+    gameOver = room.status === 'finished';
+    $('#chess-menu').hidden = true;
+    $('#chess-game').hidden = false;
+    closeResult();
+    legalCache = legalMoves(state);
+    if (gameOver) {
+      const text = room.result === 'draw'
+        ? '무승부입니다.'
+        : `${room.result === 'w' ? '백' : '흑'} 팀이 승리했습니다.`;
+      setStatus(text, true);
+      $('#chess-reward-status').textContent = text;
+      showResult(room.result === 'draw' ? '무승부' : '대국 종료', text);
+    } else {
+      const current = room.my_turn ? '내 차례입니다.' : `${room.state.turn === 'w' ? '백' : '흑'} 팀 차례입니다.`;
+      setStatus(current);
+      $('#chess-reward-status').textContent = `온라인 팀 대국 · 방 ${room.room_code}`;
+    }
+    renderTeamRoom(room);
+    renderTeamSuggestions(room);
+    refresh();
+  };
+
+  const renderTeamSuggestions = (room) => {
+    const status = $('#chess-team-play-status');
+    const list = $('#chess-team-proposals');
+    const answer = $('#chess-team-answer');
+    const suggestions = (room.suggestions || []);
+    const request = suggestions.find((item) => item.status === 'open' && item.recipient_id === profile?.account_id);
+    const proposal = suggestions.find((item) => item.status === 'suggested' && item.requester_id === profile?.account_id);
+    answer.hidden = !request;
+    if (teamSuggestionMode) {
+      status.textContent = '제안할 출발 칸과 도착 칸을 차례로 선택하세요. 제안만으로는 수가 진행되지 않습니다.';
+    } else if (request) {
+      status.textContent = `${request.requester_name}님이 팀 수 제안을 요청했습니다.`;
+    } else if (proposal) {
+      status.textContent = `${proposal.recipient_name}님의 제안이 도착했습니다. 아래 버튼을 눌러야 실제로 착수됩니다.`;
+    } else {
+      status.textContent = room.my_turn ? '내 차례입니다.' : '팀 차례를 기다리는 중입니다.';
+    }
+    list.replaceChildren();
+    if (proposal?.proposed_move && room.my_turn) {
+      const move = proposal.proposed_move;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = `제안 수 두기 (${squareName(move.from)} → ${squareName(move.to)}${move.promo ? ` = ${move.promo.toUpperCase()}` : ''})`;
+      button.disabled = thinking;
+      button.addEventListener('click', () => {
+        const legal = legalCache.find((candidate) => candidate.from === move.from
+          && candidate.to === move.to && (candidate.promo || null) === (move.promo || null));
+        if (legal) commitMove(legal);
+        else setStatus('이 제안은 현재 포지션에서 둘 수 없습니다.', true);
+      });
+      list.append(button);
+    }
+  };
+
+  const showTeamRoom = async (room) => {
+    localStorage.setItem('sangki-chess-team-room', room.id);
+    if (room.status === 'lobby') {
+      teamGame = null;
+      renderTeamRoom(room);
+      $('#chess-team-lobby').hidden = false;
+    } else {
+      $('#chess-team-lobby').hidden = true;
+      if (teamGame?.id === room.id && room.status === 'active'
+        && JSON.stringify(teamGame.moves) === JSON.stringify(room.moves)) {
+        teamGame = room;
+        teamRoom = room;
+        renderPlayers();
+        renderTeamSuggestions(room);
+        setStatus(room.my_turn ? '내 팀 차례입니다.' : `${room.state.turn === 'w' ? '백' : '흑'} 팀 차례입니다.`);
+        refresh();
+      } else {
+        restoreTeamGame(room);
+      }
+    }
+  };
+
+  const ensureTeamProfile = async () => {
+    if (!accountReady) await loadProfile();
+    if (!profile?.nickname) throw new Error('온라인 대국에는 로그인과 투자 닉네임이 필요합니다.');
+  };
+
+  const createTeamRoom = async () => {
+    try {
+      await ensureTeamProfile();
+      $('#chess-team-room-status').textContent = '방을 만들고 있습니다…';
+      const room = await rpc('chess_team_create', {
+        ...accountPayload(), p_capacity: Number($('#chess-team-capacity').value)
+      });
+      settings.mode = 'team';
+      await showTeamRoom(room);
+    } catch (error) {
+      $('#chess-team-room-status').textContent = error.message;
+    }
+  };
+
+  const joinTeamRoom = async () => {
+    try {
+      await ensureTeamProfile();
+      const room = await rpc('chess_team_join', {
+        ...accountPayload(), p_room_code: $('#chess-team-code').value.trim().toUpperCase()
+      });
+      settings.mode = 'team';
+      await showTeamRoom(room);
+    } catch (error) {
+      $('#chess-team-room-status').textContent = error.message;
+    }
+  };
+
+  const syncTeamRoom = async () => {
+    if (!teamRoom || thinking) return;
+    const room = await rpc('chess_team_get', { ...accountPayload(), p_game_id: teamRoom.id });
+    await showTeamRoom(room);
+  };
+
+  const submitTeamMove = async (move) => {
+    if (!teamGame?.my_turn || thinking) return;
+    const id = gameId;
+    const game = teamGame;
+    thinking = true;
+    setStatus('팀 대국 서버에 수를 전송하는 중…');
+    refresh();
+    try {
+      const room = await rpc('chess_team_move', {
+        ...accountPayload(), p_game_id: game.id, p_ply: history.length,
+        p_from: move.from, p_to: move.to, p_promo: move.promo || null
+      });
+      if (id !== gameId) return;
+      playSound(Boolean(move.capture));
+      restoreTeamGame(room);
+    } catch (error) {
+      if (id !== gameId) return;
+      try {
+        const room = await rpc('chess_team_get', { ...accountPayload(), p_game_id: game.id });
+        restoreTeamGame(room);
+      } catch (syncError) {
+        setStatus(`${error.message} 서버 동기화 실패: ${syncError.message}`, true);
+      }
+    } finally {
+      if (id === gameId) {
+        thinking = false;
+        refresh();
+      }
+    }
+  };
+
+  const sendTeamSuggestion = async (move) => {
+    const request = teamGame?.suggestions?.find((item) => item.status === 'open'
+      && item.recipient_id === profile?.account_id);
+    if (!request) {
+      teamSuggestionMode = false;
+      setStatus('수 제안 요청이 만료되었습니다. 방을 새로고침하세요.', true);
+      return;
+    }
+    thinking = true;
+    refresh();
+    try {
+      const room = await rpc('chess_team_suggest_move', {
+        ...accountPayload(), p_game_id: teamGame.id, p_request_id: request.id,
+        p_from: move.from, p_to: move.to, p_promo: move.promo || null
+      });
+      teamSuggestionMode = false;
+      restoreTeamGame(room);
+    } catch (error) {
+      teamSuggestionMode = false;
+      setStatus(error.message, true);
+    } finally {
+      thinking = false;
+      refresh();
+    }
+  };
+
   const submitServerMove = async (move) => {
     const id = gameId;
     const previousGame = serverGame;
@@ -738,6 +995,10 @@
 
   const startGame = async () => {
     if (thinking) return;
+    if (settings.mode === 'team') {
+      $('#chess-team-room-status').textContent = '온라인 팀 대국은 방을 만들거나 방 코드로 참가하세요.';
+      return;
+    }
     const id = gameId;
     if (serverGame && !serverGame.result && !window.confirm('새 경기를 시작하면 진행 중인 경기는 패배로 기록됩니다. 계속할까요?')) return;
     if (settings.mode === 'ai' && (accountSession || guestNickname)) {
@@ -820,13 +1081,102 @@
       const ai = settings.mode === 'ai';
       $('#field-side').hidden = !ai;
       $('#field-level').hidden = !ai;
+      $('#chess-team-lobby').hidden = settings.mode !== 'team';
+      $('#chess-start').hidden = settings.mode === 'team';
       updateProfileView();
     });
   });
 
   $('#chess-start').addEventListener('click', startGame);
+  $('#chess-team-create').addEventListener('click', createTeamRoom);
+  $('#chess-team-join').addEventListener('click', joinTeamRoom);
+  $('#chess-team-reconnect').addEventListener('click', async () => {
+    const savedId = localStorage.getItem('sangki-chess-team-room');
+    if (!savedId) {
+      $('#chess-team-room-status').textContent = '다시 연결할 저장된 방이 없습니다.';
+      return;
+    }
+    try {
+      await ensureTeamProfile();
+      settings.mode = 'team';
+      document.querySelectorAll('.chess-seg[data-group="mode"] button').forEach((button) => {
+        button.classList.toggle('is-on', button.dataset.value === 'team');
+      });
+      $('#chess-team-lobby').hidden = false;
+      await showTeamRoom(await rpc('chess_team_get', { ...accountPayload(), p_game_id: savedId }));
+    } catch (error) {
+      $('#chess-team-room-status').textContent = error.message;
+    }
+  });
+  $('#chess-team-white').addEventListener('click', async () => {
+    if (!teamRoom) return;
+    try { await showTeamRoom(await rpc('chess_team_change', {
+      ...accountPayload(), p_game_id: teamRoom.id, p_team: 'w'
+    })); } catch (error) { $('#chess-team-room-status').textContent = error.message; }
+  });
+  $('#chess-team-black').addEventListener('click', async () => {
+    if (!teamRoom) return;
+    try { await showTeamRoom(await rpc('chess_team_change', {
+      ...accountPayload(), p_game_id: teamRoom.id, p_team: 'b'
+    })); } catch (error) { $('#chess-team-room-status').textContent = error.message; }
+  });
+  $('#chess-team-ready').addEventListener('click', async () => {
+    if (!teamRoom) return;
+    try { await showTeamRoom(await rpc('chess_team_ready', {
+      ...accountPayload(), p_game_id: teamRoom.id, p_ready: !teamRoom.my_ready
+    })); } catch (error) { $('#chess-team-room-status').textContent = error.message; }
+  });
+  $('#chess-team-start').addEventListener('click', async () => {
+    if (!teamRoom) return;
+    try { await showTeamRoom(await rpc('chess_team_start', {
+      ...accountPayload(), p_game_id: teamRoom.id
+    })); } catch (error) { $('#chess-team-room-status').textContent = error.message; }
+  });
+  const leaveTeamRoom = async () => {
+    if (!teamRoom || !window.confirm('온라인 대국 방에서 나갈까요? 진행 중인 대국에서 나가면 내 팀은 패배할 수 있습니다.')) return;
+    try {
+      await rpc('chess_team_leave', { ...accountPayload(), p_game_id: teamRoom.id });
+      localStorage.removeItem('sangki-chess-team-room');
+      teamRoom = null;
+      teamGame = null;
+      teamSuggestionMode = false;
+      pendingTeamRequestId = null;
+      $('#chess-team-room-controls').hidden = true;
+      $('#chess-team-room-status').textContent = '방에서 나왔습니다.';
+      $('#chess-game').hidden = true;
+      $('#chess-menu').hidden = false;
+      closeResult();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  };
+  $('#chess-team-leave').addEventListener('click', leaveTeamRoom);
+  $('#chess-team-request').addEventListener('click', async () => {
+    if (!teamGame?.my_turn) return;
+    thinking = true;
+    refresh();
+    try {
+      const room = await rpc('chess_team_request_suggestion', {
+        ...accountPayload(), p_game_id: teamGame.id,
+        p_request_id: pendingTeamRequestId || (pendingTeamRequestId = crypto.randomUUID()),
+        p_recipient_id: null
+      });
+      pendingTeamRequestId = null;
+      restoreTeamGame(room);
+    } catch (error) { setStatus(error.message, true); }
+    finally { thinking = false; refresh(); }
+  });
+  $('#chess-team-answer').addEventListener('click', () => {
+    if (!teamGame?.suggestions?.some((item) => item.status === 'open'
+      && item.recipient_id === profile?.account_id)) return;
+    teamSuggestionMode = true;
+    selected = -1;
+    renderTeamSuggestions(teamGame);
+    refresh();
+  });
   const startPractice = () => {
     if (thinking) return;
+    if (teamGame) return;
     if (serverGame && !serverGame.result
       && !window.confirm('서버 경기는 보존하고 새 연습 경기를 시작합니다. 연습 경기는 전적·보상이 없습니다. 계속할까요?')) return;
     serverGame = null;
@@ -846,6 +1196,10 @@
   });
   const leaveGame = async () => {
     if (thinking) return;
+    if (teamGame) {
+      await leaveTeamRoom();
+      return;
+    }
     const id = gameId;
     if (serverGame && !serverGame.result) {
       if (!window.confirm('진행 중인 경기를 나가면 패배로 기록됩니다. 나갈까요?')) return;
@@ -1045,10 +1399,28 @@
     gameId += 1;
     thinking = false;
     serverGame = null;
+    teamGame = null;
+    teamRoom = null;
+    teamSuggestionMode = false;
     $('#chess-game').hidden = true;
     $('#chess-menu').hidden = false;
     closeResult();
     void loadProfile();
+  });
+  const pollTeamRoom = async () => {
+    if (!teamRoom || thinking || teamSyncBusy || document.hidden) return;
+    teamSyncBusy = true;
+    try {
+      await syncTeamRoom();
+    } catch (error) {
+      $('#chess-team-room-status').textContent = `온라인 대국 연결 오류: ${error.message}`;
+    } finally {
+      teamSyncBusy = false;
+    }
+  };
+  window.setInterval(() => { void pollTeamRoom(); }, 3000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void pollTeamRoom();
   });
   void loadProfile();
 })();

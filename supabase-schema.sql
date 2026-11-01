@@ -316,7 +316,7 @@ create table if not exists public.investment_assets (
   symbol text primary key,
   name text not null,
   base_price bigint not null check (base_price > 0),
-  current_price bigint not null check (current_price >= 0),
+  current_price numeric not null check (current_price >= 0),
   change_pct numeric not null default 0,
   listed boolean not null default true
 );
@@ -355,16 +355,23 @@ create table if not exists public.investment_users (
 create table if not exists public.investment_holdings (
   client_id uuid not null references public.investment_users(client_id) on delete cascade,
   symbol text not null references public.investment_assets(symbol),
-  quantity bigint not null default 0 check (quantity >= 0),
+  quantity numeric not null default 0 check (quantity >= 0),
   invested_amount bigint not null default 0 check (invested_amount >= 0),
   primary key (client_id, symbol)
 );
 
 alter table public.investment_holdings
   add column if not exists invested_amount bigint not null default 0;
+alter table public.investment_assets
+  alter column current_price type numeric using current_price::numeric;
+alter table public.investment_holdings
+  alter column quantity type numeric using quantity::numeric;
 
 update public.investment_holdings h
-set invested_amount = h.quantity * a.current_price
+set invested_amount = least(
+  9223372036854775807::numeric,
+  round(h.quantity * a.current_price)
+)::bigint
 from public.investment_assets a
 where h.symbol = a.symbol
   and h.quantity > 0
@@ -713,6 +720,14 @@ as $$
       join public.investment_assets a on a.symbol = h.symbol
       where h.client_id = u.client_id and a.listed
     ), 0),
+    'total_asset_exact', (
+      u.cash + coalesce((
+        select sum(h.quantity * a.current_price)
+        from public.investment_holdings h
+        join public.investment_assets a on a.symbol = h.symbol
+        where h.client_id = u.client_id and a.listed
+      ), 0)
+    )::text,
     'market_date', (select last_market_date from public.investment_market where id = 1),
     'assets', coalesce((
       select jsonb_agg(
@@ -725,13 +740,29 @@ as $$
       )
       from public.investment_assets a
     ), '[]'::jsonb),
-    'holdings', coalesce((select jsonb_agg(to_jsonb(h) order by h.symbol) from public.investment_holdings h where h.client_id = u.client_id), '[]'::jsonb),
+    'holdings', coalesce((
+      select jsonb_agg(
+        jsonb_set(
+          jsonb_set(
+            to_jsonb(h),
+            '{quantity_exact}',
+            to_jsonb(h.quantity::text)
+          ),
+          '{invested_amount_exact}',
+          to_jsonb(h.invested_amount::text)
+        )
+        order by h.symbol
+      )
+      from public.investment_holdings h
+      where h.client_id = u.client_id
+    ), '[]'::jsonb),
     'ranking', coalesce((
       select jsonb_agg(jsonb_build_object(
         'client_id', r.client_id,
         'nickname', r.nickname,
         'player_level', r.player_level,
-        'total_asset', r.total_asset
+        'total_asset', r.total_asset,
+        'total_asset_exact', r.total_asset::text
       ) order by r.total_asset desc)
       from (
         select iu.client_id, iu.nickname, coalesce(sgs.player_level, 0) as player_level,
@@ -1262,12 +1293,13 @@ end;
 $$;
 
 drop function if exists public.investment_trade(uuid, text, text, integer);
+drop function if exists public.investment_trade(uuid, text, text, bigint);
 
 create or replace function public.investment_trade(
   p_client_id uuid,
   p_symbol text,
   p_side text,
-  p_quantity bigint
+  p_quantity numeric
 )
 returns jsonb
 language plpgsql
@@ -1277,20 +1309,27 @@ as $$
 declare
   user_row public.investment_users%rowtype;
   asset_row public.investment_assets%rowtype;
-  current_quantity bigint;
+  current_quantity numeric;
   current_invested bigint;
   total_price bigint;
+  exact_total_price numeric;
 begin
   perform public.investment_update_market();
   select * into user_row from public.investment_users where client_id = p_client_id for update;
   if user_row.client_id is null then raise exception '먼저 닉네임을 설정하세요.'; end if;
   if p_quantity is null or p_quantity < 1 then raise exception '수량은 1주 이상이어야 합니다.'; end if;
+  if p_quantity <> trunc(p_quantity) then raise exception '수량은 정수로 입력하세요.'; end if;
+  if p_side not in ('buy', 'sell') then raise exception '잘못된 거래 유형입니다.'; end if;
   select * into asset_row from public.investment_assets where symbol = p_symbol for update;
   if asset_row.symbol is null or not asset_row.listed then raise exception '현재 거래할 수 없는 상품입니다.'; end if;
-  if (asset_row.current_price::numeric * p_quantity::numeric) > 9223372036854775807 then
+  exact_total_price := case
+    when p_side = 'buy' then ceil(asset_row.current_price * p_quantity::numeric)
+    else floor(asset_row.current_price * p_quantity::numeric)
+  end;
+  if exact_total_price > 9223372036854775807 then
     raise exception '거래 금액이 너무 큽니다.';
   end if;
-  total_price := asset_row.current_price * p_quantity;
+  total_price := exact_total_price::bigint;
   select coalesce(quantity, 0), coalesce(invested_amount, 0)
   into current_quantity, current_invested
   from public.investment_holdings
@@ -1301,9 +1340,6 @@ begin
 
   if p_side = 'buy' then
     if user_row.cash < total_price then raise exception '보유 현금이 부족합니다.'; end if;
-    if (current_quantity::numeric + p_quantity::numeric) > 9223372036854775807 then
-      raise exception '보유 주식 수량이 너무 큽니다.';
-    end if;
     if (current_invested::numeric + total_price::numeric) > 9223372036854775807 then
       raise exception '투자 금액이 너무 큽니다.';
     end if;
@@ -1327,15 +1363,13 @@ begin
     where client_id = p_client_id and symbol = p_symbol and quantity >= p_quantity;
     if not found then raise exception '보유 주식보다 많이 팔 수 없습니다.'; end if;
     update public.investment_users set cash = cash + total_price where client_id = p_client_id;
-  else
-    raise exception '잘못된 거래 유형입니다.';
   end if;
   return public.investment_build_state(p_client_id);
 end;
 $$;
 
 revoke all on function public.investment_get_state(uuid, text) from public;
-revoke all on function public.investment_trade(uuid, text, text, bigint) from public;
+revoke all on function public.investment_trade(uuid, text, text, numeric) from public;
 revoke all on function public.investment_admin_grant_cash(text, uuid, bigint) from public;
 revoke all on function public.investment_admin_grant_cash_to_all(text, bigint, text) from public;
 revoke all on function public.investment_admin_get_users(text) from public;
@@ -1343,7 +1377,7 @@ revoke all on function public.investment_admin_grant_item(text, uuid, text, bigi
 revoke all on function public.investment_admin_remove_item(text, uuid, text, bigint, text) from public;
 revoke all on function public.investment_admin_adjust_cash(text, uuid, bigint) from public;
 grant execute on function public.investment_get_state(uuid, text) to anon;
-grant execute on function public.investment_trade(uuid, text, text, bigint) to anon;
+grant execute on function public.investment_trade(uuid, text, text, numeric) to anon;
 grant execute on function public.investment_admin_grant_cash(text, uuid, bigint) to anon;
 grant execute on function public.investment_admin_grant_cash_to_all(text, bigint, text) to anon;
 grant execute on function public.investment_admin_get_users(text) to anon, authenticated;
@@ -1426,7 +1460,7 @@ security definer
 set search_path = public
 as $$
 declare
-  v_current_price bigint;
+  v_current_price numeric;
 begin
   if p_admin_password <> '8170' then
     raise exception '관리자 비밀번호가 틀렸습니다.';
@@ -1449,7 +1483,7 @@ begin
   where symbol = p_symbol;
 
   update public.investment_assets
-  set current_price = greatest(1, round(current_price::numeric / 1000)::bigint),
+  set current_price = current_price / 1000,
       change_pct = 0,
       split_notice = true
   where symbol = p_symbol;
@@ -1636,7 +1670,7 @@ alter table public.investment_assets
   add column if not exists delisted_at timestamptz;
 
 alter table public.investment_holdings
-  alter column quantity type bigint using quantity::bigint;
+  alter column quantity type numeric using quantity::numeric;
 
 create or replace function public.investment_apply_stock_splits()
 returns void
@@ -1647,7 +1681,10 @@ as $$
 declare
   asset_row record;
   v_split_factor bigint;
+  v_previous_admin_reset text;
 begin
+  v_previous_admin_reset := current_setting('app.investment_admin_reset', true);
+  perform set_config('app.investment_admin_reset', 'on', true);
   for asset_row in
     select symbol, current_price
     from public.investment_assets
@@ -1711,14 +1748,12 @@ begin
     where symbol = asset_row.symbol;
 
     update public.investment_assets
-    set current_price = greatest(
-          1,
-          round(current_price::numeric / v_split_factor)::bigint
-        ),
+    set current_price = current_price / v_split_factor,
         split_notice = true
     where symbol = asset_row.symbol;
 
   end loop;
+  perform set_config('app.investment_admin_reset', coalesce(v_previous_admin_reset, 'off'), true);
 end;
 $$;
 
@@ -6047,7 +6082,10 @@ as $$
 declare
   asset_row record;
   v_split_factor bigint;
+  v_previous_admin_reset text;
 begin
+  v_previous_admin_reset := current_setting('app.investment_admin_reset', true);
+  perform set_config('app.investment_admin_reset', 'on', true);
   for asset_row in
     select symbol, current_price
     from public.investment_assets
@@ -6111,13 +6149,13 @@ begin
       select
         h.client_id,
         '보유하고 있던 ' || a.name || ' 종목이 1주당 1,000주로 분할되었습니다. 보유 수량 '
-          || to_char(h.quantity, 'FM999,999,999,999,999,999,999')
+          || h.quantity::text
           || '주 → '
-          || to_char(h.quantity * v_split_factor, 'FM999,999,999,999,999,999,999')
+          || (h.quantity * v_split_factor)::text
           || '주, 주가는 '
-          || to_char(asset_row.current_price, 'FM999,999,999,999,999')
+          || trim_scale(asset_row.current_price)::text
           || '원 → '
-          || to_char(greatest(1, round(asset_row.current_price::numeric / v_split_factor)::bigint), 'FM999,999,999,999,999')
+          || trim_scale(asset_row.current_price / v_split_factor)::text
           || '원으로 조정되었습니다.'
       from public.investment_holdings h
       join public.investment_assets a on a.symbol = h.symbol
@@ -6130,14 +6168,12 @@ begin
     where symbol = asset_row.symbol;
 
     update public.investment_assets
-    set current_price = greatest(
-          1,
-          round(current_price::numeric / v_split_factor)::bigint
-        ),
+    set current_price = current_price / v_split_factor,
         split_notice = true
     where symbol = asset_row.symbol;
 
   end loop;
+  perform set_config('app.investment_admin_reset', coalesce(v_previous_admin_reset, 'off'), true);
 end;
 $$;
 

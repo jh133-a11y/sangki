@@ -34,7 +34,14 @@ test('unowned and excessive sales do not submit an RPC; legitimate sales still s
   await context.trade('AAA','sell',input);
   assert.equal(calls.length,1);
   assert.equal(input.disabled,false);
-  input.disabled=true;
+  context.investmentState.holdings=[{symbol:'AAA',quantity:1,quantity_exact:'9007199254740993000'}];
+  input.value='9007199254740993001';
   await context.trade('AAA','sell',input);
   assert.equal(calls.length,1);
+  input.value='9007199254740993000';
+  await context.trade('AAA','sell',input);
+  assert.equal(calls.length,2);
+  input.disabled=true;
+  await context.trade('AAA','sell',input);
+  assert.equal(calls.length,2);
 });
