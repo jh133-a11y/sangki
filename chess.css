@@ -53,6 +53,20 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--orange); outlin
 .chess-seg button small { display: block; margin-top: 6px; font-size: 10px; line-height: 1.5; }
 .chess-start { width: 100%; margin-top: 8px; border: 1px solid var(--ink); border-radius: 0; padding: 15px; background: var(--acid); cursor: pointer; font-size: 13px; letter-spacing: .1em; }
 .chess-start:hover { background: var(--ink); color: var(--acid); }
+.chess-team-lobby { border: 1px solid var(--ink); padding: 14px; margin: 18px 0; background: #fff; }
+.chess-team-lobby h2 { margin: 0 0 10px; font-size: 15px; }
+.chess-team-lobby .chess-field { margin: 12px 0; }
+.chess-team-lobby select, .chess-team-actions input, .chess-team-actions button,
+.chess-team-play button { min-width: 0; border: 1px solid var(--ink); padding: 9px; background: var(--paper); }
+.chess-team-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chess-team-actions button, .chess-team-play button { cursor: pointer; }
+.chess-team-actions button.is-on { background: var(--ink); color: var(--paper); }
+.chess-team-actions input { flex: 1 1 120px; }
+.chess-team-players { display: grid; gap: 6px; padding-left: 20px; font-size: 12px; }
+.chess-team-play { border: 1px solid var(--ink); padding: 12px; background: #fff; font-size: 12px; }
+.chess-team-play p { margin: 0 0 10px; line-height: 1.6; }
+#chess-team-proposals { display: grid; gap: 6px; margin-top: 8px; }
+.chess-team-play button:disabled, .chess-team-actions button:disabled { opacity: .5; cursor: not-allowed; }
 
 .chess-game { display: grid; grid-template-columns: minmax(0, 560px) minmax(220px, 1fr); gap: 24px; align-items: start; margin-top: 22px; }
 .chess-player { display: flex; justify-content: space-between; align-items: center; min-height: 34px; padding: 6px 2px; font-size: 12px; }
